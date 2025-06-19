@@ -1,0 +1,14 @@
+pandas>=2.2
+numpy>=1.25
+yfinance>=0.2
+ta>=0.11
+tensorflow>=2.17
+keras>=3.4
+scikit-learn>=1.5
+xgboost>=2.0
+gymnasium[other]>=1.4
+stable-baselines3>=2.3
+schedule>=1.2
+python-telegram-bot>=20.7
+PyYAML>=6.0
+streamlit>=1.34
