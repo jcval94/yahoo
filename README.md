@@ -154,7 +154,9 @@ sequenceDiagram
 El repositorio incluye flujos de trabajo en `.github/workflows` que ejecutan el pipeline de manera programada. Ahora existen dos flujos principales:
 
 * `monthly.yml` realiza el entrenamiento completo una vez al mes.
-* `daily.yml` procesa los datos recientes y aplica los modelos para generar nuevas predicciones.
+* `daily.yml` procesa los datos recientes, aplica los modelos para generar nuevas
+  predicciones y luego guarda `results/predictions.csv` en el repositorio con
+  un commit automatico.
 
 ## Diagrama del pipeline automatizado
 
