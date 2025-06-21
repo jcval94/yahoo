@@ -97,21 +97,21 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    ```bash
    python -m src.abt.build_abt
    ```
-   Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas.
+   Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
 
 3. **Entrenamiento**
    
    ```bash
    python -m src.training
    ```
-   Se generan varios modelos de ejemplo y se guardan en `models/`. Puedes revisar esos archivos para entender cómo mejorar la calidad de las predicciones.
+   Se generan varios modelos de ejemplo y se guardan en `models/`. Puedes revisar esos archivos para entender cómo mejorar la calidad de las predicciones. En pantalla verás un resumen de las matrices de entrenamiento usadas para cada ticker.
 
 4. **Prediccion**
    
    ```bash
    python -m src.predict
    ```
-   Se aplican los modelos guardados y se genera un archivo `predictions.csv` en la carpeta `results/`.
+   Se aplican los modelos guardados y se genera un archivo `predictions.csv` en la carpeta `results/`. El comando mostrará también un panorama del DataFrame usado para predecir.
 
 5. **Evaluacion**
    
