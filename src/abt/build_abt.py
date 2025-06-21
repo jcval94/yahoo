@@ -6,6 +6,9 @@ import pandas as pd
 import yfinance as yf
 import ta
 import time
+import socket
+import requests_cache
+from pandas_datareader.stooq import StooqDailyReader
 
 from ..utils import (
     timed_stage,
@@ -27,47 +30,75 @@ with open(CONFIG_PATH) as cfg_file:
 DATA_DIR = Path(__file__).resolve().parents[2] / CONFIG.get("data_dir", "data")
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 
+CACHE_EXPIRE = 60 * 60  # 1 h
+
+session = requests_cache.CachedSession(
+    "yf_cache", expire_after=CACHE_EXPIRE
+)
+
+
+def _internet_ok(host="query1.finance.yahoo.com", port=443, timeout=3):
+    try:
+        socket.create_connection((host, port), timeout=timeout)
+        return True
+    except OSError:
+        return False
+
+
+def _download_yahoo(ticker, period, interval):
+    return yf.download(
+        ticker,
+        period=period,
+        interval=interval,
+        session=session,
+        progress=False,
+        threads=False,
+    )
+
+
+def _download_stooq(ticker, start, end):
+    return StooqDailyReader(ticker, start=start, end=end).read()
+
 def download_ticker(
     ticker: str,
     start: str,
-    end: str | None = None,
     interval: str = "1d",
     retries: int = 3,
 ) -> pd.DataFrame:
-    """Download historical data or fall back to generated sample data."""
+    """Download historical data with fallbacks for CI environments."""
     with timed_stage(f"download {ticker}"):
-        logger.info(
-            "yf.download params ticker=%s start=%s end=%s interval=%s",
-            ticker,
-            start,
-            end or "today",
-            interval,
-        )
-        start_dt = pd.to_datetime(start)
-        end_dt = pd.to_datetime(end) if end else None
+        period = "6mo"
+        today = pd.Timestamp.today().normalize()
+        start_dt = today - pd.DateOffset(months=6)
+
+        if not _internet_ok():
+            logger.warning("Runner sin internet. Usando datos simulados.")
+            df = generate_sample_data(start_dt)
+            log_df_details(f"downloaded {ticker}", df)
+            return df
+
         df = pd.DataFrame()
         for attempt in range(1, retries + 1):
             try:
-                df = yf.download(
-                    ticker,
-                    start=start_dt,
-                    end=end_dt,
-                    interval=interval,
-                    progress=False,
-                    threads=False,
-                )
+                df = _download_yahoo(ticker, period, interval)
+                if not df.empty:
+                    break
             except Exception as exc:
-                logger.error(
-                    "Attempt %d to download %s failed: %s", attempt, ticker, exc
-                )
+                logger.error("yf intento %d falló: %s", attempt, exc)
                 df = pd.DataFrame()
-            if not df.empty:
-                break
-            if attempt < retries:
-                time.sleep(1)
+            time.sleep(1)
+
         if df.empty:
-            logger.warning("%s download empty, using sample data", ticker)
-            df = generate_sample_data(start)
+            try:
+                df = _download_stooq(ticker, start_dt, today)
+                logger.info("Stooq suministró %d filas para %s", len(df), ticker)
+            except Exception as exc:
+                logger.error("Stooq también falló: %s", exc)
+
+        if df.empty:
+            logger.warning("Todo falló. Generando datos de ejemplo.")
+            df = generate_sample_data(start_dt)
+
     log_df_details(f"downloaded {ticker}", df)
     return df
 
