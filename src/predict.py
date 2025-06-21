@@ -23,7 +23,10 @@ MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "model
 def load_models(model_dir: Path) -> Dict[str, Any]:
     models = {}
     for file in model_dir.glob("*.pkl"):
-        models[file.stem] = joblib.load(file)
+        try:
+            models[file.stem] = joblib.load(file)
+        except Exception:
+            logger.error("Failed to load model %s", file)
     return models
 
 
@@ -36,12 +39,15 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
             continue
         X = df.drop(columns=["Close"], errors="ignore")
         y = df.get("Close")
-        preds = getattr(model, "predict", lambda X: None)(X)
-        if preds is None:
-            continue
-        mae = mean_absolute_error(y, preds)
-        r2 = r2_score(y, preds)
-        rows.append({"ticker": ticker, "mae": mae, "r2": r2, "actual": y.iloc[-1], "pred": preds[-1]})
+        try:
+            preds = getattr(model, "predict", lambda X: None)(X)
+            if preds is None:
+                continue
+            mae = mean_absolute_error(y, preds)
+            r2 = r2_score(y, preds)
+            rows.append({"ticker": ticker, "mae": mae, "r2": r2, "actual": y.iloc[-1], "pred": preds[-1]})
+        except Exception:
+            logger.error("Prediction failed for %s", name)
     result_df = pd.DataFrame(rows)
     out_file = RESULTS_DIR / "predictions.csv"
     result_df.to_csv(out_file, index=False)
