@@ -11,3 +11,10 @@ risk_free_rate: 0.015
 data_dir: "data"
 model_dir: "models"
 evaluation_dir: "results/metrics"
+target_cols:
+  SPY: Close
+  QQQ: "Adj Close"
+  IEF: Close
+  GLD: Close
+  EEM: Close
+  VNQ: Close

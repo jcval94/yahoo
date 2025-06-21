@@ -2,7 +2,7 @@
 import logging
 import yaml
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Union, Iterable
 
 import joblib
 import pandas as pd
@@ -21,6 +21,8 @@ with open(CONFIG_PATH) as cfg_file:
 
 logger = logging.getLogger(__name__)
 
+TARGET_COLS = CONFIG.get("target_cols", {})
+
 
 MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models")
 MODEL_DIR.mkdir(exist_ok=True, parents=True)
@@ -31,17 +33,30 @@ EVAL_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def train_models(
-    data: Dict[str, Union[pd.DataFrame, Path]], frequency: str = "daily"
+    data: Union[Dict[str, Union[pd.DataFrame, Path]], pd.DataFrame],
+    frequency: str = "daily",
 ) -> Dict[str, Path]:
     """Train basic models, evaluate them and persist both models and metrics."""
     paths = {}
     metrics_rows = []
-    for ticker, df in data.items():
-        if isinstance(df, (str, Path)):
-            df = pd.read_csv(df, index_col=0, parse_dates=True)
+
+    if isinstance(data, pd.DataFrame):
+        grouped = {
+            t: df.drop(columns=["Ticker"], errors="ignore")
+            for t, df in data.groupby("Ticker")
+        }
+    else:
+        grouped = {}
+        for t, df in data.items():
+            if isinstance(df, (str, Path)):
+                df = pd.read_csv(df, index_col=0, parse_dates=True)
+            grouped[t] = df
+
+    for ticker, df in grouped.items():
         log_df_details(f"training data {ticker}", df)
-        X = df.drop(columns=["Close"], errors="ignore")
-        y = df.get("Close")
+        target_col = TARGET_COLS.get(ticker, "Close")
+        X = df.drop(columns=[target_col], errors="ignore")
+        y = df.get(target_col)
         log_df_details(f"features {ticker}", X)
 
         with timed_stage(f"train RF {ticker}"):
@@ -120,5 +135,13 @@ if __name__ == "__main__":
     from .abt.build_abt import build_abt
 
     data_paths = build_abt()
-    data = {t: pd.read_csv(p, index_col=0, parse_dates=True) for t, p in data_paths.items()}
-    train_models(data)
+    combined_path = data_paths.get("combined")
+    if combined_path:
+        combined_df = pd.read_csv(combined_path, index_col=0, parse_dates=True)
+        train_models(combined_df)
+    else:
+        data = {
+            t: pd.read_csv(p, index_col=0, parse_dates=True)
+            for t, p in data_paths.items()
+        }
+        train_models(data)
