@@ -28,7 +28,7 @@ def train_models(data: Dict[str, Union[pd.DataFrame, Path]], frequency: str = "d
     paths = {}
     for ticker, df in data.items():
         if isinstance(df, (str, Path)):
-            df = pd.read_csv(df)
+            df = pd.read_csv(df, index_col=0, parse_dates=True)
         log_df_details(f"training data {ticker}", df)
         X = df.drop(columns=["Close"], errors="ignore")
         y = df.get("Close")
@@ -78,5 +78,5 @@ if __name__ == "__main__":
     from .abt.build_abt import build_abt
 
     data_paths = build_abt()
-    data = {t: pd.read_csv(p) for t, p in data_paths.items()}
+    data = {t: pd.read_csv(p, index_col=0, parse_dates=True) for t, p in data_paths.items()}
     train_models(data)

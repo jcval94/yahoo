@@ -67,6 +67,6 @@ if __name__ == "__main__":
     from .abt.build_abt import build_abt
 
     data_paths = build_abt()
-    data = {t: pd.read_csv(p) for t, p in data_paths.items()}
+    data = {t: pd.read_csv(p, index_col=0, parse_dates=True) for t, p in data_paths.items()}
     models = load_models(MODEL_DIR)
     run_predictions(models, data)

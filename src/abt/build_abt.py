@@ -96,7 +96,8 @@ def build_abt() -> dict:
                 df = download_ticker(ticker, CONFIG["start_date"])
                 df = enrich_indicators(df)
                 out_file = DATA_DIR / f"{ticker}.csv"
-                df.to_csv(out_file)
+                df.index.name = "Date"
+                df.to_csv(out_file, index_label="Date")
                 log_df_details(f"saved {ticker}", df)
                 results[ticker] = out_file
         except Exception:
