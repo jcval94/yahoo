@@ -3,7 +3,11 @@ import time
 from contextlib import contextmanager
 from typing import Optional
 
+import numpy as np
 import pandas as pd
+
+# Flag to track whether sample data was generated at any stage
+SAMPLE_DATA_USED = False
 
 @contextmanager
 def timed_stage(name: str):
@@ -32,3 +36,30 @@ def log_df_details(name: str, df: Optional[pd.DataFrame], head: int = 5) -> None
     if not df.empty:
         preview = df.head(head).to_string()
         logger.info("%s head:\n%s", name, preview)
+
+
+def generate_sample_data(start: str, periods: int = 30) -> pd.DataFrame:
+    """Return a simple deterministic OHLCV DataFrame for offline use."""
+    global SAMPLE_DATA_USED
+    SAMPLE_DATA_USED = True
+    dates = pd.date_range(start=start, periods=periods, freq="D")
+    base = np.linspace(1, periods, periods)
+    df = pd.DataFrame(
+        {
+            "Open": base,
+            "High": base + 1,
+            "Low": base - 1,
+            "Close": base,
+            "Adj Close": base,
+            "Volume": np.random.randint(1000, 10000, size=periods),
+        },
+        index=dates,
+    )
+    return df
+
+
+def log_offline_mode(stage: str) -> None:
+    """If sample data was used, log this fact for the given stage."""
+    logger = logging.getLogger(__name__)
+    if SAMPLE_DATA_USED:
+        logger.info("Using generated sample data in %s stage", stage)

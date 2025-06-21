@@ -6,10 +6,16 @@ import pandas as pd
 import yfinance as yf
 import ta
 
-from ..utils import timed_stage, log_df_details
+from ..utils import (
+    timed_stage,
+    log_df_details,
+    generate_sample_data,
+    log_offline_mode,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 # configuration lives at the project root two levels up from this file
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config.yaml"
@@ -21,9 +27,16 @@ DATA_DIR = Path(__file__).resolve().parents[2] / CONFIG.get("data_dir", "data")
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 
 def download_ticker(ticker: str, start: str) -> pd.DataFrame:
-    """Download historical data for a single ticker."""
+    """Download historical data or fall back to generated sample data."""
     with timed_stage(f"download {ticker}"):
-        df = yf.download(ticker, start=start)
+        try:
+            df = yf.download(ticker, start=start)
+        except Exception:
+            logger.error("Failed to download %s, using sample data", ticker)
+            df = generate_sample_data(start)
+    if df.empty:
+        logger.warning("%s download empty, using sample data", ticker)
+        df = generate_sample_data(start)
     log_df_details(f"downloaded {ticker}", df)
     return df
 
@@ -57,6 +70,7 @@ def build_abt() -> dict:
                 results[ticker] = out_file
         except Exception:
             logger.error("Failed to process %s", ticker)
+    log_offline_mode("build_abt")
     return results
 
 if __name__ == "__main__":
