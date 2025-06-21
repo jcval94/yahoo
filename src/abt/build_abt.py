@@ -4,7 +4,6 @@ import yaml
 from pathlib import Path
 import pandas as pd
 import yfinance as yf
-import ta
 import time
 import socket
 import requests_cache
@@ -68,9 +67,9 @@ def download_ticker(
 ) -> pd.DataFrame:
     """Download historical data with fallbacks for CI environments."""
     with timed_stage(f"download {ticker}"):
-        period = "6mo"
+        period = "1y"
         today = pd.Timestamp.today().normalize()
-        start_dt = today - pd.DateOffset(months=6)
+        start_dt = today - pd.DateOffset(months=12)
 
         if not _internet_ok():
             logger.warning("Runner sin internet. Usando datos simulados.")
@@ -108,15 +107,15 @@ def download_ticker(
     return df
 
 def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate basic technical indicators for a dataframe."""
+    """Calculate technical indicators for a dataframe."""
     with timed_stage("indicator calculation"):
         if df.empty:
             logger.warning("DataFrame empty. Skipping indicators.")
             return df
         try:
-            df["rsi"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
-            df["sma_20"] = ta.trend.SMAIndicator(df["Close"], window=20).sma_indicator()
-            df["sma_50"] = ta.trend.SMAIndicator(df["Close"], window=50).sma_indicator()
+            from ..features import add_technical_indicators
+
+            df = add_technical_indicators(df)
         except Exception:
             logger.exception("Failed to compute technical indicators")
             raise

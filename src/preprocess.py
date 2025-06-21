@@ -3,7 +3,6 @@ import logging
 from typing import Dict, List
 
 import pandas as pd
-import ta
 import yfinance as yf
 
 from .utils import (
@@ -41,10 +40,9 @@ def enrich_features(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         log_df_details("enrich empty", df)
         return df
-    df = df.copy()
-    df["rsi"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
-    df["sma_20"] = ta.trend.SMAIndicator(df["Close"], window=20).sma_indicator()
-    df["sma_50"] = ta.trend.SMAIndicator(df["Close"], window=50).sma_indicator()
+    from .features import add_technical_indicators
+
+    df = add_technical_indicators(df)
     log_df_details("enriched", df)
     return df
 
