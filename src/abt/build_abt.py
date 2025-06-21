@@ -11,11 +11,13 @@ from ..utils import timed_stage, log_df_details
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
+# configuration lives at the project root two levels up from this file
+CONFIG_PATH = Path(__file__).resolve().parents[2] / "config.yaml"
 with open(CONFIG_PATH) as cfg_file:
     CONFIG = yaml.safe_load(cfg_file)
 
-DATA_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("data_dir", "data")
+# store data in the directory defined in config at the project root
+DATA_DIR = Path(__file__).resolve().parents[2] / CONFIG.get("data_dir", "data")
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 
 def download_ticker(ticker: str, start: str) -> pd.DataFrame:
