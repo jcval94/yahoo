@@ -16,8 +16,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.11
-      - run: pip install -r requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+      - name: Instalar dependencias
+        run: |
+          pip install --upgrade pip
+          pip install yfinance==0.2.61 ta==0.11.0 requests-cache==1.2.0 pandas>=2.2
+          pip install -r requirements.txt
       - run: python -m src.training
+      - name: Upload ABT artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: abt-data
+          path: data/*.csv
       - name: Commit trained models
         env:
           PUSH_TOKEN: ${{ secrets.GH_PAT }}
