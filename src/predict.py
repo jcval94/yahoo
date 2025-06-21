@@ -9,7 +9,7 @@ import pandas as pd
 
 from sklearn.metrics import mean_absolute_error, r2_score
 
-from .utils import log_df_details
+from .utils import log_df_details, log_offline_mode
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,7 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
     out_file = RESULTS_DIR / "predictions.csv"
     result_df.to_csv(out_file, index=False)
     logger.info("Saved predictions to %s", out_file)
+    log_offline_mode("prediction")
     return result_df
 
 
