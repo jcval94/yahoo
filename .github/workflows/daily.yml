@@ -1,0 +1,17 @@
+name: Daily Processing
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - run: pip install -r requirements.txt
+      - run: python -m src.abt.build_abt
+      - run: python -m src.predict
+      - run: python -m src.notify.notifier --message "Proceso diario completado"

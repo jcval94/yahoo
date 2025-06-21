@@ -12,11 +12,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-DATA_DIR.mkdir(exist_ok=True, parents=True)
-
 with open(CONFIG_PATH) as cfg_file:
     CONFIG = yaml.safe_load(cfg_file)
+
+DATA_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("data_dir", "data")
+DATA_DIR.mkdir(exist_ok=True, parents=True)
 
 def download_ticker(ticker: str, start: str) -> pd.DataFrame:
     """Download historical data for a single ticker."""
