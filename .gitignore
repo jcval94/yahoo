@@ -4,6 +4,8 @@ data/
 # Keep only predictions CSV from results
 results/*
 !results/predictions.csv
+!results/metrics/
+!results/metrics/**
 
 # Byte-compiled / cache files
 __pycache__/
