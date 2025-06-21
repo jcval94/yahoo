@@ -10,7 +10,7 @@ import pandas as pd
 from .models.lstm_model import train_lstm
 from .models.rf_model import train_rf
 from .models.xgb_model import train_xgb
-from .utils import timed_stage
+from .utils import timed_stage, log_df_details
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
 with open(CONFIG_PATH) as cfg_file:
@@ -29,8 +29,10 @@ def train_models(data: Dict[str, Union[pd.DataFrame, Path]], frequency: str = "d
     for ticker, df in data.items():
         if isinstance(df, (str, Path)):
             df = pd.read_csv(df)
+        log_df_details(f"training data {ticker}", df)
         X = df.drop(columns=["Close"], errors="ignore")
         y = df.get("Close")
+        log_df_details(f"features {ticker}", X)
 
         with timed_stage(f"train RF {ticker}"):
             try:

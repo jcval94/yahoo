@@ -9,6 +9,8 @@ import pandas as pd
 
 from sklearn.metrics import mean_absolute_error, r2_score
 
+from .utils import log_df_details
+
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
@@ -37,6 +39,7 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
         df = data.get(ticker)
         if df is None:
             continue
+        log_df_details(f"predict data {ticker}", df)
         X = df.drop(columns=["Close"], errors="ignore")
         y = df.get("Close")
         try:

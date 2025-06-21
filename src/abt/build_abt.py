@@ -6,7 +6,7 @@ import pandas as pd
 import yfinance as yf
 import ta
 
-from ..utils import timed_stage
+from ..utils import timed_stage, log_df_details
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,6 +22,7 @@ def download_ticker(ticker: str, start: str) -> pd.DataFrame:
     """Download historical data for a single ticker."""
     with timed_stage(f"download {ticker}"):
         df = yf.download(ticker, start=start)
+    log_df_details(f"downloaded {ticker}", df)
     return df
 
 def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -37,6 +38,7 @@ def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
         except Exception:
             logger.exception("Failed to compute technical indicators")
             raise
+    log_df_details("with indicators", df)
     return df
 
 def build_abt() -> dict:
@@ -49,6 +51,7 @@ def build_abt() -> dict:
                 df = enrich_indicators(df)
                 out_file = DATA_DIR / f"{ticker}.csv"
                 df.to_csv(out_file)
+                log_df_details(f"saved {ticker}", df)
                 results[ticker] = out_file
         except Exception:
             logger.error("Failed to process %s", ticker)
