@@ -29,6 +29,10 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
             models[file.stem] = joblib.load(file)
         except Exception:
             logger.error("Failed to load model %s", file)
+    if not models:
+        raise FileNotFoundError(
+            f"No trained models found in {model_dir}. Run the monthly training first."
+        )
     return models
 
 
