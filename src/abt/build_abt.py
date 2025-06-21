@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 import ta
+import time
 
 from ..utils import (
     timed_stage,
@@ -26,17 +27,47 @@ with open(CONFIG_PATH) as cfg_file:
 DATA_DIR = Path(__file__).resolve().parents[2] / CONFIG.get("data_dir", "data")
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 
-def download_ticker(ticker: str, start: str) -> pd.DataFrame:
+def download_ticker(
+    ticker: str,
+    start: str,
+    end: str | None = None,
+    interval: str = "1d",
+    retries: int = 3,
+) -> pd.DataFrame:
     """Download historical data or fall back to generated sample data."""
     with timed_stage(f"download {ticker}"):
-        try:
-            df = yf.download(ticker, start=start)
-        except Exception:
-            logger.error("Failed to download %s, using sample data", ticker)
+        logger.info(
+            "yf.download params ticker=%s start=%s end=%s interval=%s",
+            ticker,
+            start,
+            end or "today",
+            interval,
+        )
+        start_dt = pd.to_datetime(start)
+        end_dt = pd.to_datetime(end) if end else None
+        df = pd.DataFrame()
+        for attempt in range(1, retries + 1):
+            try:
+                df = yf.download(
+                    ticker,
+                    start=start_dt,
+                    end=end_dt,
+                    interval=interval,
+                    progress=False,
+                    threads=False,
+                )
+            except Exception as exc:
+                logger.error(
+                    "Attempt %d to download %s failed: %s", attempt, ticker, exc
+                )
+                df = pd.DataFrame()
+            if not df.empty:
+                break
+            if attempt < retries:
+                time.sleep(1)
+        if df.empty:
+            logger.warning("%s download empty, using sample data", ticker)
             df = generate_sample_data(start)
-    if df.empty:
-        logger.warning("%s download empty, using sample data", ticker)
-        df = generate_sample_data(start)
     log_df_details(f"downloaded {ticker}", df)
     return df
 

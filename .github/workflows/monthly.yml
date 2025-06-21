@@ -1,4 +1,6 @@
 name: Monthly Training
+permissions:
+  contents: write
 on:
   schedule:
     - cron: '0 0 1 * *'
@@ -8,12 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
       - uses: actions/setup-python@v5
         with:
           python-version: 3.11
       - run: pip install -r requirements.txt
       - run: python -m src.training
       - name: Commit trained models
+        env:
+          PUSH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
@@ -22,7 +30,8 @@ jobs:
             echo "No model changes to commit"
           else
             git commit -m "Update monthly models"
-            git push
+            token=${PUSH_TOKEN:-$GITHUB_TOKEN}
+            git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
           fi
       - run: python -m src.predict
       - run: python -m src.portfolio.optimize
