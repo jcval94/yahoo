@@ -33,22 +33,31 @@ def train_models(data: Dict[str, Union[pd.DataFrame, Path]], frequency: str = "d
         y = df.get("Close")
 
         with timed_stage(f"train RF {ticker}"):
-            rf = train_rf(X, y)
-            rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
-            joblib.dump(rf, rf_path)
-            paths[f"{ticker}_rf"] = rf_path
+            try:
+                rf = train_rf(X, y)
+                rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
+                joblib.dump(rf, rf_path)
+                paths[f"{ticker}_rf"] = rf_path
+            except Exception:
+                logger.error("Failed RF training for %s", ticker)
 
         with timed_stage(f"train XGB {ticker}"):
-            xgb = train_xgb(X, y)
-            xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
-            joblib.dump(xgb, xgb_path)
-            paths[f"{ticker}_xgb"] = xgb_path
+            try:
+                xgb = train_xgb(X, y)
+                xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
+                joblib.dump(xgb, xgb_path)
+                paths[f"{ticker}_xgb"] = xgb_path
+            except Exception:
+                logger.error("Failed XGB training for %s", ticker)
 
         with timed_stage(f"train LSTM {ticker}"):
-            lstm = train_lstm(X, y)
-            lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
-            joblib.dump(lstm, lstm_path)
-            paths[f"{ticker}_lstm"] = lstm_path
+            try:
+                lstm = train_lstm(X, y)
+                lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
+                joblib.dump(lstm, lstm_path)
+                paths[f"{ticker}_lstm"] = lstm_path
+            except Exception:
+                logger.error("Failed LSTM training for %s", ticker)
 
     return paths
 
