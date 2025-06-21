@@ -110,6 +110,9 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    hiperparámetros para que el proceso sea rápido. Puedes ampliar la grilla de
    parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
    verás un resumen de las matrices de entrenamiento usadas para cada ticker.
+   Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
+   `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento y las
+   métricas también se imprimen en los logs.
 
 4. **Prediccion**
    
@@ -123,7 +126,8 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    ```bash
    python -m src.evaluation
    ```
-   Compara predicciones con valores reales y emite métricas simples como MAE y R2. Sirve para saber si los modelos deben reentrenarse.
+   Compara predicciones con valores reales y emite varias métricas (MAE, MSE,
+   RMSE, MAPE, R2 y EVS). Sirve para decidir si los modelos deben reentrenarse.
 
 6. **Optimizacion de portafolio**
    
