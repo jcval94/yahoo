@@ -1,5 +1,6 @@
 """Apply trained models to new data and store predictions."""
 import logging
+import yaml
 from pathlib import Path
 from typing import Dict, Any
 
@@ -10,8 +11,13 @@ from sklearn.metrics import mean_absolute_error, r2_score
 
 logger = logging.getLogger(__name__)
 
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
+with open(CONFIG_PATH) as cfg_file:
+    CONFIG = yaml.safe_load(cfg_file)
+
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 RESULTS_DIR.mkdir(exist_ok=True, parents=True)
+MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models")
 
 
 def load_models(model_dir: Path) -> Dict[str, Any]:
@@ -41,3 +47,12 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
     result_df.to_csv(out_file, index=False)
     logger.info("Saved predictions to %s", out_file)
     return result_df
+
+
+if __name__ == "__main__":
+    from .abt.build_abt import build_abt
+
+    data_paths = build_abt()
+    data = {t: pd.read_csv(p) for t, p in data_paths.items()}
+    models = load_models(MODEL_DIR)
+    run_predictions(models, data)

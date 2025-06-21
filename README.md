@@ -151,7 +151,10 @@ sequenceDiagram
 
 ## Automatizacion
 
-El repositorio incluye flujos de trabajo en `.github/workflows` que ejecutan el pipeline de manera programada. Revisa `train.yml` para ver un ejemplo de ejecucion semanal.
+El repositorio incluye flujos de trabajo en `.github/workflows` que ejecutan el pipeline de manera programada. Ahora existen dos flujos principales:
+
+* `monthly.yml` realiza el entrenamiento completo una vez al mes.
+* `daily.yml` procesa los datos recientes y aplica los modelos para generar nuevas predicciones.
 
 ## Diagrama del pipeline automatizado
 

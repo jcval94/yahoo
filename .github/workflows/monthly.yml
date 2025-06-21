@@ -1,7 +1,7 @@
-name: Train & Recommend
+name: Monthly Training
 on:
   schedule:
-    - cron: '0 21 * * 0'
+    - cron: '0 0 1 * *'
   workflow_dispatch:
 jobs:
   train:
@@ -12,5 +12,7 @@ jobs:
         with:
           python-version: 3.11
       - run: pip install -r requirements.txt
-      - run: python -m src.abt.build_abt
-      - run: python -m src.models.rf_model  # ejemplo
+      - run: python -m src.training
+      - run: python -m src.predict
+      - run: python -m src.portfolio.optimize
+      - run: python -m src.notify.notifier --message "Proceso mensual completado"

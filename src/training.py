@@ -1,7 +1,8 @@
 """Model training pipeline."""
 import logging
+import yaml
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
 
 import joblib
 import pandas as pd
@@ -11,17 +12,23 @@ from .models.rf_model import train_rf
 from .models.xgb_model import train_xgb
 from .utils import timed_stage
 
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
+with open(CONFIG_PATH) as cfg_file:
+    CONFIG = yaml.safe_load(cfg_file)
+
 logger = logging.getLogger(__name__)
 
 
-MODEL_DIR = Path(__file__).resolve().parents[1] / "models"
+MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models")
 MODEL_DIR.mkdir(exist_ok=True, parents=True)
 
 
-def train_models(data: Dict[str, pd.DataFrame], frequency: str = "daily") -> Dict[str, Path]:
-    """Train placeholder models and persist them to disk."""
+def train_models(data: Dict[str, Union[pd.DataFrame, Path]], frequency: str = "daily") -> Dict[str, Path]:
+    """Train basic models and persist them to disk."""
     paths = {}
     for ticker, df in data.items():
+        if isinstance(df, (str, Path)):
+            df = pd.read_csv(df)
         X = df.drop(columns=["Close"], errors="ignore")
         y = df.get("Close")
 
@@ -44,3 +51,11 @@ def train_models(data: Dict[str, pd.DataFrame], frequency: str = "daily") -> Dic
             paths[f"{ticker}_lstm"] = lstm_path
 
     return paths
+
+
+if __name__ == "__main__":
+    from .abt.build_abt import build_abt
+
+    data_paths = build_abt()
+    data = {t: pd.read_csv(p) for t, p in data_paths.items()}
+    train_models(data)
