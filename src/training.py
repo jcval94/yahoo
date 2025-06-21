@@ -36,7 +36,11 @@ def train_models(data: Dict[str, Union[pd.DataFrame, Path]], frequency: str = "d
 
         with timed_stage(f"train RF {ticker}"):
             try:
-                rf = train_rf(X, y)
+                rf_grid = {
+                    "n_estimators": [20, 30],
+                    "max_depth": [3, None],
+                }
+                rf = train_rf(X, y, param_grid=rf_grid, cv=2)
                 rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
                 joblib.dump(rf, rf_path)
                 paths[f"{ticker}_rf"] = rf_path
@@ -45,7 +49,11 @@ def train_models(data: Dict[str, Union[pd.DataFrame, Path]], frequency: str = "d
 
         with timed_stage(f"train XGB {ticker}"):
             try:
-                xgb = train_xgb(X, y)
+                xgb_grid = {
+                    "n_estimators": [50, 75],
+                    "max_depth": [3, 4],
+                }
+                xgb = train_xgb(X, y, param_grid=xgb_grid, cv=2)
                 xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
                 joblib.dump(xgb, xgb_path)
                 paths[f"{ticker}_xgb"] = xgb_path
@@ -54,7 +62,8 @@ def train_models(data: Dict[str, Union[pd.DataFrame, Path]], frequency: str = "d
 
         with timed_stage(f"train LSTM {ticker}"):
             try:
-                lstm = train_lstm(X, y)
+                lstm_grid = {"units": [16, 32], "epochs": [2, 3]}
+                lstm = train_lstm(X, y, param_grid=lstm_grid, cv=2)
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
                 joblib.dump(lstm, lstm_path)
                 paths[f"{ticker}_lstm"] = lstm_path

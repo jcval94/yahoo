@@ -104,7 +104,11 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    ```bash
    python -m src.training
    ```
-   Se generan varios modelos de ejemplo y se guardan en `models/`. Puedes revisar esos archivos para entender cómo mejorar la calidad de las predicciones. En pantalla verás un resumen de las matrices de entrenamiento usadas para cada ticker.
+   Se generan varios modelos de ejemplo y se guardan en `models/`. Cada
+   entrenamiento ejecuta una validación cruzada básica con solo un par de
+   hiperparámetros para que el proceso sea rápido. Puedes ampliar la grilla de
+   parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
+   verás un resumen de las matrices de entrenamiento usadas para cada ticker.
 
 4. **Prediccion**
    
