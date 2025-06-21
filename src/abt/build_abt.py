@@ -32,9 +32,10 @@ DATA_DIR.mkdir(exist_ok=True, parents=True)
 
 CACHE_EXPIRE = 60 * 60  # 1 h
 
-session = requests_cache.CachedSession(
-    "yf_cache", expire_after=CACHE_EXPIRE
-)
+# Install a global cache for all requests instead of passing a session to
+# yfinance. The library now manages its own session, so this avoids
+# compatibility issues and still provides caching.
+requests_cache.install_cache("yf_cache", expire_after=CACHE_EXPIRE)
 
 
 def _internet_ok(host="query1.finance.yahoo.com", port=443, timeout=3):
@@ -46,11 +47,11 @@ def _internet_ok(host="query1.finance.yahoo.com", port=443, timeout=3):
 
 
 def _download_yahoo(ticker, period, interval):
+    """Download data using yfinance without passing a custom session."""
     return yf.download(
         ticker,
         period=period,
         interval=interval,
-        session=session,
         progress=False,
         threads=False,
     )
