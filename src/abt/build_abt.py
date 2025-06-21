@@ -2,7 +2,9 @@
 import pandas as pd, yfinance as yf, ta, yaml, os
 from pathlib import Path
 
-CONFIG = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), '../../config.yaml')))
+# Load configuration from the project root
+with open(os.path.join(os.path.dirname(__file__), '../../config.yaml')) as cfg_file:
+    CONFIG = yaml.safe_load(cfg_file)
 DATA_DIR = Path(os.path.join(os.path.dirname(__file__), '../../data'))
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 
