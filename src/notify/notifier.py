@@ -1,4 +1,4 @@
-"""Utilities to send email and Telegram notifications."""
+"""Utility functions to send email notifications."""
 import logging
 import time
 from typing import Any
@@ -20,15 +20,3 @@ def send_email(message: str, **kwargs) -> None:
         logger.info("Email notification finished in %.2f seconds", duration)
 
 
-def send_telegram(message: str, **kwargs) -> None:
-    start = time.perf_counter()
-    logger.info("Sending Telegram notification")
-    try:
-        # Placeholder for telegram sending logic
-        pass
-    except Exception:
-        logger.exception("Error while sending telegram message")
-        raise
-    finally:
-        duration = time.perf_counter() - start
-        logger.info("Telegram notification finished in %.2f seconds", duration)

@@ -9,6 +9,5 @@ xgboost>=2.0
 gymnasium[other]>=1.4
 stable-baselines3>=2.3
 schedule>=1.2
-python-telegram-bot>=20.7
 PyYAML>=6.0
-streamlit>=1.34
+joblib>=1.3
