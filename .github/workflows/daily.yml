@@ -8,10 +8,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-python@v5
         with:
           python-version: 3.11
       - run: pip install -r requirements.txt
       - run: python -m src.abt.build_abt
       - run: python -m src.predict
+      - name: Commit results
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add results/predictions.csv
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update daily predictions"
+            git push
+          fi
       - run: python -m src.notify.notifier --message "Proceso diario completado"
