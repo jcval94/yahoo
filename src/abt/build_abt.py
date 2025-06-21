@@ -126,18 +126,41 @@ def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
 def build_abt() -> dict:
     """Build the analytic base table for all tickers defined in the config."""
     results = {}
+    combined_frames = []
+
     for ticker in CONFIG.get("etfs", []):
         try:
-            with timed_stage(f"processing {ticker}"):
+            with timed_stage(f"download {ticker}"):
                 df = download_ticker(ticker, CONFIG["start_date"])
-                df = enrich_indicators(df)
-                out_file = DATA_DIR / f"{ticker}.csv"
-                df.index.name = "Date"
-                df.to_csv(out_file, index_label="Date")
-                log_df_details(f"saved {ticker}", df)
-                results[ticker] = out_file
+                df["Ticker"] = ticker
+                combined_frames.append(df)
         except Exception:
-            logger.error("Failed to process %s", ticker)
+            logger.error("Failed to download %s", ticker)
+
+    if not combined_frames:
+        log_offline_mode("build_abt")
+        return results
+
+    combined_df = pd.concat(combined_frames)
+
+    processed_frames = []
+    for ticker, group_df in combined_df.groupby("Ticker"):
+        with timed_stage(f"processing {ticker}"):
+            group_df = enrich_indicators(group_df)
+        out_file = DATA_DIR / f"{ticker}.csv"
+        group_df.index.name = "Date"
+        group_df.to_csv(out_file, index_label="Date")
+        log_df_details(f"saved {ticker}", group_df)
+        results[ticker] = out_file
+        processed_frames.append(group_df)
+
+    combined_processed = pd.concat(processed_frames)
+    combined_file = DATA_DIR / "etfs_combined.csv"
+    combined_processed.index.name = "Date"
+    combined_processed.to_csv(combined_file, index_label="Date")
+    log_df_details("saved combined", combined_processed)
+    results["combined"] = combined_file
+
     log_offline_mode("build_abt")
     return results
 
