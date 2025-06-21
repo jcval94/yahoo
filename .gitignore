@@ -1,0 +1,10 @@
+# Ignore generated data
+data/
+
+# Keep only predictions CSV from results
+results/*
+!results/predictions.csv
+
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]

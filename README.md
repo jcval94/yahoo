@@ -74,7 +74,8 @@ La carpeta `src` contiene todas las utilidades. Algunos scripts son simples plan
 * `abt/` incluye la construcción de la "Analytic Base Table". Aquí se descargan y
   enriquecen los datos diarios.
 * `models/` contiene ejemplos de modelos de machine learning listos para usar o
-  para que los sustituyas por los tuyos.
+  para que los sustituyas por los tuyos. En esta carpeta se almacenan tambien los
+  modelos entrenados mensualmente que se versionan en el repositorio.
 * `portfolio/` alberga herramientas para backtesting y optimización de cartera.
 * `notify/` muestra cómo enviar un correo o mensaje una vez que tienes nuevos
   resultados.
@@ -155,12 +156,10 @@ sequenceDiagram
 
 ## Automatizacion
 
-El repositorio incluye flujos de trabajo en `.github/workflows` que ejecutan el pipeline de manera programada. Ahora existen dos flujos principales:
+El repositorio incluye flujos de trabajo en `.github/workflows` que ejecutan el pipeline de forma programada. Estos flujos se complementan de la siguiente manera:
 
-* `monthly.yml` realiza el entrenamiento completo una vez al mes.
-* `daily.yml` procesa los datos recientes, aplica los modelos para generar nuevas
-  predicciones y luego guarda `results/predictions.csv` en el repositorio con
-  un commit automatico.
+* `monthly.yml` realiza el entrenamiento completo una vez al mes y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `*.pkl` nuevo o actualizado para mantener la version mas reciente en el repositorio.
+* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
 
 ## Diagrama del pipeline automatizado
 

@@ -13,6 +13,17 @@ jobs:
           python-version: 3.11
       - run: pip install -r requirements.txt
       - run: python -m src.training
+      - name: Commit trained models
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add models/*.pkl
+          if git diff --cached --quiet; then
+            echo "No model changes to commit"
+          else
+            git commit -m "Update monthly models"
+            git push
+          fi
       - run: python -m src.predict
       - run: python -m src.portfolio.optimize
       - run: python -m src.notify.notifier --message "Proceso mensual completado"
