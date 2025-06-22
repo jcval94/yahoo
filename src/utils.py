@@ -3,6 +3,8 @@ import time
 from contextlib import contextmanager
 from typing import Optional
 
+from sklearn.model_selection import TimeSeriesSplit
+
 import numpy as np
 import pandas as pd
 
@@ -56,6 +58,21 @@ def generate_sample_data(start: str, periods: int = 30) -> pd.DataFrame:
         index=dates,
     )
     return df
+
+
+def rolling_cv(
+    n_samples: int,
+    train_size: int = 60,
+    horizon: int = 1,
+    max_splits: int = 5,
+) -> TimeSeriesSplit:
+    """Return a rolling TimeSeriesSplit for short-term forecasting."""
+    n_splits = min(max_splits, max(1, n_samples - train_size))
+    return TimeSeriesSplit(
+        n_splits=n_splits,
+        test_size=horizon,
+        max_train_size=train_size,
+    )
 
 
 def log_offline_mode(stage: str) -> None:
