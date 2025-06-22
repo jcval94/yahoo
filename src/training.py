@@ -6,6 +6,7 @@ from typing import Dict, Union, Iterable
 
 import joblib
 import pandas as pd
+from sklearn.model_selection import TimeSeriesSplit
 
 from .models.lstm_model import train_lstm
 from .models.rf_model import train_rf
@@ -58,13 +59,26 @@ def train_models(
     for ticker, df in grouped.items():
         log_df_details(f"training data {ticker}", df)
         target_col = TARGET_COLS.get(ticker, "Close")
-        X = df.drop(columns=[target_col], errors="ignore")
-        y = df.get(target_col)
+
+        end_dt = df.index.max()
+        start_cv = end_dt - pd.DateOffset(months=6)
+        df_recent = df.loc[df.index >= start_cv]
+
+        X = df_recent.drop(columns=[target_col], errors="ignore")
+        y = df_recent.get(target_col)
         log_df_details(f"features {ticker}", X)
+
+        n_samples = len(df_recent)
+        if n_samples <= 61:
+            logger.warning("%s insufficient data for custom CV", ticker)
+            cv_splitter = TimeSeriesSplit(n_splits=2, test_size=1, max_train_size=60)
+        else:
+            n_splits = min(5, n_samples - 60)
+            cv_splitter = TimeSeriesSplit(n_splits=n_splits, test_size=1, max_train_size=60)
 
         with timed_stage(f"train Linear {ticker}"):
             try:
-                lin = train_linear(X, y, cv=2)
+                lin = train_linear(X, y, cv=cv_splitter)
                 lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg.pkl"
                 joblib.dump(lin, lin_path)
                 paths[f"{ticker}_linreg"] = lin_path
@@ -85,7 +99,7 @@ def train_models(
                     "n_estimators": [20, 30],
                     "max_depth": [3, None],
                 }
-                rf = train_rf(X, y, param_grid=rf_grid, cv=2)
+                rf = train_rf(X, y, param_grid=rf_grid, cv=cv_splitter)
                 rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
                 joblib.dump(rf, rf_path)
                 paths[f"{ticker}_rf"] = rf_path
@@ -106,7 +120,7 @@ def train_models(
                     "n_estimators": [50, 75],
                     "max_depth": [3, 4],
                 }
-                xgb = train_xgb(X, y, param_grid=xgb_grid, cv=2)
+                xgb = train_xgb(X, y, param_grid=xgb_grid, cv=cv_splitter)
                 xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
                 joblib.dump(xgb, xgb_path)
                 paths[f"{ticker}_xgb"] = xgb_path
@@ -127,7 +141,7 @@ def train_models(
                     "n_estimators": [50, 75],
                     "max_depth": [3, 4],
                 }
-                lgbm = train_lgbm(X, y, param_grid=lgbm_grid, cv=2)
+                lgbm = train_lgbm(X, y, param_grid=lgbm_grid, cv=cv_splitter)
                 lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm.pkl"
                 joblib.dump(lgbm, lgbm_path)
                 paths[f"{ticker}_lgbm"] = lgbm_path
@@ -145,7 +159,7 @@ def train_models(
         with timed_stage(f"train LSTM {ticker}"):
             try:
                 lstm_grid = {"units": [16, 32], "epochs": [2, 3]}
-                lstm = train_lstm(X, y, param_grid=lstm_grid, cv=2)
+                lstm = train_lstm(X, y, param_grid=lstm_grid, cv=cv_splitter)
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
                 joblib.dump(lstm, lstm_path)
                 paths[f"{ticker}_lstm"] = lstm_path

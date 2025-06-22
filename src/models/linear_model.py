@@ -1,22 +1,27 @@
 """Simple linear regression utilities."""
 import logging
 import time
-from typing import Any
+from typing import Any, Union
 
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+from sklearn.model_selection import TimeSeriesSplit, cross_val_score, BaseCrossValidator
 
 logger = logging.getLogger(__name__)
 
 
-def train_linear(X_train, y_train, cv: int = 3, **kwargs) -> Any:
+def train_linear(
+    X_train,
+    y_train,
+    cv: Union[int, BaseCrossValidator] = 3,
+    **kwargs,
+) -> Any:
     """Train a linear regression model with basic cross-validation."""
     start = time.perf_counter()
     logger.info("Training Linear Regression model")
 
     try:
         model = LinearRegression(**kwargs)
-        splitter = TimeSeriesSplit(n_splits=cv)
+        splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
         scores = cross_val_score(
             model,
             X_train,

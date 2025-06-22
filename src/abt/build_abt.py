@@ -45,11 +45,12 @@ def _internet_ok(host="query1.finance.yahoo.com", port=443, timeout=3):
         return False
 
 
-def _download_yahoo(ticker, period, interval):
+def _download_yahoo(ticker, start, end, interval):
     """Download data using yfinance without passing a custom session."""
     return yf.download(
         ticker,
-        period=period,
+        start=start,
+        end=end,
         interval=interval,
         progress=False,
         threads=False,
@@ -67,9 +68,8 @@ def download_ticker(
 ) -> pd.DataFrame:
     """Download historical data with fallbacks for CI environments."""
     with timed_stage(f"download {ticker}"):
-        period = "1y"
         today = pd.Timestamp.today().normalize()
-        start_dt = today - pd.DateOffset(months=12)
+        start_dt = pd.to_datetime(start)
 
         if not _internet_ok():
             logger.warning("Runner sin internet. Usando datos simulados.")
@@ -80,7 +80,12 @@ def download_ticker(
         df = pd.DataFrame()
         for attempt in range(1, retries + 1):
             try:
-                df = _download_yahoo(ticker, period, interval)
+                df = _download_yahoo(
+                    ticker,
+                    start_dt.strftime("%Y-%m-%d"),
+                    today.strftime("%Y-%m-%d"),
+                    interval,
+                )
                 if not df.empty:
                     break
             except Exception as exc:

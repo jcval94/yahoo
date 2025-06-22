@@ -1,6 +1,6 @@
 """Stock selection utilities."""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List
 
 import pandas as pd
@@ -47,3 +47,17 @@ def select_tickers(candidates: List[str], end_date: str) -> List[str]:
     selection = top_volume + most_stable + biggest_losers
     logger.info("Selected tickers: %s", selection)
     return selection
+
+
+if __name__ == "__main__":
+    import yaml
+    from pathlib import Path
+
+    CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
+    with open(CONFIG_PATH) as cfg_file:
+        config = yaml.safe_load(cfg_file)
+
+    tickers = config.get("etfs", [])
+    today = datetime.today().strftime("%Y-%m-%d")
+    selected = select_tickers(tickers, today)
+    print("Selected tickers:", ", ".join(selected))
