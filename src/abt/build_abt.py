@@ -62,14 +62,14 @@ def _download_stooq(ticker, start, end):
 
 def download_ticker(
     ticker: str,
-    start: str,
+    months: int,
     interval: str = "1d",
     retries: int = 3,
 ) -> pd.DataFrame:
-    """Download historical data with fallbacks for CI environments."""
+    """Download recent data with fallbacks for CI environments."""
     with timed_stage(f"download {ticker}"):
         today = pd.Timestamp.today().normalize()
-        start_dt = pd.to_datetime(start)
+        start_dt = today - pd.DateOffset(months=months)
 
         if not _internet_ok():
             logger.warning("Runner sin internet. Usando datos simulados.")
@@ -135,7 +135,7 @@ def build_abt() -> dict:
     for ticker in CONFIG.get("etfs", []):
         try:
             with timed_stage(f"download {ticker}"):
-                df = download_ticker(ticker, CONFIG["start_date"])
+                df = download_ticker(ticker, CONFIG.get("history_months", 6))
                 df["Ticker"] = ticker
                 combined_frames.append(df)
         except Exception:

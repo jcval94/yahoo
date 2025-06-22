@@ -46,7 +46,7 @@ El archivo `config.yaml` define los ETFs que se van a procesar y otras opciones 
 etfs:
   - SPY
   - QQQ
-start_date: "2015-01-01"
+history_months: 6
 prediction_horizon: 5
 ```
 
@@ -98,7 +98,7 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    ```bash
    python -m src.abt.build_abt
    ```
-   Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
+   Esto baja datos historicos y agrega indicadores tecnicos. El periodo descargado se define con `history_months` en `config.yaml` (por defecto 6 meses hacia atras). Puedes editar este archivo para cambiar los tickers o la ventana de datos. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
 
 3. **Entrenamiento**
    
