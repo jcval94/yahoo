@@ -6,7 +6,6 @@ from typing import Dict, Union, Iterable
 
 import joblib
 import pandas as pd
-from sklearn.model_selection import TimeSeriesSplit
 
 from .models.lstm_model import train_lstm
 from .models.rf_model import train_rf
@@ -14,7 +13,7 @@ from .models.xgb_model import train_xgb
 from .models.linear_model import train_linear
 from .models.lightgbm_model import train_lgbm
 from .models.arima_model import train_arima
-from .utils import timed_stage, log_df_details, log_offline_mode
+from .utils import timed_stage, log_df_details, log_offline_mode, rolling_cv
 from .evaluation import evaluate_predictions
 
 RUN_TIMESTAMP = pd.Timestamp.now(tz="UTC").isoformat()
@@ -69,12 +68,7 @@ def train_models(
         log_df_details(f"features {ticker}", X)
 
         n_samples = len(df_recent)
-        if n_samples <= 61:
-            logger.warning("%s insufficient data for custom CV", ticker)
-            cv_splitter = TimeSeriesSplit(n_splits=2, test_size=1, max_train_size=60)
-        else:
-            n_splits = min(5, n_samples - 60)
-            cv_splitter = TimeSeriesSplit(n_splits=n_splits, test_size=1, max_train_size=60)
+        cv_splitter = rolling_cv(n_samples)
 
         with timed_stage(f"train Linear {ticker}"):
             try:
