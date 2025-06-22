@@ -45,11 +45,12 @@ def _internet_ok(host="query1.finance.yahoo.com", port=443, timeout=3):
         return False
 
 
-def _download_yahoo(ticker, period, interval):
+def _download_yahoo(ticker, start, end, interval):
     """Download data using yfinance without passing a custom session."""
     return yf.download(
         ticker,
-        period=period,
+        start=start,
+        end=end,
         interval=interval,
         progress=False,
         threads=False,
@@ -61,15 +62,14 @@ def _download_stooq(ticker, start, end):
 
 def download_ticker(
     ticker: str,
-    start: str,
+    months: int,
     interval: str = "1d",
     retries: int = 3,
 ) -> pd.DataFrame:
-    """Download historical data with fallbacks for CI environments."""
+    """Download recent data with fallbacks for CI environments."""
     with timed_stage(f"download {ticker}"):
-        period = "1y"
         today = pd.Timestamp.today().normalize()
-        start_dt = today - pd.DateOffset(months=12)
+        start_dt = today - pd.DateOffset(months=months)
 
         if not _internet_ok():
             logger.warning("Runner sin internet. Usando datos simulados.")
@@ -80,7 +80,12 @@ def download_ticker(
         df = pd.DataFrame()
         for attempt in range(1, retries + 1):
             try:
-                df = _download_yahoo(ticker, period, interval)
+                df = _download_yahoo(
+                    ticker,
+                    start_dt.strftime("%Y-%m-%d"),
+                    today.strftime("%Y-%m-%d"),
+                    interval,
+                )
                 if not df.empty:
                     break
             except Exception as exc:
@@ -130,7 +135,7 @@ def build_abt() -> dict:
     for ticker in CONFIG.get("etfs", []):
         try:
             with timed_stage(f"download {ticker}"):
-                df = download_ticker(ticker, CONFIG["start_date"])
+                df = download_ticker(ticker, CONFIG.get("history_months", 6))
                 df["Ticker"] = ticker
                 combined_frames.append(df)
         except Exception:

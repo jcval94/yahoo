@@ -1,12 +1,12 @@
 """Utility functions to train and use an LSTM model with simple CV."""
 import logging
 import time
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Sequence, Union
 
 import numpy as np
 from tensorflow import keras
 from tensorflow.keras import layers
-from sklearn.model_selection import TimeSeriesSplit
+from sklearn.model_selection import TimeSeriesSplit, BaseCrossValidator
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def train_lstm(
     X_train,
     y_train,
     param_grid: Dict[str, Sequence] | None = None,
-    cv: int = 3,
+    cv: Union[int, BaseCrossValidator] = 3,
     **kwargs,
 ) -> Any:
     """Train a simple LSTM using manual cross-validation."""
@@ -33,7 +33,7 @@ def train_lstm(
     best_score = float("inf")
     best_params = {"units": 16, "epochs": 2}
 
-    splitter = TimeSeriesSplit(n_splits=cv)
+    splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
 
     try:
         for units in param_grid.get("units", [16]):

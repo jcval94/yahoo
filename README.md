@@ -8,15 +8,15 @@ tus necesidades. No necesitas ser experto en Python; basta con seguir las
 instrucciones e ir probando.
 
 El objetivo es que puedas entender todo el recorrido: desde la selección de los
-tickers, pasando por la construcción del dataset, hasta el cálculo de métricas y
-la creación de un portafolio. También se incluye un ejemplo de notificación para
-cerrar el ciclo completo.
+tickers (ETF indicados en `config.yaml`), pasando por la construcción del
+dataset, hasta el cálculo de métricas y la creación de un portafolio. También se
+incluye un ejemplo de notificación para cerrar el ciclo completo.
 
 ## Diagrama general
 
 ```mermaid
 flowchart LR
-    A[Seleccion de acciones] --> B[Extraccion de datos]
+    A[Seleccion de ETFs] --> B[Extraccion de datos]
     B --> C[Preprocesamiento]
     C --> D[Entrenamiento de modelos]
     D --> E[Prediccion]
@@ -46,11 +46,16 @@ El archivo `config.yaml` define los ETFs que se van a procesar y otras opciones 
 etfs:
   - SPY
   - QQQ
-start_date: "2015-01-01"
+  - IEF
+  - GLD
+  - EEM
+  - VNQ
+history_months: 6
 prediction_horizon: 5
 ```
 
-Cambia este archivo segun tus necesidades.
+Cambia este archivo segun tus necesidades. El campo `history_months` controla la
+ventana historica (por defecto 6 meses).
 
 ## Estructura de carpetas
 
@@ -59,7 +64,12 @@ flowchart TB
     subgraph src
       direction TB
       A1[abt] -- build_abt.py --> A2[Generar ABT]
-      B1[models] -- rf_model.py --> B2[Modelos ML]
+      B1[models] -- linear_model.py --> B2[Modelos ML]
+      B1 -- rf_model.py --> B2
+      B1 -- xgb_model.py --> B2
+      B1 -- lightgbm_model.py --> B2
+      B1 -- lstm_model.py --> B2
+      B1 -- arima_model.py --> B2
       C1[portfolio] -- backtest.py --> C2[Portafolio]
     end
     src -->|utilidades| utils
@@ -91,24 +101,28 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    ```bash
    python -m src.selection
    ```
-   Obtendras una lista de los tickers mas interesantes según volumen, estabilidad y desempeño. Esta lista se usa como punto de partida para el resto del flujo.
+   Usa la lista de ETFs definida en `config.yaml` para calcular
+   volumen, estabilidad y retorno de los últimos seis meses.
+   Obtendrás una lista de los más interesantes que servirá de punto de
+   partida para el resto del flujo.
 
 2. **Descarga y preprocesamiento**
    
    ```bash
    python -m src.abt.build_abt
    ```
-   Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
+   Esto baja datos historicos y agrega indicadores tecnicos. El periodo descargado se define con `history_months` en `config.yaml` (por defecto 6 meses hacia atras). Puedes editar este archivo para cambiar los tickers o la ventana de datos. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
 
 3. **Entrenamiento**
    
    ```bash
    python -m src.training
    ```
-   Se generan varios modelos de ejemplo y se guardan en `models/`. Cada
-   entrenamiento ejecuta una validación cruzada básica con solo un par de
-   hiperparámetros para que el proceso sea rápido. Puedes ampliar la grilla de
-   parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
+    Entrena un conjunto de modelos (Linear, RandomForest, XGBoost, LightGBM,
+    LSTM y ARIMA) y guarda cada artefacto en `models/`. Cada
+    entrenamiento utiliza los últimos 6 meses de datos y aplica validación
+    cruzada temporal con ventanas de 60 días para predecir el día siguiente.
+    Puedes ampliar la grilla de parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
    verás un resumen de las matrices de entrenamiento usadas para cada ticker.
    Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
    `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento y las

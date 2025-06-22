@@ -5,7 +5,7 @@ etfs:
   - GLD
   - EEM
   - VNQ
-start_date: "2015-01-01"
+history_months: 6
 prediction_horizon: 5
 risk_free_rate: 0.015
 data_dir: "data"
