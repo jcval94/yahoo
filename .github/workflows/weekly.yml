@@ -1,0 +1,34 @@
+name: Weekly ABT
+permissions:
+  contents: write
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch: {}
+jobs:
+  build_weekly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+      - name: Instalar dependencias
+        run: |
+          pip install --upgrade pip
+          pip install yfinance==0.2.61 ta==0.11.0 requests-cache==1.2.0 pandas>=2.2
+          pip install -r requirements.txt
+      - run: python -m src.abt.build_abt --weekly
+      - name: Upload weekly ABT
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-abt
+          path: data/*_weekly.csv
+      - run: python -m src.notify.notifier --message "Proceso semanal completado"

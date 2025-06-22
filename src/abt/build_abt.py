@@ -127,6 +127,30 @@ def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
     log_df_details("with indicators", df)
     return df
 
+
+def _to_weekly(df: pd.DataFrame) -> pd.DataFrame:
+    """Resample daily OHLC data to weekly frequency."""
+    if df.empty:
+        return df
+
+    agg = {}
+    for col in df.columns:
+        if col == "Open":
+            agg[col] = "first"
+        elif col == "High":
+            agg[col] = "max"
+        elif col == "Low":
+            agg[col] = "min"
+        elif col in {"Close", "Adj Close"}:
+            agg[col] = "last"
+        elif col == "Volume":
+            agg[col] = "sum"
+        else:
+            agg[col] = "last"
+
+    weekly = df.resample("W").agg(agg)
+    return weekly
+
 def build_abt() -> dict:
     """Build the analytic base table for all tickers defined in the config."""
     results = {}
@@ -168,5 +192,61 @@ def build_abt() -> dict:
     log_offline_mode("build_abt")
     return results
 
+
+def build_weekly_abt() -> dict:
+    """Build weekly analytic base tables for configured tickers."""
+    results = {}
+    combined_frames = []
+
+    for ticker in CONFIG.get("etfs", []):
+        try:
+            with timed_stage(f"download {ticker}"):
+                df = download_ticker(ticker, CONFIG["start_date"])
+                df = _to_weekly(df)
+                df["Ticker"] = ticker
+                combined_frames.append(df)
+        except Exception:
+            logger.error("Failed to download %s", ticker)
+
+    if not combined_frames:
+        log_offline_mode("build_weekly_abt")
+        return results
+
+    combined_df = pd.concat(combined_frames)
+
+    processed_frames = []
+    for ticker, group_df in combined_df.groupby("Ticker"):
+        with timed_stage(f"processing {ticker}"):
+            group_df = enrich_indicators(group_df)
+        out_file = DATA_DIR / f"{ticker}_weekly.csv"
+        group_df.index.name = "Date"
+        group_df.to_csv(out_file, index_label="Date")
+        log_df_details(f"saved {ticker}_weekly", group_df)
+        results[ticker] = out_file
+        processed_frames.append(group_df)
+
+    combined_processed = pd.concat(processed_frames)
+    combined_file = DATA_DIR / "etfs_combined_weekly.csv"
+    combined_processed.index.name = "Date"
+    combined_processed.to_csv(combined_file, index_label="Date")
+    log_df_details("saved combined weekly", combined_processed)
+    results["combined"] = combined_file
+
+    log_offline_mode("build_weekly_abt")
+    return results
+
 if __name__ == "__main__":
-    build_abt()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Build analytic base tables")
+    parser.add_argument(
+        "--weekly",
+        action="store_true",
+        help="build weekly aggregated ABT instead of daily",
+    )
+    args = parser.parse_args()
+
+    if args.weekly:
+        build_weekly_abt()
+    else:
+        build_abt()
