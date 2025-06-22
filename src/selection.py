@@ -14,10 +14,10 @@ def _fetch_history(ticker: str, start: str, end: str) -> pd.DataFrame:
     return yf.download(ticker, start=start, end=end, progress=False)
 
 
-def select_tickers(candidates: List[str], end_date: str) -> List[str]:
+def select_tickers(candidates: List[str], end_date: str, months: int = 6) -> List[str]:
     """Select 10 tickers based on volume, stability and performance."""
     end_dt = pd.to_datetime(end_date)
-    start_dt = end_dt - pd.DateOffset(months=6)
+    start_dt = end_dt - pd.DateOffset(months=months)
     metrics = {}
 
     for ticker in candidates:
@@ -59,5 +59,6 @@ if __name__ == "__main__":
 
     tickers = config.get("etfs", [])
     today = datetime.today().strftime("%Y-%m-%d")
-    selected = select_tickers(tickers, today)
+    months = config.get("history_months", 6)
+    selected = select_tickers(tickers, today, months=months)
     print("Selected tickers:", ", ".join(selected))

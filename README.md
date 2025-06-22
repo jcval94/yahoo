@@ -102,7 +102,8 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    python -m src.selection
    ```
    Usa la lista de ETFs definida en `config.yaml` para calcular
-   volumen, estabilidad y retorno de los últimos seis meses.
+   volumen, estabilidad y retorno en la ventana definida por `history_months` 
+   (por defecto seis meses).
    Obtendrás una lista de los más interesantes que servirá de punto de
    partida para el resto del flujo.
 
