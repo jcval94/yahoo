@@ -46,11 +46,33 @@ El archivo `config.yaml` define los ETFs que se van a procesar y otras opciones 
 etfs:
   - SPY
   - QQQ
+  - IEF
+  - GLD
+  - EEM
+  - VNQ
+  - VOO
+  - IVV
+  - VEA
+  - VWO
 start_date: "2015-01-01"
 prediction_horizon: 5
 ```
 
+Todos estos fondos cotizan en el Sistema Internacional de Cotizaciones
+(SIC) de la Bolsa Mexicana, por lo que se pueden operar desde México.
+
 Cambia este archivo segun tus necesidades.
+
+### Seleccion de ETFs
+
+El módulo `src.etf_selection` permite elegir hasta diez ETFs tomando en
+cuenta la actividad de los **últimos seis meses**. Primero verifica que
+cada fondo incluya acciones clave (Google y Meta por defecto) y luego
+ordena los candidatos por el volumen promedio negociado en ese
+período. Además busca para cada fondo la "contraparte" con la
+correlación más negativa entre los candidatos y la agrega al listado si
+hay espacio. Esto ayuda a enfocarse en fondos líquidos disponibles en el
+SIC mexicano, manteniendo pares con baja correlación.
 
 ## Estructura de carpetas
 
@@ -110,6 +132,9 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    hiperparámetros para que el proceso sea rápido. Puedes ampliar la grilla de
    parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
    verás un resumen de las matrices de entrenamiento usadas para cada ticker.
+   Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
+   `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento y las
+   métricas también se imprimen en los logs.
 
 4. **Prediccion**
    
@@ -123,7 +148,8 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    ```bash
    python -m src.evaluation
    ```
-   Compara predicciones con valores reales y emite métricas simples como MAE y R2. Sirve para saber si los modelos deben reentrenarse.
+   Compara predicciones con valores reales y emite varias métricas (MAE, MSE,
+   RMSE, MAPE, R2 y EVS). Sirve para decidir si los modelos deben reentrenarse.
 
 6. **Optimizacion de portafolio**
    
@@ -158,7 +184,7 @@ sequenceDiagram
 
 El repositorio incluye flujos de trabajo en `.github/workflows` que ejecutan el pipeline de forma programada. Estos flujos se complementan de la siguiente manera:
 
-* `monthly.yml` realiza el entrenamiento completo una vez al mes y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `*.pkl` nuevo o actualizado para mantener la version mas reciente en el repositorio.
+* `monthly.yml` realiza el entrenamiento completo una vez al mes y guarda los modelos resultantes en la carpeta `models/`. Para evitar problemas con archivos binarios, cada modelo se almacena como texto base64 con extension `*.b64` y el flujo hace commit de estos archivos de texto.
 * `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
 
 Para que estos flujos puedan subir cambios al repositorio asegúrate de que el `GITHUB_TOKEN` tenga permisos de escritura. Los archivos YAML incluyen `permissions: contents: write`, con lo que el token integrado bastará en la mayoría de los repositorios. Si usas un fork o tu `GITHUB_TOKEN` es de solo lectura, crea un *Personal Access Token* y guárdalo como `GH_PAT`. Luego modifica los workflows para utilizar dicho token al hacer `git push`.

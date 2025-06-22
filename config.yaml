@@ -1,12 +1,17 @@
 etfs:
-  - SPY
-  - QQQ
-  - IEF
-  - GLD
-  - EEM
-  - VNQ
+  - SPY    # S&P 500 ETF Trust
+  - QQQ    # Invesco QQQ Trust
+  - IEF    # iShares 7-10 Year Treasury Bond ETF
+  - GLD    # SPDR Gold Shares
+  - EEM    # iShares MSCI Emerging Markets ETF
+  - VNQ    # Vanguard Real Estate ETF
+  - VOO    # Vanguard S&P 500 ETF
+  - IVV    # iShares Core S&P 500 ETF
+  - VEA    # Vanguard FTSE Developed Markets ETF
+  - VWO    # Vanguard FTSE Emerging Markets ETF
 start_date: "2015-01-01"
 prediction_horizon: 5
 risk_free_rate: 0.015
 data_dir: "data"
 model_dir: "models"
+evaluation_dir: "results/metrics"

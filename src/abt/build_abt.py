@@ -100,6 +100,10 @@ def download_ticker(
             logger.warning("Todo falló. Generando datos de ejemplo.")
             df = generate_sample_data(start_dt)
 
+        if isinstance(df.columns, pd.MultiIndex):
+            df = df.copy()
+            df.columns = df.columns.get_level_values(0)
+
     log_df_details(f"downloaded {ticker}", df)
     return df
 

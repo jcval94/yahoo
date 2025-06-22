@@ -4,12 +4,11 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any
 
-import joblib
 import pandas as pd
 
 from sklearn.metrics import mean_absolute_error, r2_score
 
-from .utils import log_df_details, log_offline_mode
+from .utils import log_df_details, log_offline_mode, load_model_text
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +23,9 @@ MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "model
 
 def load_models(model_dir: Path) -> Dict[str, Any]:
     models = {}
-    for file in model_dir.glob("*.pkl"):
+    for file in model_dir.glob("*.b64"):
         try:
-            models[file.stem] = joblib.load(file)
+            models[file.stem] = load_model_text(file)
         except Exception:
             logger.error("Failed to load model %s", file)
     if not models:

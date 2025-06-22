@@ -1,7 +1,11 @@
 import logging
 import time
 from contextlib import contextmanager
-from typing import Optional
+from typing import Optional, Any
+from pathlib import Path
+
+import base64
+import joblib
 
 import numpy as np
 import pandas as pd
@@ -63,3 +67,17 @@ def log_offline_mode(stage: str) -> None:
     logger = logging.getLogger(__name__)
     if SAMPLE_DATA_USED:
         logger.info("Using generated sample data in %s stage", stage)
+
+
+def save_model_text(model: Any, path: Path) -> None:
+    """Persist a model as base64-encoded text."""
+    data = joblib.dumps(model)
+    encoded = base64.b64encode(data).decode("ascii")
+    path.write_text(encoded)
+
+
+def load_model_text(path: Path) -> Any:
+    """Load a model previously saved with :func:`save_model_text`."""
+    encoded = path.read_text()
+    data = base64.b64decode(encoded.encode("ascii"))
+    return joblib.loads(data)
