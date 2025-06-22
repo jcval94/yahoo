@@ -1,0 +1,36 @@
+"""Simple linear regression utilities."""
+import logging
+import time
+from typing import Any
+
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+
+logger = logging.getLogger(__name__)
+
+
+def train_linear(X_train, y_train, cv: int = 3, **kwargs) -> Any:
+    """Train a linear regression model with basic cross-validation."""
+    start = time.perf_counter()
+    logger.info("Training Linear Regression model")
+
+    try:
+        model = LinearRegression(**kwargs)
+        splitter = TimeSeriesSplit(n_splits=cv)
+        scores = cross_val_score(
+            model,
+            X_train,
+            y_train,
+            cv=splitter,
+            scoring="neg_mean_absolute_error",
+        )
+        logger.info("Linear CV MAE: %.4f", -scores.mean())
+        model.fit(X_train, y_train)
+    except Exception:
+        logger.exception("Error while training Linear Regression")
+        raise
+    finally:
+        duration = time.perf_counter() - start
+        logger.info("Linear Regression training finished in %.2f seconds", duration)
+
+    return model

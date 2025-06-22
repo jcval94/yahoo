@@ -10,6 +10,9 @@ import pandas as pd
 from .models.lstm_model import train_lstm
 from .models.rf_model import train_rf
 from .models.xgb_model import train_xgb
+from .models.linear_model import train_linear
+from .models.lightgbm_model import train_lgbm
+from .models.arima_model import train_arima
 from .utils import timed_stage, log_df_details, log_offline_mode
 from .evaluation import evaluate_predictions
 
@@ -59,6 +62,23 @@ def train_models(
         y = df.get(target_col)
         log_df_details(f"features {ticker}", X)
 
+        with timed_stage(f"train Linear {ticker}"):
+            try:
+                lin = train_linear(X, y, cv=2)
+                lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg.pkl"
+                joblib.dump(lin, lin_path)
+                paths[f"{ticker}_linreg"] = lin_path
+                try:
+                    preds = lin.predict(X)
+                    metrics = evaluate_predictions(y, preds)
+                    metrics_row = {"model": f"{ticker}_linreg", **metrics, "run_date": RUN_TIMESTAMP}
+                    metrics_rows.append(metrics_row)
+                    logger.info("Linear metrics %s", metrics_row)
+                except Exception:
+                    logger.error("Failed Linear evaluation for %s", ticker)
+            except Exception:
+                logger.error("Failed Linear training for %s", ticker)
+
         with timed_stage(f"train RF {ticker}"):
             try:
                 rf_grid = {
@@ -101,6 +121,27 @@ def train_models(
             except Exception:
                 logger.error("Failed XGB training for %s", ticker)
 
+        with timed_stage(f"train LGBM {ticker}"):
+            try:
+                lgbm_grid = {
+                    "n_estimators": [50, 75],
+                    "max_depth": [3, 4],
+                }
+                lgbm = train_lgbm(X, y, param_grid=lgbm_grid, cv=2)
+                lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm.pkl"
+                joblib.dump(lgbm, lgbm_path)
+                paths[f"{ticker}_lgbm"] = lgbm_path
+                try:
+                    preds = lgbm.predict(X)
+                    metrics = evaluate_predictions(y, preds)
+                    metrics_row = {"model": f"{ticker}_lgbm", **metrics, "run_date": RUN_TIMESTAMP}
+                    metrics_rows.append(metrics_row)
+                    logger.info("LGBM metrics %s", metrics_row)
+                except Exception:
+                    logger.error("Failed LGBM evaluation for %s", ticker)
+            except Exception:
+                logger.error("Failed LGBM training for %s", ticker)
+
         with timed_stage(f"train LSTM {ticker}"):
             try:
                 lstm_grid = {"units": [16, 32], "epochs": [2, 3]}
@@ -119,6 +160,23 @@ def train_models(
                     logger.error("Failed LSTM evaluation for %s", ticker)
             except Exception:
                 logger.error("Failed LSTM training for %s", ticker)
+
+        with timed_stage(f"train ARIMA {ticker}"):
+            try:
+                arima = train_arima(y)
+                arima_path = MODEL_DIR / f"{ticker}_{frequency}_arima.pkl"
+                joblib.dump(arima, arima_path)
+                paths[f"{ticker}_arima"] = arima_path
+                try:
+                    preds = arima.predict(X)
+                    metrics = evaluate_predictions(y, preds)
+                    metrics_row = {"model": f"{ticker}_arima", **metrics, "run_date": RUN_TIMESTAMP}
+                    metrics_rows.append(metrics_row)
+                    logger.info("ARIMA metrics %s", metrics_row)
+                except Exception:
+                    logger.error("Failed ARIMA evaluation for %s", ticker)
+            except Exception:
+                logger.error("Failed ARIMA training for %s", ticker)
 
     if metrics_rows:
         metrics_df = pd.DataFrame(metrics_rows)
