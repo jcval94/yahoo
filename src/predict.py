@@ -19,6 +19,8 @@ CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
 with open(CONFIG_PATH) as cfg_file:
     CONFIG = yaml.safe_load(cfg_file)
 
+TARGET_COLS = CONFIG.get("target_cols", {})
+
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 RESULTS_DIR.mkdir(exist_ok=True, parents=True)
 MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models")
@@ -48,13 +50,20 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
     rows = []
     for name, model in models.items():
         ticker = name.split("_")[0]
+        target_col = TARGET_COLS.get(ticker, "Close")
         df = data.get(ticker)
         if df is None or len(df) < 2:
             logger.warning("Not enough data to predict %s", ticker)
             continue
+        if target_col not in df.columns:
+            logger.warning(
+                "%s missing column %s, falling back to 'Close'", ticker, target_col
+            )
+            target_col = "Close"
+        logger.info("Using target column %s for %s", target_col, ticker)
         log_df_details(f"predict data {ticker}", df)
-        X = df.drop(columns=["Close"], errors="ignore")
-        y = df.get("Close")
+        X = df.drop(columns=[target_col], errors="ignore")
+        y = df.get(target_col)
         try:
             preds = getattr(model, "predict", lambda X: None)(X)
             if preds is None:
