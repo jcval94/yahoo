@@ -1,8 +1,8 @@
 # Yahoo Finance Pipeline
 
-Este repositorio contiene un pipeline educativo que procesa datos de Yahoo Finance desde la descarga hasta la generacion de recomendaciones. Cada fase se encuentra en modulos independientes para que puedas revisarlos y adaptarlos a tus necesidades. No es necesario ser un experto en Python; basta con seguir las instrucciones y probar los ejemplos.
+¡Bienvenido a este pequeño experimento! Aquí encontrarás un pipeline educativo que procesa datos de Yahoo Finance de principio a fin. Cada fase está separada en módulos para que puedas revisarla, jugar con ella y adaptarla a tu antojo. No necesitas ser un gurú de Python; basta con seguir las instrucciones y ver qué pasa.
 
-El flujo completo abarca la seleccion de tickers, la construccion del dataset, el entrenamiento y la evaluacion de modelos y la creacion de un portafolio. Para cerrar el ciclo se incluye un ejemplo de notificacion final.
+El recorrido va desde elegir los tickers hasta entrenar modelos y armar un portafolio. Para rematar, incluye un ejemplo de notificación final.
 
 ## Diagrama general
 
@@ -17,7 +17,7 @@ flowchart LR
     G --> H[Notificacion]
 ```
 
-Este flujo se puede ejecutar manualmente o de forma programada mediante GitHub Actions.
+Puedes lanzarlo a mano o dejar que GitHub Actions lo haga por ti.
 
 ## Instalacion
 
@@ -76,42 +76,42 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    ```bash
    python -m src.selection
    ```
-   Obtendras una lista de los tickers mas interesantes segun volumen, estabilidad y desempeno.
+   Verás una lista de tickers interesantes segun volumen, estabilidad y desempeño. Perfecta para empezar.
 
 2. **Descarga y preprocesamiento**
 
    ```bash
    python -m src.abt.build_abt
    ```
-   Descarga datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se muestran las primeras filas de cada DataFrame.
+   Descarga datos historicos y agrega indicadores tecnicos. Puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se muestran las primeras filas para que veas que todo va bien.
 
 3. **Entrenamiento**
 
    ```bash
    python -m src.training
    ```
-   Se generan varios modelos de ejemplo y se guardan en `models/`. Cada entrenamiento usa los ultimos 6 meses de datos y aplica validacion cruzada temporal. Puedes ampliar la grilla de parametros en `src/training.py`.
+   Se entrenan algunos modelos de ejemplo que se guardan en `models/`. Cada entrenamiento usa los ultimos seis meses de datos y hace validacion cruzada temporal. Sientete libre de ampliar la grilla en `src/training.py`.
 
 4. **Prediccion**
 
    ```bash
    python -m src.predict
    ```
-   Aplica los modelos guardados y genera `results/predictions.csv`.
+   Aplica los modelos guardados y crea `results/predictions.csv`.
 
 5. **Evaluacion**
 
    ```bash
    python -m src.evaluation
    ```
-   Compara predicciones con valores reales y emite varias metricas (MAE, MSE, RMSE, MAPE, R2 y EVS).
+   Compara predicciones con valores reales y arroja metricas como MAE, MSE y compania.
 
 6. **Optimizacion de portafolio**
 
    ```bash
    python -m src.portfolio.optimize
    ```
-   Ajusta los pesos segun tus reglas de negocio para construir un portafolio equilibrado.
+   Ajusta los pesos segun tus reglas para armar un portafolio equilibrado.
 
 7. **Notificacion**
 
@@ -143,7 +143,7 @@ En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma 
 * `weekly.yml` genera la version agregada semanalmente del ABT.
 * `daily.yml` procesa los datos nuevos y aplica los modelos ya almacenados en `models/`.
 
-Para que estos flujos puedan subir cambios al repositorio, verifica que el `GITHUB_TOKEN` tenga permisos de escritura. Si usas un fork, puedes crear un *Personal Access Token* y guardarlo como `GH_PAT`.
+Para que estos flujos suban cambios por ti, revisa que `GITHUB_TOKEN` tenga permisos de escritura. Si trabajas en un fork, crea un *Personal Access Token* y guárdalo como `GH_PAT`. ¡Listo!
 
 ## Diagrama del pipeline automatizado
 
