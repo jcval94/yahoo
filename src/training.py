@@ -72,6 +72,10 @@ def train_models(
         df_recent["target"] = df_recent[target_col].shift(-1)
         df_recent.dropna(inplace=True)
 
+        X = df_recent.drop(columns=[target_col, "target"], errors="ignore")
+        y = df_recent["target"]
+        log_df_details(f"features {ticker}", X)
+
         test_start = df_recent.index.max() - pd.Timedelta(days=7)
         df_train = df_recent[df_recent.index <= test_start]
         df_test = df_recent[df_recent.index > test_start]
