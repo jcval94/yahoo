@@ -16,6 +16,7 @@ def timed_stage(name: str):
     """Context manager to log start/end time of a stage."""
     logger = logging.getLogger(__name__)
     start = time.perf_counter()
+    logger.info("-" * 40)
     logger.info("Starting %s", name)
     try:
         yield
@@ -25,6 +26,7 @@ def timed_stage(name: str):
     finally:
         duration = time.perf_counter() - start
         logger.info("Finished %s in %.2f seconds", name, duration)
+        logger.info("-" * 40)
 
 
 def log_df_details(name: str, df: Optional[pd.DataFrame], head: int = 5) -> None:

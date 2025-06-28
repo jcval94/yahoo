@@ -58,30 +58,71 @@ def train_models(
     for ticker, df in grouped.items():
         log_df_details(f"training data {ticker}", df)
         target_col = TARGET_COLS.get(ticker, "Close")
+        if target_col not in df.columns:
+            logger.warning(
+                "%s missing column %s, falling back to 'Close'", ticker, target_col
+            )
+            target_col = "Close"
 
         end_dt = df.index.max()
         start_cv = end_dt - pd.DateOffset(months=6)
         df_recent = df.loc[df.index >= start_cv]
 
-        X = df_recent.drop(columns=[target_col], errors="ignore")
-        y = df_recent.get(target_col)
-        log_df_details(f"features {ticker}", X)
+        df_recent = df_recent.copy()
+        df_recent["target"] = df_recent[target_col].shift(-1)
+        df_recent.dropna(inplace=True)
 
-        n_samples = len(df_recent)
+        test_start = df_recent.index.max() - pd.Timedelta(days=7)
+        df_train = df_recent[df_recent.index <= test_start]
+        df_test = df_recent[df_recent.index > test_start]
+
+        if len(df_train) < 20:
+            logger.warning(
+                "%s only %d rows after cleaning; skipping training", ticker, len(df_train)
+            )
+            continue
+        if df_test.empty:
+            logger.warning("%s has no test data; skipping training", ticker)
+            continue
+
+        X_train = df_train.drop(columns=[target_col, "target"], errors="ignore")
+        y_train = df_train["target"]
+        X_test = df_test.drop(columns=[target_col, "target"], errors="ignore")
+        y_test = df_test["target"]
+        log_df_details(f"train features {ticker}", X_train)
+        log_df_details(f"test features {ticker}", X_test)
+
+        n_samples = len(df_train)
         cv_splitter = rolling_cv(n_samples)
 
         with timed_stage(f"train Linear {ticker}"):
             try:
-                lin = train_linear(X, y, cv=cv_splitter)
+                lin = train_linear(X_train, y_train, cv=cv_splitter)
                 lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg.pkl"
                 joblib.dump(lin, lin_path)
                 paths[f"{ticker}_linreg"] = lin_path
                 try:
-                    preds = lin.predict(X)
-                    metrics = evaluate_predictions(y, preds)
-                    metrics_row = {"model": f"{ticker}_linreg", **metrics, "run_date": RUN_TIMESTAMP}
-                    metrics_rows.append(metrics_row)
-                    logger.info("Linear metrics %s", metrics_row)
+                    preds_train = lin.predict(X_train)
+                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    metrics_rows.append({
+                        "model": f"{ticker}_linreg",
+                        "dataset": "train",
+                        **train_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    preds_test = lin.predict(X_test)
+                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    metrics_rows.append({
+                        "model": f"{ticker}_linreg",
+                        "dataset": "test",
+                        **test_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    logger.info(
+                        "Linear train metrics %s | test metrics %s",
+                        train_metrics,
+                        test_metrics,
+                    )
                 except Exception:
                     logger.error("Failed Linear evaluation for %s", ticker)
             except Exception:
@@ -93,16 +134,32 @@ def train_models(
                     "n_estimators": [20, 30],
                     "max_depth": [3, None],
                 }
-                rf = train_rf(X, y, param_grid=rf_grid, cv=cv_splitter)
+                rf = train_rf(X_train, y_train, param_grid=rf_grid, cv=cv_splitter)
                 rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
                 joblib.dump(rf, rf_path)
                 paths[f"{ticker}_rf"] = rf_path
                 try:
-                    preds = rf.predict(X)
-                    metrics = evaluate_predictions(y, preds)
-                    metrics_row = {"model": f"{ticker}_rf", **metrics, "run_date": RUN_TIMESTAMP}
-                    metrics_rows.append(metrics_row)
-                    logger.info("RF metrics %s", metrics_row)
+                    preds_train = rf.predict(X_train)
+                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    metrics_rows.append({
+                        "model": f"{ticker}_rf",
+                        "dataset": "train",
+                        **train_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    preds_test = rf.predict(X_test)
+                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    metrics_rows.append({
+                        "model": f"{ticker}_rf",
+                        "dataset": "test",
+                        **test_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    logger.info(
+                        "RF train metrics %s | test metrics %s",
+                        train_metrics,
+                        test_metrics,
+                    )
                 except Exception:
                     logger.error("Failed RF evaluation for %s", ticker)
             except Exception:
@@ -114,16 +171,32 @@ def train_models(
                     "n_estimators": [50, 75],
                     "max_depth": [3, 4],
                 }
-                xgb = train_xgb(X, y, param_grid=xgb_grid, cv=cv_splitter)
+                xgb = train_xgb(X_train, y_train, param_grid=xgb_grid, cv=cv_splitter)
                 xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
                 joblib.dump(xgb, xgb_path)
                 paths[f"{ticker}_xgb"] = xgb_path
                 try:
-                    preds = xgb.predict(X)
-                    metrics = evaluate_predictions(y, preds)
-                    metrics_row = {"model": f"{ticker}_xgb", **metrics, "run_date": RUN_TIMESTAMP}
-                    metrics_rows.append(metrics_row)
-                    logger.info("XGB metrics %s", metrics_row)
+                    preds_train = xgb.predict(X_train)
+                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    metrics_rows.append({
+                        "model": f"{ticker}_xgb",
+                        "dataset": "train",
+                        **train_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    preds_test = xgb.predict(X_test)
+                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    metrics_rows.append({
+                        "model": f"{ticker}_xgb",
+                        "dataset": "test",
+                        **test_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    logger.info(
+                        "XGB train metrics %s | test metrics %s",
+                        train_metrics,
+                        test_metrics,
+                    )
                 except Exception:
                     logger.error("Failed XGB evaluation for %s", ticker)
             except Exception:
@@ -135,16 +208,32 @@ def train_models(
                     "n_estimators": [50, 75],
                     "max_depth": [3, 4],
                 }
-                lgbm = train_lgbm(X, y, param_grid=lgbm_grid, cv=cv_splitter)
+                lgbm = train_lgbm(X_train, y_train, param_grid=lgbm_grid, cv=cv_splitter)
                 lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm.pkl"
                 joblib.dump(lgbm, lgbm_path)
                 paths[f"{ticker}_lgbm"] = lgbm_path
                 try:
-                    preds = lgbm.predict(X)
-                    metrics = evaluate_predictions(y, preds)
-                    metrics_row = {"model": f"{ticker}_lgbm", **metrics, "run_date": RUN_TIMESTAMP}
-                    metrics_rows.append(metrics_row)
-                    logger.info("LGBM metrics %s", metrics_row)
+                    preds_train = lgbm.predict(X_train)
+                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    metrics_rows.append({
+                        "model": f"{ticker}_lgbm",
+                        "dataset": "train",
+                        **train_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    preds_test = lgbm.predict(X_test)
+                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    metrics_rows.append({
+                        "model": f"{ticker}_lgbm",
+                        "dataset": "test",
+                        **test_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    logger.info(
+                        "LGBM train metrics %s | test metrics %s",
+                        train_metrics,
+                        test_metrics,
+                    )
                 except Exception:
                     logger.error("Failed LGBM evaluation for %s", ticker)
             except Exception:
@@ -153,17 +242,34 @@ def train_models(
         with timed_stage(f"train LSTM {ticker}"):
             try:
                 lstm_grid = {"units": [16, 32], "epochs": [2, 3]}
-                lstm = train_lstm(X, y, param_grid=lstm_grid, cv=cv_splitter)
+                lstm = train_lstm(X_train, y_train, param_grid=lstm_grid, cv=cv_splitter)
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
                 joblib.dump(lstm, lstm_path)
                 paths[f"{ticker}_lstm"] = lstm_path
                 try:
-                    preds = lstm.predict(X)
-                    preds = preds.flatten() if hasattr(preds, "flatten") else preds
-                    metrics = evaluate_predictions(y, preds)
-                    metrics_row = {"model": f"{ticker}_lstm", **metrics, "run_date": RUN_TIMESTAMP}
-                    metrics_rows.append(metrics_row)
-                    logger.info("LSTM metrics %s", metrics_row)
+                    preds_train = lstm.predict(X_train)
+                    preds_train = preds_train.flatten() if hasattr(preds_train, "flatten") else preds_train
+                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    metrics_rows.append({
+                        "model": f"{ticker}_lstm",
+                        "dataset": "train",
+                        **train_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    preds_test = lstm.predict(X_test)
+                    preds_test = preds_test.flatten() if hasattr(preds_test, "flatten") else preds_test
+                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    metrics_rows.append({
+                        "model": f"{ticker}_lstm",
+                        "dataset": "test",
+                        **test_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    logger.info(
+                        "LSTM train metrics %s | test metrics %s",
+                        train_metrics,
+                        test_metrics,
+                    )
                 except Exception:
                     logger.error("Failed LSTM evaluation for %s", ticker)
             except Exception:
@@ -171,16 +277,32 @@ def train_models(
 
         with timed_stage(f"train ARIMA {ticker}"):
             try:
-                arima = train_arima(y)
+                arima = train_arima(y_train)
                 arima_path = MODEL_DIR / f"{ticker}_{frequency}_arima.pkl"
                 joblib.dump(arima, arima_path)
                 paths[f"{ticker}_arima"] = arima_path
                 try:
-                    preds = arima.predict(X)
-                    metrics = evaluate_predictions(y, preds)
-                    metrics_row = {"model": f"{ticker}_arima", **metrics, "run_date": RUN_TIMESTAMP}
-                    metrics_rows.append(metrics_row)
-                    logger.info("ARIMA metrics %s", metrics_row)
+                    preds_train = arima.predict(X_train)
+                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    metrics_rows.append({
+                        "model": f"{ticker}_arima",
+                        "dataset": "train",
+                        **train_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    preds_test = arima.predict(X_test)
+                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    metrics_rows.append({
+                        "model": f"{ticker}_arima",
+                        "dataset": "test",
+                        **test_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                    })
+                    logger.info(
+                        "ARIMA train metrics %s | test metrics %s",
+                        train_metrics,
+                        test_metrics,
+                    )
                 except Exception:
                     logger.error("Failed ARIMA evaluation for %s", ticker)
             except Exception:

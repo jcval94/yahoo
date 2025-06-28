@@ -29,7 +29,7 @@ def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["bb_bbl"] = bb.bollinger_lband()
     df["bb_width"] = (df["bb_bbh"] - df["bb_bbl"]) / df["bb_bbm"]
 
-    stoch = ta.momentum.StochOscillator(df["High"], df["Low"], df["Close"])
+    stoch = ta.momentum.StochasticOscillator(df["High"], df["Low"], df["Close"])
     df["stoch"] = stoch.stoch()
     df["stoch_signal"] = stoch.stoch_signal()
 
