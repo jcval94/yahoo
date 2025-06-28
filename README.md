@@ -76,6 +76,8 @@ La carpeta `src` contiene todas las utilidades. Algunos scripts son simples plan
 * `models/` contiene ejemplos de modelos de machine learning listos para usar o
   para que los sustituyas por los tuyos. En esta carpeta se almacenan tambien los
   modelos entrenados mensualmente que se versionan en el repositorio.
+  Estos archivos `*.pkl` se rastrean mediante **Git LFS**, por lo que debes
+  ejecutar `git lfs install` tras clonar el proyecto para poder descargarlos.
 * `portfolio/` alberga herramientas para backtesting y optimización de cartera.
 * `notify/` muestra cómo enviar un correo o mensaje una vez que tienes nuevos
   resultados.
