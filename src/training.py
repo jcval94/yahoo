@@ -65,7 +65,7 @@ def train_models(
             target_col = "Close"
 
         end_dt = df.index.max()
-        start_cv = end_dt - pd.DateOffset(months=6)
+        start_cv = end_dt - pd.DateOffset(months=12)
         df_recent = df.loc[df.index >= start_cv]
 
         df_recent = df_recent.copy()

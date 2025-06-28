@@ -64,11 +64,26 @@ def generate_sample_data(start: str, periods: int = 30) -> pd.DataFrame:
 
 def rolling_cv(
     n_samples: int,
-    train_size: int = 60,
-    horizon: int = 1,
-    max_splits: int = 5,
+    train_size: int = 90,
+    horizon: int = 3,
+    max_splits: int = 8,
 ) -> TimeSeriesSplit:
-    """Return a rolling TimeSeriesSplit for short-term forecasting."""
+    """Return a rolling ``TimeSeriesSplit`` for forecasting.
+
+    Parameters
+    ----------
+    n_samples
+        Total number of observations available.
+    train_size
+        Size of each training window. Defaults to ``90`` days for more
+        robust training.
+    horizon
+        Forecast horizon (size of the test window). Defaults to ``3`` days
+        to better capture short-term trends.
+    max_splits
+        Maximum number of CV splits. Increasing this value provides
+        better validation while keeping runtime reasonable.
+    """
     n_splits = min(max_splits, max(1, n_samples - train_size))
     return TimeSeriesSplit(
         n_splits=n_splits,
