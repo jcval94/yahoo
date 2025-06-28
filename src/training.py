@@ -17,7 +17,7 @@ from .utils import timed_stage, log_df_details, log_offline_mode, rolling_cv
 from .evaluation import evaluate_predictions
 
 # Maximum days required by moving averages or lag features
-LOOKBACK_MONTHS = 9
+LOOKBACK_MONTHS = 12
 MAX_MA_DAYS = 50
 
 RUN_TIMESTAMP = pd.Timestamp.now(tz="UTC").isoformat()
