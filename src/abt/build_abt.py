@@ -16,9 +16,7 @@ from ..utils import (
     log_offline_mode,
 )
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 # configuration lives at the project root two levels up from this file
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config.yaml"
@@ -235,7 +233,11 @@ def build_weekly_abt() -> dict:
     log_offline_mode("build_weekly_abt")
     return results
 
-if __name__ == "__main__":
+def main():
+    """Entry point for command line execution."""
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
+
     import argparse
 
     parser = argparse.ArgumentParser(description="Build analytic base tables")
@@ -250,3 +252,7 @@ if __name__ == "__main__":
         build_weekly_abt()
     else:
         build_abt()
+
+
+if __name__ == "__main__":
+    main()
