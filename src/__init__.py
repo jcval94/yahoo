@@ -1,9 +1,18 @@
-"""Convenience imports for project modules."""
+"""Lightweight package initialization.
 
-from . import abt, models, notify, portfolio
-from .selection import select_tickers
-from .preprocess import extract_data, preprocess_data
-from .training import train_models
-from .predict import load_models, run_predictions
-from .evaluation import evaluate_predictions, detect_drift
+The original module eagerly imported most project submodules which pulled in
+heavy optional dependencies. In minimal environments (like the tests used in
+this kata) those imports fail before any functionality can run.  To avoid these
+errors the package no longer imports other modules at import time.  Instead, the
+consumer should import the required submodules directly, e.g.::
+
+    from src import training
+    training.train_models(...)
+
+This keeps ``import src`` safe even when dependencies such as ``yaml`` or
+``pandas`` are missing.
+"""
+
+__all__: list[str] = []
+
 
