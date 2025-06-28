@@ -9,6 +9,7 @@ from sklearn.metrics import (
     mean_absolute_percentage_error,
     explained_variance_score,
     r2_score,
+    root_mean_squared_error,
 )
 
 logger = logging.getLogger(__name__)
@@ -18,11 +19,11 @@ def evaluate_predictions(y_true: Sequence[float], y_pred: Sequence[float]) -> di
     """Return an expanded set of regression metrics."""
     mae = mean_absolute_error(y_true, y_pred)
     mse = mean_squared_error(y_true, y_pred)
-    rmse = mean_squared_error(y_true, y_pred, squared=False)
+    rmse = root_mean_squared_error(y_true, y_pred)
     mape = mean_absolute_percentage_error(y_true, y_pred)
     r2 = r2_score(y_true, y_pred)
     evs = explained_variance_score(y_true, y_pred)
-    return {
+    metrics = {
         "MAE": mae,
         "MSE": mse,
         "RMSE": rmse,
@@ -30,6 +31,7 @@ def evaluate_predictions(y_true: Sequence[float], y_pred: Sequence[float]) -> di
         "R2": r2,
         "EVS": evs,
     }
+    return {k: round(v, 4) for k, v in metrics.items()}
 
 
 def detect_drift(prev: Sequence[float], curr: Sequence[float], threshold: float = 0.1) -> bool:

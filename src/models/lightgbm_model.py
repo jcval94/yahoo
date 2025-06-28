@@ -27,7 +27,7 @@ def train_lgbm(
         }
 
     try:
-        base_model = LGBMRegressor(random_state=42, **kwargs)
+        base_model = LGBMRegressor(random_state=42, verbosity=-1, **kwargs)
         splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
         search = GridSearchCV(
             base_model,
