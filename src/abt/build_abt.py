@@ -149,6 +149,30 @@ def _to_weekly(df: pd.DataFrame) -> pd.DataFrame:
     weekly = df.resample("W").agg(agg)
     return weekly
 
+
+def _to_quarterly(df: pd.DataFrame) -> pd.DataFrame:
+    """Resample daily OHLC data to quarterly frequency."""
+    if df.empty:
+        return df
+
+    agg = {}
+    for col in df.columns:
+        if col == "Open":
+            agg[col] = "first"
+        elif col == "High":
+            agg[col] = "max"
+        elif col == "Low":
+            agg[col] = "min"
+        elif col in {"Close", "Adj Close"}:
+            agg[col] = "last"
+        elif col == "Volume":
+            agg[col] = "sum"
+        else:
+            agg[col] = "last"
+
+    quarterly = df.resample("Q").agg(agg)
+    return quarterly
+
 def build_abt() -> dict:
     """Build the analytic base table for all tickers defined in the config."""
     results = {}
@@ -233,6 +257,49 @@ def build_weekly_abt() -> dict:
     log_offline_mode("build_weekly_abt")
     return results
 
+
+def build_quarterly_abt() -> dict:
+    """Build quarterly analytic base tables for configured tickers."""
+    results = {}
+    combined_frames = []
+
+    for ticker in CONFIG.get("etfs", []):
+        try:
+            with timed_stage(f"download {ticker}"):
+                df = download_ticker(ticker, CONFIG["start_date"])
+                df = _to_quarterly(df)
+                df["Ticker"] = ticker
+                combined_frames.append(df)
+        except Exception:
+            logger.error("Failed to download %s", ticker)
+
+    if not combined_frames:
+        log_offline_mode("build_quarterly_abt")
+        return results
+
+    combined_df = pd.concat(combined_frames)
+
+    processed_frames = []
+    for ticker, group_df in combined_df.groupby("Ticker"):
+        with timed_stage(f"processing {ticker}"):
+            group_df = enrich_indicators(group_df)
+        out_file = DATA_DIR / f"{ticker}_quarterly.csv"
+        group_df.index.name = "Date"
+        group_df.to_csv(out_file, index_label="Date")
+        log_df_details(f"saved {ticker}_quarterly", group_df)
+        results[ticker] = out_file
+        processed_frames.append(group_df)
+
+    combined_processed = pd.concat(processed_frames)
+    combined_file = DATA_DIR / "etfs_combined_quarterly.csv"
+    combined_processed.index.name = "Date"
+    combined_processed.to_csv(combined_file, index_label="Date")
+    log_df_details("saved combined quarterly", combined_processed)
+    results["combined"] = combined_file
+
+    log_offline_mode("build_quarterly_abt")
+    return results
+
 def main():
     """Entry point for command line execution."""
     logging.basicConfig(level=logging.INFO)
@@ -246,10 +313,17 @@ def main():
         action="store_true",
         help="build weekly aggregated ABT instead of daily",
     )
+    parser.add_argument(
+        "--quarterly",
+        action="store_true",
+        help="build quarterly aggregated ABT instead of daily",
+    )
     args = parser.parse_args()
 
     if args.weekly:
         build_weekly_abt()
+    elif args.quarterly:
+        build_quarterly_abt()
     else:
         build_abt()
 
