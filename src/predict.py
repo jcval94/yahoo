@@ -42,7 +42,8 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
     for name, model in models.items():
         ticker = name.split("_")[0]
         df = data.get(ticker)
-        if df is None:
+        if df is None or len(df) < 2:
+            logger.warning("Not enough data to predict %s", ticker)
             continue
         log_df_details(f"predict data {ticker}", df)
         X = df.drop(columns=["Close"], errors="ignore")
