@@ -169,6 +169,7 @@ El repositorio incluye flujos de trabajo en `.github/workflows` que ejecutan el 
 
 * `monthly.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `*.pkl` nuevo o actualizado para mantener la version mas reciente en el repositorio.
 * `weekly.yml` genera la version agregada semanalmente del ABT. Se ejecuta cada lunes y sube los archivos como artefactos.
+* `quarterly.yml` genera la version agregada trimestral del ABT. Se ejecuta cada trimestre y sube los archivos como artefactos.
 * `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
 
 Para que estos flujos puedan subir cambios al repositorio asegúrate de que el `GITHUB_TOKEN` tenga permisos de escritura. Los archivos YAML incluyen `permissions: contents: write`, con lo que el token integrado bastará en la mayoría de los repositorios. Si usas un fork o tu `GITHUB_TOKEN` es de solo lectura, crea un *Personal Access Token* y guárdalo como `GH_PAT`. Luego modifica los workflows para utilizar dicho token al hacer `git push`.
