@@ -315,8 +315,11 @@ def train_models(
     if metrics_rows:
         metrics_df = pd.DataFrame(metrics_rows)
         metrics_file = EVAL_DIR / f"metrics_{frequency}_{RUN_TIMESTAMP[:10]}.csv"
-        metrics_df.to_csv(metrics_file, index=False)
-        logger.info("Saved evaluation metrics to %s", metrics_file)
+        try:
+            metrics_df.to_csv(metrics_file, index=False)
+            logger.info("Saved evaluation metrics to %s", metrics_file)
+        except Exception:
+            logger.error("Failed to save metrics to %s", metrics_file)
         logger.info("Metrics summary:\n%s", metrics_df)
 
     log_offline_mode("training")
@@ -324,6 +327,8 @@ def train_models(
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
     from .abt.build_abt import build_abt
 
     data_paths = build_abt()

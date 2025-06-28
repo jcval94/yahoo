@@ -13,7 +13,7 @@ model_dir: "models"
 evaluation_dir: "results/metrics"
 target_cols:
   SPY: Close
-  QQQ: "Adj Close"
+  QQQ: Close
   IEF: Close
   GLD: Close
   EEM: Close
