@@ -7,6 +7,7 @@ from typing import Dict, Any
 
 import joblib
 import pandas as pd
+from tensorflow import keras
 
 from sklearn.metrics import mean_absolute_error, r2_score
 
@@ -25,11 +26,17 @@ MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "model
 
 def load_models(model_dir: Path) -> Dict[str, Any]:
     models = {}
-    for file in model_dir.glob("*.pkl"):
-        try:
-            models[file.stem] = joblib.load(file)
-        except Exception:
-            logger.error("Failed to load model %s", file)
+    for file in model_dir.iterdir():
+        if file.suffix == ".pkl":
+            try:
+                models[file.stem] = joblib.load(file)
+            except Exception:
+                logger.error("Failed to load model %s", file)
+        elif file.suffix == ".keras":
+            try:
+                models[file.stem] = keras.models.load_model(file)
+            except Exception:
+                logger.error("Failed to load model %s", file)
     if not models:
         raise FileNotFoundError(
             f"No trained models found in {model_dir}. Run the monthly training first."
