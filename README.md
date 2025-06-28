@@ -41,6 +41,22 @@ prediction_horizon: 5
 ```
 
 Modifica este archivo segun tus necesidades.
+## Variables de configuracion
+
+Estas son las claves principales de `config.yaml` y su uso:
+
+* **etfs**: lista de fondos o indices a procesar.
+* **start_date**: fecha inicial para descargar historicos.
+* **prediction_horizon**: numero de dias a predecir.
+* **risk_free_rate**: tasa libre de riesgo usada en la optimizacion.
+* **data_dir**: carpeta donde se guardan los CSV descargados.
+* **model_dir**: carpeta para los modelos entrenados.
+* **evaluation_dir**: ruta donde se escriben las metricas.
+* **target_cols**: columna objetivo por cada ETF.
+
+En los flujos de GitHub Actions tambien se utilizan `GITHUB_TOKEN` o `GH_PAT`
+para autorizar los commits automaticos.
+
 
 ## Estructura de carpetas
 
@@ -104,7 +120,19 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    ```bash
    python -m src.evaluation
    ```
-   Compara predicciones con valores reales y arroja metricas como MAE, MSE y compania.
+   Compara predicciones con valores reales y guarda metricas como MAE, MSE, RMSE, MAPE, R2 y EVS.
+
+## Metricas de evaluacion
+
+La funcion de evaluacion calcula los siguientes indicadores:
+
+- **MAE**: error absoluto medio.
+- **MSE**: error cuadratico medio.
+- **RMSE**: raiz cuadrada del MSE.
+- **MAPE**: porcentaje de error absoluto medio.
+- **R2**: coeficiente de determinacion.
+- **EVS**: varianza explicada por el modelo.
+
 
 6. **Optimizacion de portafolio**
 
