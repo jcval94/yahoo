@@ -108,8 +108,10 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    python -m src.training
    ```
     Se generan varios modelos de ejemplo y se guardan en `models/`. Cada
-    entrenamiento utiliza los últimos 6 meses de datos y aplica validación
-    cruzada temporal con ventanas de 60 días para predecir el día siguiente.
+   entrenamiento utiliza por defecto los últimos **9 meses** de datos 
+   (más unos 50 días extra para calcular las medias móviles) y reserva la
+   última semana como conjunto de validación. Se aplica validación
+   cruzada temporal con ventanas de 60 días para predecir el día siguiente.
     Puedes ampliar la grilla de parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
    verás un resumen de las matrices de entrenamiento usadas para cada ticker.
    Tras entrenar se calculan métricas y se guardan en la carpeta indicada por

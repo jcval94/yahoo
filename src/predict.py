@@ -1,23 +1,25 @@
 """Apply trained models to new data and store predictions."""
 import logging
-import yaml
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any
 
 import joblib
 import pandas as pd
-from tensorflow import keras
+
+try:
+    from tensorflow import keras
+except Exception:  # pragma: no cover - optional dependency
+    keras = None
 
 from sklearn.metrics import mean_absolute_error, r2_score
 
-from .utils import log_df_details, log_offline_mode
+from .utils import log_df_details, log_offline_mode, load_config
 
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
-with open(CONFIG_PATH) as cfg_file:
-    CONFIG = yaml.safe_load(cfg_file)
+CONFIG = load_config(CONFIG_PATH)
 
 TARGET_COLS = CONFIG.get("target_cols", {})
 
@@ -53,6 +55,9 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
             except Exception:
                 logger.error("Failed to load model %s", file)
         elif file.suffix == ".keras":
+            if keras is None:
+                logger.error("TensorFlow unavailable; cannot load %s", file)
+                continue
             try:
                 models[file.stem] = keras.models.load_model(file)
             except Exception:

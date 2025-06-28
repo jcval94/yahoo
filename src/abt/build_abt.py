@@ -1,7 +1,7 @@
 """Build daily and weekly ABTs enriched with technical indicators."""
 import logging
-import yaml
 from pathlib import Path
+from ..utils import load_config
 import pandas as pd
 import yfinance as yf
 import time
@@ -14,14 +14,14 @@ from ..utils import (
     log_df_details,
     generate_sample_data,
     log_offline_mode,
+    load_config,
 )
 
 logger = logging.getLogger(__name__)
 
 # configuration lives at the project root two levels up from this file
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config.yaml"
-with open(CONFIG_PATH) as cfg_file:
-    CONFIG = yaml.safe_load(cfg_file)
+CONFIG = load_config(CONFIG_PATH)
 
 # store data in the directory defined in config at the project root
 DATA_DIR = Path(__file__).resolve().parents[2] / CONFIG.get("data_dir", "data")
