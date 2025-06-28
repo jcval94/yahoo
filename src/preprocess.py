@@ -13,11 +13,11 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
-logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 
 def extract_data(tickers: List[str], start: str) -> Dict[str, pd.DataFrame]:
     """Download raw price data for a list of tickers."""
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
     data = {}
     for t in tickers:
         with timed_stage(f"download {t}"):
