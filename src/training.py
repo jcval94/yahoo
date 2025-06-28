@@ -63,8 +63,11 @@ def train_models(
         start_cv = end_dt - pd.DateOffset(months=6)
         df_recent = df.loc[df.index >= start_cv]
 
-        X = df_recent.drop(columns=[target_col], errors="ignore")
-        y = df_recent.get(target_col)
+        df_recent = df_recent.copy()
+        df_recent["target"] = df_recent[target_col].shift(-1)
+        df_recent.dropna(inplace=True)
+        X = df_recent.drop(columns=[target_col, "target"], errors="ignore")
+        y = df_recent["target"]
         log_df_details(f"features {ticker}", X)
 
         n_samples = len(df_recent)
