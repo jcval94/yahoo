@@ -1,16 +1,8 @@
 # Yahoo Finance Pipeline
 
-Este proyecto ofrece una serie de scripts para crear un flujo de trabajo completo con datos financieros descargados de Yahoo Finance. La idea es proporcionar un ejemplo sencillo que muestre desde la descarga de datos hasta la evaluación de modelos y la generación de recomendaciones.
+Este repositorio contiene un pipeline educativo que procesa datos de Yahoo Finance desde la descarga hasta la generacion de recomendaciones. Cada fase se encuentra en modulos independientes para que puedas revisarlos y adaptarlos a tus necesidades. No es necesario ser un experto en Python; basta con seguir las instrucciones y probar los ejemplos.
 
-Aunque el código es mínimo, sirve como plantilla educativa. Cada paso se
-encuentra aislado en un módulo para que puedas estudiarlo y modificarlo según
-tus necesidades. No necesitas ser experto en Python; basta con seguir las
-instrucciones e ir probando.
-
-El objetivo es que puedas entender todo el recorrido: desde la selección de los
-tickers, pasando por la construcción del dataset, hasta el cálculo de métricas y
-la creación de un portafolio. También se incluye un ejemplo de notificación para
-cerrar el ciclo completo.
+El flujo completo abarca la seleccion de tickers, la construccion del dataset, el entrenamiento y la evaluacion de modelos y la creacion de un portafolio. Para cerrar el ciclo se incluye un ejemplo de notificacion final.
 
 ## Diagrama general
 
@@ -25,14 +17,12 @@ flowchart LR
     G --> H[Notificacion]
 ```
 
-Este flujo se ejecuta normalmente de forma programada mediante GitHub Actions.
+Este flujo se puede ejecutar manualmente o de forma programada mediante GitHub Actions.
 
-## Requisitos
+## Instalacion
 
-* Python 3.11 o superior
-* Las dependencias listadas en `requirements.txt`
-
-Instala todo con:
+1. Usa Python 3.11 o superior.
+2. Instala las dependencias con:
 
 ```bash
 pip install -r requirements.txt
@@ -40,7 +30,7 @@ pip install -r requirements.txt
 
 ## Configuracion rapida
 
-El archivo `config.yaml` define los ETFs que se van a procesar y otras opciones básicas:
+El archivo `config.yaml` define los ETFs que se procesaran y otras opciones basicas:
 
 ```yaml
 etfs:
@@ -50,7 +40,7 @@ start_date: "2015-01-01"
 prediction_horizon: 5
 ```
 
-Cambia este archivo segun tus necesidades.
+Modifica este archivo segun tus necesidades.
 
 ## Estructura de carpetas
 
@@ -69,70 +59,55 @@ flowchart TB
     src --> evaluation
 ```
 
-La carpeta `src` contiene todas las utilidades. Algunos scripts son simples plantillas para mostrar donde agregar tu logica.
+La carpeta `src` contiene las utilidades principales. Algunos scripts son plantillas listas para que agregues tu logica.
 
-* `abt/` incluye la construcción de la "Analytic Base Table". Aquí se descargan y
-  enriquecen los datos diarios.
-* `models/` contiene ejemplos de modelos de machine learning listos para usar o
-  para que los sustituyas por los tuyos. En esta carpeta se almacenan tambien los
-  modelos entrenados mensualmente que se versionan en el repositorio.
-  Estos archivos `*.pkl` se rastrean mediante **Git LFS**, por lo que debes
-  ejecutar `git lfs install` tras clonar el proyecto para poder descargarlos.
-* `portfolio/` alberga herramientas para backtesting y optimización de cartera.
-* `notify/` muestra cómo enviar un correo o mensaje una vez que tienes nuevos
-  resultados.
+* `abt/` crea la "Analytic Base Table" con datos diarios descargados y enriquecidos.
+* `models/` almacena ejemplos de modelos de machine learning y los modelos entrenados mensualmente.
+  Estos archivos `*.pkl` se rastrean mediante **Git LFS**, por lo que conviene ejecutar `git lfs install` tras clonar el proyecto.
+* `portfolio/` ofrece herramientas para backtesting y optimizacion de cartera.
+* `notify/` muestra como enviar un mensaje con los resultados.
 
-Además de estas carpetas, existen scripts de selección y predicción en la raíz
-del paquete para que puedas ejecutar el flujo sin complicaciones.
+Ademas existen scripts de seleccion y prediccion en la raiz del paquete para ejecutar el flujo sin complicaciones.
 
 ## Ejecucion paso a paso
 
 1. **Seleccion de acciones**
 
-   Ejecuta:
    ```bash
    python -m src.selection
    ```
-   Obtendras una lista de los tickers mas interesantes según volumen, estabilidad y desempeño. Esta lista se usa como punto de partida para el resto del flujo.
+   Obtendras una lista de los tickers mas interesantes segun volumen, estabilidad y desempeno.
 
 2. **Descarga y preprocesamiento**
-   
+
    ```bash
    python -m src.abt.build_abt
    ```
-   Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
+   Descarga datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se muestran las primeras filas de cada DataFrame.
 
 3. **Entrenamiento**
-   
+
    ```bash
    python -m src.training
    ```
-    Se generan varios modelos de ejemplo y se guardan en `models/`. Cada
-    entrenamiento utiliza los últimos 6 meses de datos y aplica validación
-    cruzada temporal con ventanas de 60 días para predecir el día siguiente.
-    Puedes ampliar la grilla de parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
-   verás un resumen de las matrices de entrenamiento usadas para cada ticker.
-   Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
-   `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento y las
-   métricas también se imprimen en los logs.
+   Se generan varios modelos de ejemplo y se guardan en `models/`. Cada entrenamiento usa los ultimos 6 meses de datos y aplica validacion cruzada temporal. Puedes ampliar la grilla de parametros en `src/training.py`.
 
 4. **Prediccion**
-   
+
    ```bash
    python -m src.predict
    ```
-   Se aplican los modelos guardados y se genera un archivo `predictions.csv` en la carpeta `results/`. El comando mostrará también un panorama del DataFrame usado para predecir.
+   Aplica los modelos guardados y genera `results/predictions.csv`.
 
 5. **Evaluacion**
-   
+
    ```bash
    python -m src.evaluation
    ```
-   Compara predicciones con valores reales y emite varias métricas (MAE, MSE,
-   RMSE, MAPE, R2 y EVS). Sirve para decidir si los modelos deben reentrenarse.
+   Compara predicciones con valores reales y emite varias metricas (MAE, MSE, RMSE, MAPE, R2 y EVS).
 
 6. **Optimizacion de portafolio**
-   
+
    ```bash
    python -m src.portfolio.optimize
    ```
@@ -143,7 +118,7 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
    ```bash
    python -m src.notify.notifier --message "Proceso completo"
    ```
-   Envía un aviso por correo o chat con los resultados finales. Es un ejemplo que puedes adaptar a tu sistema de mensajería.
+   Envía un aviso por correo o chat con los resultados finales.
 
 ## Flujo de entrenamiento y prediccion
 
@@ -162,18 +137,15 @@ sequenceDiagram
 
 ## Automatizacion
 
-El repositorio incluye flujos de trabajo en `.github/workflows` que ejecutan el pipeline de forma programada. Estos flujos se complementan de la siguiente manera:
+En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma programada:
 
-* `monthly.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `*.pkl` nuevo o actualizado para mantener la version mas reciente en el repositorio.
-* `weekly.yml` genera la version agregada semanalmente del ABT. Se ejecuta cada lunes y sube los archivos como artefactos.
-* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
+* `monthly.yml` entrena modelos cada tres meses y guarda los `*.pkl` resultantes en `models/`.
+* `weekly.yml` genera la version agregada semanalmente del ABT.
+* `daily.yml` procesa los datos nuevos y aplica los modelos ya almacenados en `models/`.
 
-Para que estos flujos puedan subir cambios al repositorio asegúrate de que el `GITHUB_TOKEN` tenga permisos de escritura. Los archivos YAML incluyen `permissions: contents: write`, con lo que el token integrado bastará en la mayoría de los repositorios. Si usas un fork o tu `GITHUB_TOKEN` es de solo lectura, crea un *Personal Access Token* y guárdalo como `GH_PAT`. Luego modifica los workflows para utilizar dicho token al hacer `git push`.
+Para que estos flujos puedan subir cambios al repositorio, verifica que el `GITHUB_TOKEN` tenga permisos de escritura. Si usas un fork, puedes crear un *Personal Access Token* y guardarlo como `GH_PAT`.
 
 ## Diagrama del pipeline automatizado
-
-El siguiente esquema muestra cómo cada script se encadena cuando se ejecuta desde
-GitHub Actions o desde tu propio entorno local:
 
 ```mermaid
 flowchart TD
@@ -186,11 +158,8 @@ flowchart TD
     OP --> NT[python -m src.notify.notifier]
 ```
 
-Cada bloque representa la ejecucion de un modulo. Si prefieres hacerlo
-manualmente, puedes ejecutar cada comando en tu terminal siguiendo el orden del
-diagrama.
+Cada bloque representa la ejecucion de un modulo. Si prefieres hacerlo manualmente, ejecuta cada comando en tu terminal siguiendo el orden del diagrama.
 
 ## Contribuciones
 
-Estas utilidades son un punto de partida. Puedes reemplazar las secciones marcadas como "placeholder" con implementaciones mas robustas. Se aceptan mejoras y comentarios.
-
+Este proyecto es un punto de partida. Puedes reemplazar las secciones marcadas como "placeholder" con implementaciones mas robustas. Se aceptan mejoras y comentarios.
