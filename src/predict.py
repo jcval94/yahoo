@@ -26,9 +26,27 @@ RESULTS_DIR.mkdir(exist_ok=True, parents=True)
 MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models")
 
 
+def _is_lfs_pointer(path: Path) -> bool:
+    """Return True if the file is a Git LFS pointer."""
+    try:
+        with path.open("rb") as fh:
+            header = fh.read(1024)
+        return b"git-lfs" in header
+    except Exception:
+        return False
+
+
 def load_models(model_dir: Path) -> Dict[str, Any]:
     models = {}
     for file in model_dir.iterdir():
+        if not file.is_file():
+            continue
+        if _is_lfs_pointer(file):
+            logger.error(
+                "%s appears to be a Git LFS pointer. Run 'git lfs pull' to fetch the model",
+                file,
+            )
+            continue
         if file.suffix == ".pkl":
             try:
                 models[file.stem] = joblib.load(file)
@@ -83,13 +101,18 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
             logger.error("Prediction failed for %s", name)
     result_df = pd.DataFrame(rows)
     out_file = RESULTS_DIR / "predictions.csv"
-    result_df.to_csv(out_file, index=False)
-    logger.info("Saved predictions to %s", out_file)
+    try:
+        result_df.to_csv(out_file, index=False)
+        logger.info("Saved predictions to %s", out_file)
+    except Exception:
+        logger.error("Failed to save predictions to %s", out_file)
     log_offline_mode("prediction")
     return result_df
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
     from .abt.build_abt import build_abt
 
     data_paths = build_abt()

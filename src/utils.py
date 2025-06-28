@@ -38,7 +38,7 @@ def log_df_details(name: str, df: Optional[pd.DataFrame], head: int = 5) -> None
     rows, cols = df.shape
     logger.info("%s shape: %d rows, %d columns", name, rows, cols)
     if not df.empty:
-        preview = df.head(head).to_string()
+        preview = df.head(head).to_string(max_cols=None)
         logger.info("%s head:\n%s", name, preview)
 
 
