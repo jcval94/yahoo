@@ -97,10 +97,11 @@ del paquete para que puedas ejecutar el flujo sin complicaciones.
 
 2. **Descarga y preprocesamiento**
    
-   ```bash
-   python -m src.abt.build_abt
-   ```
-   Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
+  ```bash
+  python -m src.abt.build_abt
+  ```
+  Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
+   La ABT final incluye ademas las nuevas variables de rezago (1, 7 y 14 dias) y las medias moviles de 13 y 26 dias del cierre.
 
 3. **Entrenamiento**
    
