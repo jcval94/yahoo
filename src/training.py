@@ -248,8 +248,8 @@ def train_models(
                 lstm_grid = {"units": [16, 32], "epochs": [2, 3]}
                 lstm = train_lstm(X_train, y_train, param_grid=lstm_grid, cv=cv_splitter)
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
-                joblib.dump(lstm, lstm_path)
-                paths[f"{ticker}_lstm"] = lstm_path
+                lstm.save(lstm_path.with_suffix('.keras'))
+                paths[f"{ticker}_lstm"] = lstm_path.with_suffix('.keras')
                 try:
                     preds_train = lstm.predict(X_train)
                     preds_train = preds_train.flatten() if hasattr(preds_train, "flatten") else preds_train
