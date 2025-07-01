@@ -115,7 +115,7 @@ def rolling_cv(
     n_samples: int,
     train_size: int = 90,
     horizon: int = 3,
-    max_splits: int = 8,
+    max_splits: int = 10,
 ) -> TimeSeriesSplit:
     """Return a rolling ``TimeSeriesSplit`` for forecasting.
 

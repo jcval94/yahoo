@@ -149,6 +149,7 @@ def train_models(
                 rf_grid = {
                     "n_estimators": [20, 30],
                     "max_depth": [3, None],
+                    "min_samples_leaf": [1, 5],
                 }
                 rf = train_rf(X_train, y_train, param_grid=rf_grid, cv=cv_splitter)
                 rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
@@ -186,6 +187,7 @@ def train_models(
                 xgb_grid = {
                     "n_estimators": [50, 75],
                     "max_depth": [3, 4],
+                    "learning_rate": [0.05, 0.1],
                 }
                 xgb = train_xgb(X_train, y_train, param_grid=xgb_grid, cv=cv_splitter)
                 xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
@@ -223,6 +225,7 @@ def train_models(
                 lgbm_grid = {
                     "n_estimators": [50, 75],
                     "max_depth": [3, 4],
+                    "learning_rate": [0.05, 0.1],
                 }
                 lgbm = train_lgbm(X_train, y_train, param_grid=lgbm_grid, cv=cv_splitter)
                 lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm.pkl"
@@ -257,7 +260,12 @@ def train_models(
 
         with timed_stage(f"train LSTM {ticker}"):
             try:
-                lstm_grid = {"units": [16, 32], "epochs": [2, 3]}
+                lstm_grid = {
+                    "units": [16, 32],
+                    "epochs": [2, 3],
+                    "dropout": [0.0, 0.2],
+                    "l2_reg": [0.0, 0.001],
+                }
                 lstm = train_lstm(X_train, y_train, param_grid=lstm_grid, cv=cv_splitter)
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
                 lstm.save(lstm_path.with_suffix('.keras'))

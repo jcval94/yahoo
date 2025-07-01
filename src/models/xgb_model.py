@@ -25,6 +25,7 @@ def train_xgb(
         param_grid = {
             "n_estimators": [50],
             "max_depth": [3],
+            "learning_rate": [0.1],
         }
 
     try:
