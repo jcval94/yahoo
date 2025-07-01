@@ -1,7 +1,8 @@
 import logging
 import time
+from pathlib import Path
 from contextlib import contextmanager
-from typing import Optional
+from typing import Optional, Union
 
 from sklearn.model_selection import TimeSeriesSplit
 
@@ -10,6 +11,54 @@ import pandas as pd
 
 # Flag to track whether sample data was generated at any stage
 SAMPLE_DATA_USED = False
+
+
+def load_config(path: Union[str, Path]) -> dict:
+    """Load the YAML configuration file with a fallback parser.
+
+    The real project depends on :mod:`yaml` which may not be available in the
+    execution environment.  This helper first tries to use ``yaml.safe_load`` and
+    if that fails it falls back to a very small parser that understands the
+    limited structure of ``config.yaml`` used in the tests.
+    """
+
+    try:
+        import yaml  # type: ignore
+        with open(path, "r", encoding="utf-8") as fh:
+            return yaml.safe_load(fh)
+    except Exception:
+        pass
+
+    config: dict[str, Union[str, float, int, list[str]]] = {}
+    current_key: Optional[str] = None
+    with open(path, "r", encoding="utf-8") as fh:
+        for raw in fh:
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.endswith(":") and not line.startswith("-"):
+                current_key = line[:-1]
+                config[current_key] = []
+                continue
+            if line.startswith("- ") and isinstance(config.get(current_key), list):
+                value = line[2:].strip().strip('"').strip("'")
+                config[current_key].append(value)
+                continue
+            if ":" in line:
+                key, value = line.split(":", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                # attempt numeric conversion
+                try:
+                    if "." in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except ValueError:
+                    pass
+                config[key] = value
+
+    return config
 
 @contextmanager
 def timed_stage(name: str):
@@ -64,11 +113,26 @@ def generate_sample_data(start: str, periods: int = 30) -> pd.DataFrame:
 
 def rolling_cv(
     n_samples: int,
-    train_size: int = 60,
-    horizon: int = 1,
-    max_splits: int = 5,
+    train_size: int = 90,
+    horizon: int = 3,
+    max_splits: int = 8,
 ) -> TimeSeriesSplit:
-    """Return a rolling TimeSeriesSplit for short-term forecasting."""
+    """Return a rolling ``TimeSeriesSplit`` for forecasting.
+
+    Parameters
+    ----------
+    n_samples
+        Total number of observations available.
+    train_size
+        Size of each training window. Defaults to ``90`` days for more
+        robust training.
+    horizon
+        Forecast horizon (size of the test window). Defaults to ``3`` days
+        to better capture short-term trends.
+    max_splits
+        Maximum number of CV splits. Increasing this value provides
+        better validation while keeping runtime reasonable.
+    """
     n_splits = min(max_splits, max(1, n_samples - train_size))
     return TimeSeriesSplit(
         n_splits=n_splits,

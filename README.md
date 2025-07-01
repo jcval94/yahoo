@@ -100,18 +100,29 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    Verás una lista de tickers interesantes segun volumen, estabilidad y desempeño. Perfecta para empezar.
 
 2. **Descarga y preprocesamiento**
-
-   ```bash
-   python -m src.abt.build_abt
-   ```
-   Descarga datos historicos y agrega indicadores tecnicos. Puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se muestran las primeras filas para que veas que todo va bien.
+   
+  ```bash
+  python -m src.abt.build_abt
+  ```
+  Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
+   La ABT final incluye ademas las nuevas variables de rezago (1, 7 y 14 dias) y las medias moviles de 13 y 26 dias del cierre.
 
 3. **Entrenamiento**
 
    ```bash
    python -m src.training
    ```
-   Se entrenan algunos modelos de ejemplo que se guardan en `models/`. Cada entrenamiento usa los ultimos seis meses de datos y hace validacion cruzada temporal. Sientete libre de ampliar la grilla en `src/training.py`.
+
+    Se generan varios modelos de ejemplo y se guardan en `models/`. Cada
+   entrenamiento utiliza por defecto los últimos **9 meses** de datos 
+   (más unos 50 días extra para calcular las medias móviles) y reserva la
+   última semana como conjunto de validación. Se aplica validación
+   cruzada temporal con ventanas de 60 días para predecir el día siguiente.
+    Puedes ampliar la grilla de parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
+   verás un resumen de las matrices de entrenamiento usadas para cada ticker.
+   Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
+   `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento y las
+   métricas también se imprimen en los logs.
 
 4. **Prediccion**
 
@@ -180,9 +191,12 @@ sequenceDiagram
 
 En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma programada:
 
-* `monthly.yml` entrena modelos cada tres meses y guarda los `*.pkl` resultantes en `models/`.
-* `weekly.yml` genera la version agregada semanalmente del ABT.
-* `daily.yml` procesa los datos nuevos y aplica los modelos ya almacenados en `models/`.
+
+* `monthly.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `*.pkl` nuevo o actualizado para mantener la version mas reciente en el repositorio.
+* `weekly.yml` genera la version agregada semanalmente del ABT. Se ejecuta cada lunes y sube los archivos como artefactos.
+* `quarterly.yml` genera la version agregada trimestral del ABT. Se ejecuta cada trimestre y sube los archivos como artefactos.
+* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
+
 
 Para que estos flujos suban cambios por ti, revisa que `GITHUB_TOKEN` tenga permisos de escritura. Si trabajas en un fork, crea un *Personal Access Token* y guárdalo como `GH_PAT`. ¡Listo!
 

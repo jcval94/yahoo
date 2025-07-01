@@ -1,6 +1,6 @@
 """Model training pipeline."""
 import logging
-import yaml
+from .utils import load_config
 from pathlib import Path
 from typing import Dict, Union, Iterable
 
@@ -16,11 +16,14 @@ from .models.arima_model import train_arima
 from .utils import timed_stage, log_df_details, log_offline_mode, rolling_cv
 from .evaluation import evaluate_predictions
 
+# Maximum days required by moving averages or lag features
+LOOKBACK_MONTHS = 12
+MAX_MA_DAYS = 50
+
 RUN_TIMESTAMP = pd.Timestamp.now(tz="UTC").isoformat()
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
-with open(CONFIG_PATH) as cfg_file:
-    CONFIG = yaml.safe_load(cfg_file)
+CONFIG = load_config(CONFIG_PATH)
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +68,9 @@ def train_models(
             target_col = "Close"
 
         end_dt = df.index.max()
-        start_cv = end_dt - pd.DateOffset(months=6)
-        df_recent = df.loc[df.index >= start_cv]
+        start_cv = end_dt - pd.DateOffset(months=LOOKBACK_MONTHS)
+        feature_start = start_cv - pd.Timedelta(days=MAX_MA_DAYS)
+        df_recent = df.loc[df.index >= feature_start]
 
         df_recent = df_recent.copy()
         df_recent["target"] = df_recent[target_col].shift(-1)
@@ -76,9 +80,17 @@ def train_models(
         y = df_recent["target"]
         log_df_details(f"features {ticker}", X)
 
-        test_start = df_recent.index.max() - pd.Timedelta(days=7)
-        df_train = df_recent[df_recent.index <= test_start]
-        df_test = df_recent[df_recent.index > test_start]
+        val_start = df_recent.index.max() - pd.Timedelta(days=7)
+        df_train = df_recent[df_recent.index < val_start]
+        df_test = df_recent[df_recent.index >= val_start]
+        logger.info(
+            "%s train %s to %s | validation %s to %s",
+            ticker,
+            df_train.index.min().date(),
+            df_train.index.max().date(),
+            df_test.index.min().date() if not df_test.empty else None,
+            df_test.index.max().date() if not df_test.empty else None,
+        )
 
         if len(df_train) < 20:
             logger.warning(

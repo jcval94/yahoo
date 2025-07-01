@@ -42,6 +42,17 @@ def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _add_lag_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add lagged values and short moving averages of the close price."""
+    df = df.copy()
+    df["close_lag_1"] = df["Close"].shift(1)
+    df["close_lag_7"] = df["Close"].shift(7)
+    df["close_lag_14"] = df["Close"].shift(14)
+    df["sma_13"] = df["Close"].rolling(window=13, min_periods=1).mean()
+    df["sma_26"] = df["Close"].rolling(window=26, min_periods=1).mean()
+    return df
+
+
 def _add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add day-of-week, day-of-month and US holiday flags."""
     df = df.copy()
@@ -97,6 +108,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     def enrich(group: pd.DataFrame) -> pd.DataFrame:
         group = _add_basic_indicators(group)
         group = _add_advanced_indicators(group)
+        group = _add_lag_features(group)
         group = _add_seasonal_features(group)
         group = _add_trend_line(group)
         group = _add_decomposition(group)
