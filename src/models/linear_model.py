@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any, Union
 
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score, BaseCrossValidator
 
 logger = logging.getLogger(__name__)
@@ -17,10 +17,10 @@ def train_linear(
 ) -> Any:
     """Train a linear regression model with basic cross-validation."""
     start = time.perf_counter()
-    logger.info("Training Linear Regression model")
+    logger.info("Training Ridge Regression model")
 
     try:
-        model = LinearRegression(**kwargs)
+        model = Ridge(**kwargs)
         splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
         scores = cross_val_score(
             model,

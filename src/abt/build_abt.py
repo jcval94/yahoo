@@ -154,10 +154,14 @@ def build_abt() -> dict:
     results = {}
     combined_frames = []
 
+    five_years_ago = pd.Timestamp.today().normalize() - pd.DateOffset(years=5)
+    config_start = pd.to_datetime(CONFIG["start_date"])
+    start_dt = max(config_start, five_years_ago)
+
     for ticker in CONFIG.get("etfs", []):
         try:
             with timed_stage(f"download {ticker}"):
-                df = download_ticker(ticker, CONFIG["start_date"])
+                df = download_ticker(ticker, start_dt.strftime("%Y-%m-%d"))
                 df["Ticker"] = ticker
                 combined_frames.append(df)
         except Exception:
@@ -196,10 +200,14 @@ def build_weekly_abt() -> dict:
     results = {}
     combined_frames = []
 
+    five_years_ago = pd.Timestamp.today().normalize() - pd.DateOffset(years=5)
+    config_start = pd.to_datetime(CONFIG["start_date"])
+    start_dt = max(config_start, five_years_ago)
+
     for ticker in CONFIG.get("etfs", []):
         try:
             with timed_stage(f"download {ticker}"):
-                df = download_ticker(ticker, CONFIG["start_date"])
+                df = download_ticker(ticker, start_dt.strftime("%Y-%m-%d"))
                 df = _to_weekly(df)
                 df["Ticker"] = ticker
                 combined_frames.append(df)

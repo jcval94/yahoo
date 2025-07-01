@@ -38,6 +38,7 @@ def train_rf(
         param_grid = {
             "n_estimators": [20],
             "max_depth": [3],
+            "min_samples_leaf": [1],
         }
 
     try:

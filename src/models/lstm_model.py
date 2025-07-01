@@ -24,47 +24,70 @@ def train_lstm(
     logger.info("Training LSTM model")
 
     if param_grid is None:
-        param_grid = {"units": [16], "epochs": [2]}
+        param_grid = {"units": [16], "epochs": [2], "dropout": [0.0], "l2_reg": [0.0]}
 
     X = np.asarray(X_train).astype(float)
     y = np.asarray(y_train).astype(float)
     X = np.expand_dims(X, axis=1)
 
     best_score = float("inf")
-    best_params = {"units": 16, "epochs": 2}
+    best_params = {"units": 16, "epochs": 2, "dropout": 0.0, "l2_reg": 0.0}
 
     splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
 
     try:
         for units in param_grid.get("units", [16]):
             for epochs in param_grid.get("epochs", [2]):
-                scores = []
-                for train_idx, val_idx in splitter.split(X):
-                    X_tr, X_val = X[train_idx], X[val_idx]
-                    y_tr, y_val = y[train_idx], y[val_idx]
+                for dropout in param_grid.get("dropout", [0.0]):
+                    for l2_reg in param_grid.get("l2_reg", [0.0]):
+                        scores = []
+                        for train_idx, val_idx in splitter.split(X):
+                            X_tr, X_val = X[train_idx], X[val_idx]
+                            y_tr, y_val = y[train_idx], y[val_idx]
 
-                    model = keras.Sequential([
-                        layers.Input(shape=(X_tr.shape[1], X_tr.shape[2])),
-                        layers.LSTM(units, activation="relu"),
-                        layers.Dense(1),
-                    ])
-                    model.compile(optimizer="adam", loss="mse")
-                    model.fit(X_tr, y_tr, epochs=epochs, verbose=0)
-                    val_pred = model.predict(X_val, verbose=0).flatten()
-                    scores.append(np.mean(np.abs(y_val - val_pred)))
+                            reg = keras.regularizers.l2(l2_reg) if l2_reg else None
+                            model = keras.Sequential([
+                                layers.Input(shape=(X_tr.shape[1], X_tr.shape[2])),
+                                layers.LSTM(
+                                    units,
+                                    activation="relu",
+                                    dropout=dropout,
+                                    kernel_regularizer=reg,
+                                ),
+                                layers.Dense(1, kernel_regularizer=reg),
+                            ])
+                            model.compile(optimizer="adam", loss="mse")
+                            model.fit(X_tr, y_tr, epochs=epochs, verbose=0)
+                            val_pred = model.predict(X_val, verbose=0).flatten()
+                            scores.append(np.mean(np.abs(y_val - val_pred)))
 
-                avg_score = float(np.mean(scores))
-                if avg_score < best_score:
-                    best_score = avg_score
-                    best_params = {"units": units, "epochs": epochs}
+                        avg_score = float(np.mean(scores))
+                        if avg_score < best_score:
+                            best_score = avg_score
+                            best_params = {
+                                "units": units,
+                                "epochs": epochs,
+                                "dropout": dropout,
+                                "l2_reg": l2_reg,
+                            }
 
         logger.info("LSTM best params: %s", best_params)
 
         # Train final model on full dataset
+        final_reg = (
+            keras.regularizers.l2(best_params["l2_reg"])
+            if best_params.get("l2_reg")
+            else None
+        )
         model = keras.Sequential([
             layers.Input(shape=(X.shape[1], X.shape[2])),
-            layers.LSTM(best_params["units"], activation="relu"),
-            layers.Dense(1),
+            layers.LSTM(
+                best_params["units"],
+                activation="relu",
+                dropout=best_params.get("dropout", 0.0),
+                kernel_regularizer=final_reg,
+            ),
+            layers.Dense(1, kernel_regularizer=final_reg),
         ])
         model.compile(optimizer="adam", loss="mse")
         model.fit(X, y, epochs=best_params["epochs"], verbose=0)

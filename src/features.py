@@ -16,6 +16,22 @@ def _add_basic_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _add_window_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """Add rolling window statistics for multiple horizons."""
+    df = df.copy()
+    windows = [5, 10, 20, 50]
+    for w in windows:
+        roll = df["Close"].rolling(window=w, min_periods=1)
+        df[f"ma_{w}"] = roll.mean()
+        df[f"min_{w}"] = roll.min()
+        df[f"q25_{w}"] = roll.quantile(0.25)
+        df[f"median_{w}"] = roll.quantile(0.5)
+        df[f"q75_{w}"] = roll.quantile(0.75)
+        df[f"max_{w}"] = roll.max()
+        df[f"std_{w}"] = roll.std()
+    return df
+
+
 def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     macd = ta.trend.MACD(df["Close"])
@@ -54,10 +70,23 @@ def _add_lag_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add day-of-week, day-of-month and US holiday flags."""
+    """Add calendar based features and seasonal cycles."""
     df = df.copy()
+
     df["dow"] = df.index.dayofweek
     df["dom"] = df.index.day
+    df["month"] = df.index.month
+
+    day_of_year = df.index.dayofyear.astype(float)
+    df["sin_week"] = np.sin(2 * np.pi * day_of_year / 7)
+    df["cos_week"] = np.cos(2 * np.pi * day_of_year / 7)
+    df["sin_month"] = np.sin(2 * np.pi * day_of_year / 30.5)
+    df["cos_month"] = np.cos(2 * np.pi * day_of_year / 30.5)
+    df["sin_quarter"] = np.sin(2 * np.pi * day_of_year / 91.25)
+    df["cos_quarter"] = np.cos(2 * np.pi * day_of_year / 91.25)
+    df["sin_year"] = np.sin(2 * np.pi * day_of_year / 365)
+    df["cos_year"] = np.cos(2 * np.pi * day_of_year / 365)
+
 
     cal = USFederalHolidayCalendar()
     holidays = cal.holidays(start=df.index.min(), end=df.index.max())
@@ -109,6 +138,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         group = _add_basic_indicators(group)
         group = _add_advanced_indicators(group)
         group = _add_lag_features(group)
+        group = _add_window_stats(group)
         group = _add_seasonal_features(group)
         group = _add_trend_line(group)
         group = _add_decomposition(group)
