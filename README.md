@@ -57,6 +57,11 @@ Estas son las claves principales de `config.yaml` y su uso:
 En los flujos de GitHub Actions tambien se utilizan `GITHUB_TOKEN` o `GH_PAT`
 para autorizar los commits automaticos.
 
+## Registros y modo offline
+
+Si una descarga falla o no tienes conexion, los scripts generan datos de ejemplo para que puedas seguir el flujo. Ademas, cada etapa escribe mensajes detallados en la consola indicando su progreso y si se activo este modo.
+
+
 
 ## Estructura de carpetas
 
@@ -147,6 +152,14 @@ La funcion de evaluacion calcula los siguientes indicadores:
    python -m src.notify.notifier --message "Proceso completo"
    ```
    Envía un aviso por correo o chat con los resultados finales.
+
+8. **Limpieza opcional**
+
+   ```bash
+   python -m src.clean_models
+   ```
+   Elimina los modelos guardados para empezar de cero.
+
 
 ## Flujo de entrenamiento y prediccion
 
