@@ -1,4 +1,4 @@
-"""Simple linear regression utilities."""
+"""Simple ridge regression utilities."""
 import logging
 import time
 from typing import Any, Union
@@ -15,7 +15,7 @@ def train_linear(
     cv: Union[int, BaseCrossValidator] = 3,
     **kwargs,
 ) -> Any:
-    """Train a linear regression model with basic cross-validation."""
+    """Train a ridge regression model with basic cross-validation."""
     start = time.perf_counter()
     logger.info("Training Ridge Regression model")
 
@@ -29,13 +29,13 @@ def train_linear(
             cv=splitter,
             scoring="neg_mean_absolute_error",
         )
-        logger.info("Linear CV MAE: %.4f", -scores.mean())
+        logger.info("Ridge CV MAE: %.4f", -scores.mean())
         model.fit(X_train, y_train)
     except Exception:
-        logger.exception("Error while training Linear Regression")
+        logger.exception("Error while training Ridge Regression")
         raise
     finally:
         duration = time.perf_counter() - start
-        logger.info("Linear Regression training finished in %.2f seconds", duration)
+        logger.info("Ridge Regression training finished in %.2f seconds", duration)
 
     return model
