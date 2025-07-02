@@ -114,7 +114,7 @@ def train_models(
         log_df_details(f"test features {ticker}", X_test)
 
         n_samples = len(df_train)
-        cv_splitter = rolling_cv(n_samples)
+        cv_splitter = rolling_cv(n_samples, max_splits=12)
 
         with timed_stage(f"train Linear {ticker}"):
             try:
@@ -155,9 +155,9 @@ def train_models(
         with timed_stage(f"train RF {ticker}"):
             try:
                 rf_grid = {
-                    "n_estimators": [20],
-                    "max_depth": [3],
-                    "min_samples_leaf": [1],
+                    "n_estimators": [50, 100, 150],
+                    "max_depth": [3, 5, 7],
+                    "min_samples_leaf": [1, 2],
                 }
                 rf = train_rf(X_train, y_train, param_grid=rf_grid, cv=cv_splitter)
                 rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
@@ -196,9 +196,9 @@ def train_models(
         with timed_stage(f"train XGB {ticker}"):
             try:
                 xgb_grid = {
-                    "n_estimators": [50],
-                    "max_depth": [3],
-                    "learning_rate": [0.1],
+                    "n_estimators": [50, 100, 150],
+                    "max_depth": [3, 5, 7],
+                    "learning_rate": [0.05, 0.1, 0.2],
                 }
                 xgb = train_xgb(X_train, y_train, param_grid=xgb_grid, cv=cv_splitter)
                 xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
@@ -237,9 +237,9 @@ def train_models(
         with timed_stage(f"train LGBM {ticker}"):
             try:
                 lgbm_grid = {
-                    "n_estimators": [50],
-                    "max_depth": [3],
-                    "learning_rate": [0.1],
+                    "n_estimators": [50, 100, 150],
+                    "max_depth": [3, 5, 7],
+                    "learning_rate": [0.05, 0.1, 0.2],
                 }
                 lgbm = train_lgbm(X_train, y_train, param_grid=lgbm_grid, cv=cv_splitter)
                 lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm.pkl"
@@ -278,10 +278,10 @@ def train_models(
         with timed_stage(f"train LSTM {ticker}"):
             try:
                 lstm_grid = {
-                    "units": [16],
-                    "epochs": [2],
-                    "dropout": [0.0],
-                    "l2_reg": [0.0],
+                    "units": [16, 32],
+                    "epochs": [2, 3],
+                    "dropout": [0.0, 0.2],
+                    "l2_reg": [0.0, 0.001],
                 }
                 lstm = train_lstm(X_train, y_train, param_grid=lstm_grid, cv=cv_splitter)
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
