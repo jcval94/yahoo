@@ -38,8 +38,28 @@ def _is_lfs_pointer(path: Path) -> bool:
         return False
 
 
+class _NaiveModel:
+    """Fallback model returning the last close value or zero."""
+
+    def predict(self, X: pd.DataFrame):
+        if len(X) == 0:
+            return []
+        if isinstance(X, pd.DataFrame) and "Close" in X.columns:
+            last = X["Close"].iloc[-1]
+            return [last] * len(X)
+        return [0] * len(X)
+
+
+def _is_valid_model(obj: Any) -> bool:
+    """Return True if the loaded object can make predictions."""
+    return hasattr(obj, "predict")
+
+
 def load_models(model_dir: Path) -> Dict[str, Any]:
     models = {}
+    if not model_dir.exists():
+        logger.warning("Model directory %s does not exist, using naive defaults", model_dir)
+        return {f"{t}_naive": _NaiveModel() for t in CONFIG.get("etfs", [])}
     for file in model_dir.iterdir():
         if not file.is_file():
             continue
@@ -51,7 +71,11 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
             continue
         if file.suffix == ".pkl":
             try:
-                models[file.stem] = joblib.load(file)
+                loaded = joblib.load(file)
+                if _is_valid_model(loaded):
+                    models[file.stem] = loaded
+                else:
+                    logger.error("%s does not appear to be a trained model", file)
             except Exception:
                 logger.error("Failed to load model %s", file)
         elif file.suffix == ".keras":
@@ -59,13 +83,17 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
                 logger.error("TensorFlow unavailable; cannot load %s", file)
                 continue
             try:
-                models[file.stem] = keras.models.load_model(file)
+                loaded = keras.models.load_model(file)
+                if _is_valid_model(loaded):
+                    models[file.stem] = loaded
+                else:
+                    logger.error("%s does not appear to be a trained model", file)
             except Exception:
                 logger.error("Failed to load model %s", file)
     if not models:
-        raise FileNotFoundError(
-            f"No trained models found in {model_dir}. Run the monthly training first."
-        )
+        logger.warning("No trained models found in %s, using naive defaults", model_dir)
+        for ticker in CONFIG.get("etfs", []):
+            models[f"{ticker}_naive"] = _NaiveModel()
     return models
 
 
