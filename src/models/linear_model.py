@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def train_linear(
     X_train,
     y_train,
-    cv: Union[int, BaseCrossValidator] = 3,
+    cv: Union[int, BaseCrossValidator] = 5,
     **kwargs,
 ) -> Any:
     """Train a ridge regression model with basic cross-validation."""

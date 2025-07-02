@@ -15,7 +15,7 @@ def train_lstm(
     X_train,
     y_train,
     param_grid: Dict[str, Sequence] | None = None,
-    cv: Union[int, BaseCrossValidator] = 3,
+    cv: Union[int, BaseCrossValidator] = 5,
     **kwargs,
 ) -> Any:
     """Train a simple LSTM using manual cross-validation."""
@@ -24,7 +24,12 @@ def train_lstm(
     logger.info("Training LSTM model")
 
     if param_grid is None:
-        param_grid = {"units": [16], "epochs": [2], "dropout": [0.0], "l2_reg": [0.0]}
+        param_grid = {
+            "units": [16, 32],
+            "epochs": [2, 3],
+            "dropout": [0.0, 0.2],
+            "l2_reg": [0.0, 0.001],
+        }
 
     X = np.asarray(X_train).astype(float)
     y = np.asarray(y_train).astype(float)
