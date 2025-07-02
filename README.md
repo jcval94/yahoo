@@ -36,8 +36,13 @@ El archivo `config.yaml` define los ETFs que se procesaran y otras opciones basi
 etfs:
   - SPY
   - QQQ
+  - IEF
+  - GLD
+  - EEM
+  - VNQ
 start_date: "2015-01-01"
 prediction_horizon: 5
+risk_free_rate: 0.015
 ```
 
 Modifica este archivo segun tus necesidades.
@@ -72,12 +77,15 @@ flowchart TB
       A1[abt] -- build_abt.py --> A2[Generar ABT]
       B1[models] -- rf_model.py --> B2[Modelos ML]
       C1[portfolio] -- backtest.py --> C2[Portafolio]
+      D1[features] -- features.py --> D2[Indicadores]
+      E1[var_selection] -- variable_selection.py --> E2[Seleccion]
     end
     src -->|utilidades| utils
     src --> preprocess
     src --> training
     src --> predict
     src --> evaluation
+    src --> notify
 ```
 
 La carpeta `src` contiene las utilidades principales. Algunos scripts son plantillas listas para que agregues tu logica.
@@ -87,6 +95,9 @@ La carpeta `src` contiene las utilidades principales. Algunos scripts son planti
   Estos archivos `*.pkl` se rastrean mediante **Git LFS**, por lo que conviene ejecutar `git lfs install` tras clonar el proyecto.
 * `portfolio/` ofrece herramientas para backtesting y optimizacion de cartera.
 * `notify/` muestra como enviar un mensaje con los resultados.
+* `features.py` implementa indicadores técnicos usados en el ABT.
+* `variable_selection.py` ayuda a elegir las columnas más relevantes.
+* `clean_models.py` borra modelos antiguos para un reinicio rápido.
 
 Ademas existen scripts de seleccion y prediccion en la raiz del paquete para ejecutar el flujo sin complicaciones.
 
@@ -114,8 +125,9 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    python -m src.training
    ```
 
-    Se generan varios modelos de ejemplo y se guardan en `models/`. Cada
-   entrenamiento utiliza por defecto los últimos **9 meses** de datos 
+   Se generan varios modelos de ejemplo y se guardan en `models/`. Actualmente
+   se entrenan regresión lineal, Random Forest, XGBoost, LightGBM, LSTM y ARIMA.
+  Cada entrenamiento utiliza por defecto los últimos **9 meses** de datos
    (más unos 50 días extra para calcular las medias móviles) y reserva la
    última semana como conjunto de validación. Se aplica validación
    cruzada temporal con ventanas de 60 días para predecir el día siguiente.
