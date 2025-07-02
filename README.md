@@ -115,10 +115,10 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    ```
 
     Se generan varios modelos de ejemplo y se guardan en `models/`. Cada
-   entrenamiento utiliza por defecto los últimos **9 meses** de datos 
+   entrenamiento utiliza por defecto los últimos **12 meses** de datos
    (más unos 50 días extra para calcular las medias móviles) y reserva la
    última semana como conjunto de validación. Se aplica validación
-   cruzada temporal con ventanas de 60 días para predecir el día siguiente.
+   cruzada temporal con ventanas de 90 días y horizonte de 3 días.
     Puedes ampliar la grilla de parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
    verás un resumen de las matrices de entrenamiento usadas para cada ticker.
    Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
