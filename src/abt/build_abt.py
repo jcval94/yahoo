@@ -150,8 +150,8 @@ def _to_weekly(df: pd.DataFrame) -> pd.DataFrame:
     return weekly
 
 
-def _to_quarterly(df: pd.DataFrame) -> pd.DataFrame:
-    """Resample daily OHLC data to quarterly frequency."""
+def _to_monthly(df: pd.DataFrame) -> pd.DataFrame:
+    """Resample daily OHLC data to monthly frequency."""
     if df.empty:
         return df
 
@@ -170,8 +170,8 @@ def _to_quarterly(df: pd.DataFrame) -> pd.DataFrame:
         else:
             agg[col] = "last"
 
-    quarterly = df.resample("Q").agg(agg)
-    return quarterly
+    monthly = df.resample("M").agg(agg)
+    return monthly
 
 def build_abt(frequency: str = "daily") -> dict:
     """Build analytic base tables for all tickers defined in the config."""
@@ -188,8 +188,8 @@ def build_abt(frequency: str = "daily") -> dict:
                 df = download_ticker(ticker, start_dt.strftime("%Y-%m-%d"))
                 if frequency == "weekly":
                     df = _to_weekly(df)
-                elif frequency == "quarterly":
-                    df = _to_quarterly(df)
+                elif frequency == "monthly":
+                    df = _to_monthly(df)
                 df["Ticker"] = ticker
                 combined_frames.append(df)
         except Exception:
@@ -230,9 +230,9 @@ def build_weekly_abt() -> dict:
     return build_abt("weekly")
 
 
-def build_quarterly_abt() -> dict:
-    """Build quarterly analytic base tables for configured tickers."""
-    return build_abt("quarterly")
+def build_monthly_abt() -> dict:
+    """Build monthly analytic base tables for configured tickers."""
+    return build_abt("monthly")
 
 def main():
     """Entry point for command line execution."""
@@ -244,20 +244,20 @@ def main():
     parser = argparse.ArgumentParser(description="Build analytic base tables")
     parser.add_argument(
         "--frequency",
-        choices=["daily", "weekly", "quarterly"],
+        choices=["daily", "weekly", "monthly"],
         default="daily",
         help="data frequency for the ABT",
     )
     parser.add_argument("--weekly", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
-        "--quarterly", action="store_true", help=argparse.SUPPRESS
+        "--monthly", action="store_true", help=argparse.SUPPRESS
     )
     args = parser.parse_args()
 
     if args.weekly:
         args.frequency = "weekly"
-    elif args.quarterly:
-        args.frequency = "quarterly"
+    elif args.monthly:
+        args.frequency = "monthly"
 
     build_abt(args.frequency)
 
