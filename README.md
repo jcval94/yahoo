@@ -131,6 +131,7 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    python -m src.predict
    ```
    Aplica los modelos guardados y crea `results/predictions.csv`.
+   El archivo contiene las columnas `ticker`, `model`, `parameters`, `actual` y `pred`.
 
 5. **Evaluacion**
 
