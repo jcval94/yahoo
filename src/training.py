@@ -14,6 +14,7 @@ from .models.linear_model import train_linear
 from .models.lightgbm_model import train_lgbm
 from .models.arima_model import train_arima
 from .utils import timed_stage, log_df_details, log_offline_mode, rolling_cv
+from .variable_selection import select_features_rf_cv
 from .evaluation import evaluate_predictions
 
 # Maximum days required by moving averages or lag features
@@ -101,10 +102,13 @@ def train_models(
             logger.warning("%s has no test data; skipping training", ticker)
             continue
 
-        X_train = df_train.drop(columns=[target_col, "target"], errors="ignore")
+        fs_df = df_train.drop(columns=[target_col], errors="ignore")
+        selected_cols = select_features_rf_cv(fs_df, target_col="target")
+        X_train = df_train[selected_cols]
         y_train = df_train["target"]
-        X_test = df_test.drop(columns=[target_col, "target"], errors="ignore")
+        X_test = df_test[selected_cols]
         y_test = df_test["target"]
+        logger.info("%s selected features: %s", ticker, selected_cols)
         log_df_details(f"train features {ticker}", X_train)
         log_df_details(f"test features {ticker}", X_test)
 
