@@ -1,7 +1,7 @@
 ticker,model,parameters,actual,pred
-SPY,RandomForestRegressor,"{'max_depth': 3}",617.6500244140625,0
-QQQ,RandomForestRegressor,"{'max_depth': 3}",546.989990234375,0
-IEF,RandomForestRegressor,"{'max_depth': 3}",95.29000091552734,0
-GLD,RandomForestRegressor,"{'max_depth': 3}",307.54998779296875,0
-EEM,RandomForestRegressor,"{'max_depth': 3}",48.33000183105469,0
-VNQ,RandomForestRegressor,"{'max_depth': 3}",89.70999908447266,0
+SPY,_NaiveModel,{},617.6500244140625,0
+QQQ,_NaiveModel,{},546.989990234375,0
+IEF,_NaiveModel,{},95.29000091552734,0
+GLD,_NaiveModel,{},307.54998779296875,0
+EEM,_NaiveModel,{},48.33000183105469,0
+VNQ,_NaiveModel,{},89.70999908447266,0
