@@ -34,3 +34,15 @@ def test_select_features_importance_and_multicollinearity():
     assert "x3" in selected
     max_features = int(np.sqrt(df.shape[1] - 1)) + 7
     assert len(selected) <= max_features
+
+def test_remove_multicollinearity_drops_correlated():
+    rng = np.random.default_rng(1)
+    x1 = rng.random(100)
+    x2 = x1 + rng.normal(scale=0.001, size=100)
+    x3 = rng.random(100)
+    df = pd.DataFrame({'x1': x1, 'x2': x2, 'x3': x3})
+    result = vs.remove_multicollinearity(df, threshold=0.8)
+    cols = set(result.columns)
+    assert {'x1', 'x2'} & cols
+    assert not ({'x1', 'x2'} <= cols)
+    assert 'x3' in cols
