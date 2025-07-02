@@ -95,7 +95,12 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
     return models
 
 
-def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+def run_predictions(
+    models: Dict[str, Any],
+    data: Dict[str, pd.DataFrame],
+    frequency: str = "daily",
+) -> pd.DataFrame:
+    """Run predictions for the given data."""
     rows = []
     for name, model in models.items():
         ticker = name.split("_")[0]
@@ -113,6 +118,9 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
         log_df_details(f"predict data {ticker}", df)
         X = df.drop(columns=[target_col], errors="ignore")
         y = df.get(target_col)
+        train_start = df.index.min().date()
+        train_end = df.index.max().date()
+        predict_dt = df.index.max().date()
         try:
             preds = getattr(model, "predict", lambda X: None)(X)
             if preds is None:
@@ -134,11 +142,20 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
                 "parameters": params,
                 "actual": y.iloc[-1],
                 "pred": last_pred,
+                "Training Window": f"{train_start} a {train_end}",
+                "Predict moment": str(predict_dt),
             })
         except Exception:
             logger.error("Prediction failed for %s", name)
     result_df = pd.DataFrame(rows)
-    out_file = RESULTS_DIR / "predictions.csv"
+    pred_dir = RESULTS_DIR / "predicts"
+    pred_dir.mkdir(exist_ok=True, parents=True)
+    suffix = {
+        "daily": "daily_predictions.csv",
+        "weekly": "weekly_predictions.csv",
+        "monthly": "monthly_predictions.csv",
+    }.get(frequency, "predictions.csv")
+    out_file = pred_dir / suffix
     try:
         result_df.to_csv(out_file, index=False)
         logger.info("Saved predictions to %s", out_file)
@@ -153,7 +170,18 @@ if __name__ == "__main__":
     logging.getLogger("yfinance").setLevel(logging.CRITICAL)
     from .abt.build_abt import build_abt
 
-    data_paths = build_abt()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run predictions")
+    parser.add_argument(
+        "--frequency",
+        choices=["daily", "weekly", "monthly"],
+        default="daily",
+        help="data frequency to use",
+    )
+    args = parser.parse_args()
+
+    data_paths = build_abt(args.frequency)
     data = {t: pd.read_csv(p, index_col=0, parse_dates=True) for t, p in data_paths.items()}
     models = load_models(MODEL_DIR)
-    run_predictions(models, data)
+    run_predictions(models, data, frequency=args.frequency)
