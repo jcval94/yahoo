@@ -3,7 +3,8 @@ data/
 
 # Keep only predictions CSV from results
 results/*
-!results/predictions.csv
+!results/predicts/
+!results/predicts/*.csv
 !results/metrics/
 !results/metrics/**
 
