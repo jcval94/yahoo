@@ -121,7 +121,8 @@ def train_models(
                 lin = train_linear(X_train, y_train, cv=cv_splitter)
                 lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg.pkl"
                 joblib.dump(lin, lin_path)
-                with open(lin_path.with_suffix('').with_suffix('_features.json'), 'w') as fh:
+                features_path = lin_path.with_name(lin_path.stem + '_features.json')
+                with open(features_path, 'w') as fh:
                     json.dump(selected_cols, fh)
                 paths[f"{ticker}_linreg"] = lin_path
                 try:
@@ -161,7 +162,8 @@ def train_models(
                 rf = train_rf(X_train, y_train, param_grid=rf_grid, cv=cv_splitter)
                 rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
                 joblib.dump(rf, rf_path)
-                with open(rf_path.with_suffix('').with_suffix('_features.json'), 'w') as fh:
+                features_path = rf_path.with_name(rf_path.stem + '_features.json')
+                with open(features_path, 'w') as fh:
                     json.dump(selected_cols, fh)
                 paths[f"{ticker}_rf"] = rf_path
                 try:
@@ -201,7 +203,8 @@ def train_models(
                 xgb = train_xgb(X_train, y_train, param_grid=xgb_grid, cv=cv_splitter)
                 xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
                 joblib.dump(xgb, xgb_path)
-                with open(xgb_path.with_suffix('').with_suffix('_features.json'), 'w') as fh:
+                features_path = xgb_path.with_name(xgb_path.stem + '_features.json')
+                with open(features_path, 'w') as fh:
                     json.dump(selected_cols, fh)
                 paths[f"{ticker}_xgb"] = xgb_path
                 try:
@@ -241,7 +244,8 @@ def train_models(
                 lgbm = train_lgbm(X_train, y_train, param_grid=lgbm_grid, cv=cv_splitter)
                 lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm.pkl"
                 joblib.dump(lgbm, lgbm_path)
-                with open(lgbm_path.with_suffix('').with_suffix('_features.json'), 'w') as fh:
+                features_path = lgbm_path.with_name(lgbm_path.stem + '_features.json')
+                with open(features_path, 'w') as fh:
                     json.dump(selected_cols, fh)
                 paths[f"{ticker}_lgbm"] = lgbm_path
                 try:
@@ -281,10 +285,12 @@ def train_models(
                 }
                 lstm = train_lstm(X_train, y_train, param_grid=lstm_grid, cv=cv_splitter)
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
-                lstm.save(lstm_path.with_suffix('.keras'))
-                with open(lstm_path.with_suffix('.keras').with_suffix('').with_suffix('_features.json'), 'w') as fh:
+                keras_path = lstm_path.with_suffix('.keras')
+                lstm.save(keras_path)
+                features_path = keras_path.with_name(keras_path.stem + '_features.json')
+                with open(features_path, 'w') as fh:
                     json.dump(selected_cols, fh)
-                paths[f"{ticker}_lstm"] = lstm_path.with_suffix('.keras')
+                paths[f"{ticker}_lstm"] = keras_path
                 try:
                     preds_train = lstm.predict(X_train)
                     preds_train = preds_train.flatten() if hasattr(preds_train, "flatten") else preds_train
@@ -319,7 +325,8 @@ def train_models(
                 arima = train_arima(y_train)
                 arima_path = MODEL_DIR / f"{ticker}_{frequency}_arima.pkl"
                 joblib.dump(arima, arima_path)
-                with open(arima_path.with_suffix('').with_suffix('_features.json'), 'w') as fh:
+                features_path = arima_path.with_name(arima_path.stem + '_features.json')
+                with open(features_path, 'w') as fh:
                     json.dump(selected_cols, fh)
                 paths[f"{ticker}_arima"] = arima_path
                 try:
