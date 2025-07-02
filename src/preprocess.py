@@ -24,7 +24,7 @@ def extract_data(tickers: List[str], start: str) -> Dict[str, pd.DataFrame]:
             try:
                 df = yf.download(t, start=start, progress=False)
             except Exception:
-                logger.error("Failed to download %s, using sample", t)
+                logger.exception("Failed to download %s, using sample", t)
                 df = generate_sample_data(start)
         if df.empty:
             logger.warning("%s download empty, using sample", t)

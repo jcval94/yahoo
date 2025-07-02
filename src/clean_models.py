@@ -23,7 +23,7 @@ def delete_models(model_dir: Path = MODEL_DIR) -> None:
                 item.unlink()
             logger.info("Deleted %s", item)
         except Exception:
-            logger.error("Failed to delete %s", item)
+            logger.exception("Failed to delete %s", item)
 
 
 if __name__ == "__main__":

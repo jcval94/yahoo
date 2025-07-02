@@ -87,7 +87,7 @@ def download_ticker(
                 if not df.empty:
                     break
             except Exception as exc:
-                logger.error("yf intento %d falló: %s", attempt, exc)
+                logger.exception("yf intento %d falló: %s", attempt, exc)
                 df = pd.DataFrame()
             time.sleep(1)
 
@@ -96,7 +96,7 @@ def download_ticker(
                 df = _download_stooq(ticker, start_dt, today)
                 logger.info("Stooq suministró %d filas para %s", len(df), ticker)
             except Exception as exc:
-                logger.error("Stooq también falló: %s", exc)
+                logger.exception("Stooq también falló: %s", exc)
 
         if df.empty:
             logger.warning("Todo falló. Generando datos de ejemplo.")
@@ -193,7 +193,7 @@ def build_abt(frequency: str = "daily") -> dict:
                 df["Ticker"] = ticker
                 combined_frames.append(df)
         except Exception:
-            logger.error("Failed to download %s", ticker)
+            logger.exception("Failed to download %s", ticker)
 
     if not combined_frames:
         log_offline_mode(f"build_{frequency}_abt")

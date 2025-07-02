@@ -144,9 +144,9 @@ def train_models(
                         test_metrics,
                     )
                 except Exception:
-                    logger.error("Failed Linear evaluation for %s", ticker)
+                    logger.exception("Failed Linear evaluation for %s", ticker)
             except Exception:
-                logger.error("Failed Linear training for %s", ticker)
+                logger.exception("Failed Linear training for %s", ticker)
 
         with timed_stage(f"train RF {ticker}"):
             try:
@@ -182,9 +182,9 @@ def train_models(
                         test_metrics,
                     )
                 except Exception:
-                    logger.error("Failed RF evaluation for %s", ticker)
+                    logger.exception("Failed RF evaluation for %s", ticker)
             except Exception:
-                logger.error("Failed RF training for %s", ticker)
+                logger.exception("Failed RF training for %s", ticker)
 
         with timed_stage(f"train XGB {ticker}"):
             try:
@@ -220,9 +220,9 @@ def train_models(
                         test_metrics,
                     )
                 except Exception:
-                    logger.error("Failed XGB evaluation for %s", ticker)
+                    logger.exception("Failed XGB evaluation for %s", ticker)
             except Exception:
-                logger.error("Failed XGB training for %s", ticker)
+                logger.exception("Failed XGB training for %s", ticker)
 
         with timed_stage(f"train LGBM {ticker}"):
             try:
@@ -258,9 +258,9 @@ def train_models(
                         test_metrics,
                     )
                 except Exception:
-                    logger.error("Failed LGBM evaluation for %s", ticker)
+                    logger.exception("Failed LGBM evaluation for %s", ticker)
             except Exception:
-                logger.error("Failed LGBM training for %s", ticker)
+                logger.exception("Failed LGBM training for %s", ticker)
 
         with timed_stage(f"train LSTM {ticker}"):
             try:
@@ -299,9 +299,9 @@ def train_models(
                         test_metrics,
                     )
                 except Exception:
-                    logger.error("Failed LSTM evaluation for %s", ticker)
+                    logger.exception("Failed LSTM evaluation for %s", ticker)
             except Exception:
-                logger.error("Failed LSTM training for %s", ticker)
+                logger.exception("Failed LSTM training for %s", ticker)
 
         with timed_stage(f"train ARIMA {ticker}"):
             try:
@@ -332,9 +332,9 @@ def train_models(
                         test_metrics,
                     )
                 except Exception:
-                    logger.error("Failed ARIMA evaluation for %s", ticker)
+                    logger.exception("Failed ARIMA evaluation for %s", ticker)
             except Exception:
-                logger.error("Failed ARIMA training for %s", ticker)
+                logger.exception("Failed ARIMA training for %s", ticker)
 
     if metrics_rows:
         metrics_df = pd.DataFrame(metrics_rows)
@@ -343,7 +343,7 @@ def train_models(
             metrics_df.to_csv(metrics_file, index=False)
             logger.info("Saved evaluation metrics to %s", metrics_file)
         except Exception:
-            logger.error("Failed to save metrics to %s", metrics_file)
+            logger.exception("Failed to save metrics to %s", metrics_file)
         logger.info("Metrics summary:\n%s", metrics_df)
 
     log_offline_mode("training")
