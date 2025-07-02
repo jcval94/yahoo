@@ -12,8 +12,6 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     keras = None
 
-from sklearn.metrics import mean_absolute_error, r2_score
-
 from .utils import log_df_details, log_offline_mode, load_config
 
 logger = logging.getLogger(__name__)
@@ -119,14 +117,21 @@ def run_predictions(models: Dict[str, Any], data: Dict[str, pd.DataFrame]) -> pd
             preds = getattr(model, "predict", lambda X: None)(X)
             if preds is None:
                 continue
-            mae = mean_absolute_error(y, preds)
-            r2 = r2_score(y, preds)
             pred_array = np.asarray(preds).reshape(-1)
             last_pred = pred_array[-1] if pred_array.size else None
+
+            model_name = getattr(model, "__class__", type(model)).__name__
+            params = {}
+            if hasattr(model, "get_params"):
+                try:
+                    params = model.get_params()
+                except Exception:
+                    logger.warning("Could not retrieve parameters for %s", name)
+
             rows.append({
                 "ticker": ticker,
-                "mae": mae,
-                "r2": r2,
+                "model": model_name,
+                "parameters": params,
                 "actual": y.iloc[-1],
                 "pred": last_pred,
             })

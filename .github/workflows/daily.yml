@@ -25,13 +25,19 @@ jobs:
           pip install --upgrade pip
           pip install yfinance==0.2.61 ta==0.11.0 requests-cache==1.2.0 pandas>=2.2
           pip install -r requirements.txt
-      - run: python -m src.abt.build_abt
+      - name: Build ABT
+        run: |
+          set -e
+          python -m src.abt.build_abt 2>&1 | tee abt.log || { echo "::error::ABT failed"; exit 1; }
       - name: Upload ABT artifacts
         uses: actions/upload-artifact@v4
         with:
           name: abt-data
           path: data/*.csv
-      - run: python -m src.predict
+      - name: Predict
+        run: |
+          set -e
+          python -m src.predict 2>&1 | tee predict.log || { echo "::error::Prediction failed"; exit 1; }
       - name: Commit results
         env:
           PUSH_TOKEN: ${{ secrets.GH_PAT }}
@@ -47,4 +53,12 @@ jobs:
             token=${PUSH_TOKEN:-$GITHUB_TOKEN}
             git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
           fi
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-logs
+          path: |
+            abt.log
+            predict.log
       - run: python -m src.notify.notifier --message "Proceso diario completado"
