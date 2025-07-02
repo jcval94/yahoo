@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any
+import json
 
 import joblib
 import pandas as pd
@@ -117,6 +118,17 @@ def run_predictions(
         logger.info("Using target column %s for %s", target_col, ticker)
         log_df_details(f"predict data {ticker}", df)
         X = df.drop(columns=[target_col], errors="ignore")
+        if "Ticker" in X:
+            X = X.drop(columns=["Ticker"])
+        X = X.select_dtypes(exclude="object")
+        feature_file = MODEL_DIR / f"{name}_features.json"
+        if feature_file.exists():
+            try:
+                with feature_file.open() as fh:
+                    selected = json.load(fh)
+                X = X.reindex(columns=selected, fill_value=0)
+            except Exception:
+                logger.exception("Failed to align features for %s", name)
         y = df.get(target_col)
         train_start = df.index.min().date()
         train_end = df.index.max().date()
