@@ -104,6 +104,7 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
   ```bash
   python -m src.abt.build_abt
   ```
+  Puedes pasar `--frequency weekly` o `--frequency quarterly` para obtener la ABT agregada en esas periodicidades.
   Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
    La ABT final incluye ademas las nuevas variables de rezago (1, 7 y 14 dias) y las medias moviles de 13 y 26 dias del cierre.
 

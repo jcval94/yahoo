@@ -1,4 +1,4 @@
-"""Build daily and weekly ABTs enriched with technical indicators."""
+"""Build analytic base tables enriched with technical indicators."""
 import logging
 from pathlib import Path
 from ..utils import load_config
@@ -173,8 +173,8 @@ def _to_quarterly(df: pd.DataFrame) -> pd.DataFrame:
     quarterly = df.resample("Q").agg(agg)
     return quarterly
 
-def build_abt() -> dict:
-    """Build the analytic base table for all tickers defined in the config."""
+def build_abt(frequency: str = "daily") -> dict:
+    """Build analytic base tables for all tickers defined in the config."""
     results = {}
     combined_frames = []
 
@@ -186,13 +186,17 @@ def build_abt() -> dict:
         try:
             with timed_stage(f"download {ticker}"):
                 df = download_ticker(ticker, start_dt.strftime("%Y-%m-%d"))
+                if frequency == "weekly":
+                    df = _to_weekly(df)
+                elif frequency == "quarterly":
+                    df = _to_quarterly(df)
                 df["Ticker"] = ticker
                 combined_frames.append(df)
         except Exception:
             logger.error("Failed to download %s", ticker)
 
     if not combined_frames:
-        log_offline_mode("build_abt")
+        log_offline_mode(f"build_{frequency}_abt")
         return results
 
     combined_df = pd.concat(combined_frames)
@@ -201,112 +205,34 @@ def build_abt() -> dict:
     for ticker, group_df in combined_df.groupby("Ticker"):
         with timed_stage(f"processing {ticker}"):
             group_df = enrich_indicators(group_df)
-        out_file = DATA_DIR / f"{ticker}.csv"
+        suffix = "" if frequency == "daily" else f"_{frequency}"
+        out_file = DATA_DIR / f"{ticker}{suffix}.csv"
         group_df.index.name = "Date"
         group_df.to_csv(out_file, index_label="Date")
-        log_df_details(f"saved {ticker}", group_df)
+        log_df_details(f"saved {ticker}{suffix}", group_df)
         results[ticker] = out_file
         processed_frames.append(group_df)
 
     combined_processed = pd.concat(processed_frames)
-    combined_file = DATA_DIR / "etfs_combined.csv"
+    suffix = "" if frequency == "daily" else f"_{frequency}"
+    combined_file = DATA_DIR / f"etfs_combined{suffix}.csv"
     combined_processed.index.name = "Date"
     combined_processed.to_csv(combined_file, index_label="Date")
-    log_df_details("saved combined", combined_processed)
+    log_df_details(f"saved combined{suffix}", combined_processed)
     results["combined"] = combined_file
 
-    log_offline_mode("build_abt")
+    log_offline_mode(f"build_{frequency}_abt")
     return results
 
 
 def build_weekly_abt() -> dict:
     """Build weekly analytic base tables for configured tickers."""
-    results = {}
-    combined_frames = []
-
-    five_years_ago = pd.Timestamp.today().normalize() - pd.DateOffset(years=5)
-    config_start = pd.to_datetime(CONFIG["start_date"])
-    start_dt = max(config_start, five_years_ago)
-
-    for ticker in CONFIG.get("etfs", []):
-        try:
-            with timed_stage(f"download {ticker}"):
-                df = download_ticker(ticker, start_dt.strftime("%Y-%m-%d"))
-                df = _to_weekly(df)
-                df["Ticker"] = ticker
-                combined_frames.append(df)
-        except Exception:
-            logger.error("Failed to download %s", ticker)
-
-    if not combined_frames:
-        log_offline_mode("build_weekly_abt")
-        return results
-
-    combined_df = pd.concat(combined_frames)
-
-    processed_frames = []
-    for ticker, group_df in combined_df.groupby("Ticker"):
-        with timed_stage(f"processing {ticker}"):
-            group_df = enrich_indicators(group_df)
-        out_file = DATA_DIR / f"{ticker}_weekly.csv"
-        group_df.index.name = "Date"
-        group_df.to_csv(out_file, index_label="Date")
-        log_df_details(f"saved {ticker}_weekly", group_df)
-        results[ticker] = out_file
-        processed_frames.append(group_df)
-
-    combined_processed = pd.concat(processed_frames)
-    combined_file = DATA_DIR / "etfs_combined_weekly.csv"
-    combined_processed.index.name = "Date"
-    combined_processed.to_csv(combined_file, index_label="Date")
-    log_df_details("saved combined weekly", combined_processed)
-    results["combined"] = combined_file
-
-    log_offline_mode("build_weekly_abt")
-    return results
+    return build_abt("weekly")
 
 
 def build_quarterly_abt() -> dict:
     """Build quarterly analytic base tables for configured tickers."""
-    results = {}
-    combined_frames = []
-
-    for ticker in CONFIG.get("etfs", []):
-        try:
-            with timed_stage(f"download {ticker}"):
-                df = download_ticker(ticker, CONFIG["start_date"])
-                df = _to_quarterly(df)
-                df["Ticker"] = ticker
-                combined_frames.append(df)
-        except Exception:
-            logger.error("Failed to download %s", ticker)
-
-    if not combined_frames:
-        log_offline_mode("build_quarterly_abt")
-        return results
-
-    combined_df = pd.concat(combined_frames)
-
-    processed_frames = []
-    for ticker, group_df in combined_df.groupby("Ticker"):
-        with timed_stage(f"processing {ticker}"):
-            group_df = enrich_indicators(group_df)
-        out_file = DATA_DIR / f"{ticker}_quarterly.csv"
-        group_df.index.name = "Date"
-        group_df.to_csv(out_file, index_label="Date")
-        log_df_details(f"saved {ticker}_quarterly", group_df)
-        results[ticker] = out_file
-        processed_frames.append(group_df)
-
-    combined_processed = pd.concat(processed_frames)
-    combined_file = DATA_DIR / "etfs_combined_quarterly.csv"
-    combined_processed.index.name = "Date"
-    combined_processed.to_csv(combined_file, index_label="Date")
-    log_df_details("saved combined quarterly", combined_processed)
-    results["combined"] = combined_file
-
-    log_offline_mode("build_quarterly_abt")
-    return results
+    return build_abt("quarterly")
 
 def main():
     """Entry point for command line execution."""
@@ -317,23 +243,23 @@ def main():
 
     parser = argparse.ArgumentParser(description="Build analytic base tables")
     parser.add_argument(
-        "--weekly",
-        action="store_true",
-        help="build weekly aggregated ABT instead of daily",
+        "--frequency",
+        choices=["daily", "weekly", "quarterly"],
+        default="daily",
+        help="data frequency for the ABT",
     )
+    parser.add_argument("--weekly", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
-        "--quarterly",
-        action="store_true",
-        help="build quarterly aggregated ABT instead of daily",
+        "--quarterly", action="store_true", help=argparse.SUPPRESS
     )
     args = parser.parse_args()
 
     if args.weekly:
-        build_weekly_abt()
+        args.frequency = "weekly"
     elif args.quarterly:
-        build_quarterly_abt()
-    else:
-        build_abt()
+        args.frequency = "quarterly"
+
+    build_abt(args.frequency)
 
 
 if __name__ == "__main__":
