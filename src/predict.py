@@ -75,7 +75,7 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
                 else:
                     logger.error("%s does not appear to be a trained model", file)
             except Exception:
-                logger.error("Failed to load model %s", file)
+                logger.exception("Failed to load model %s", file)
         elif file.suffix == ".keras":
             if keras is None:
                 logger.error("TensorFlow unavailable; cannot load %s", file)
@@ -87,7 +87,7 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
                 else:
                     logger.error("%s does not appear to be a trained model", file)
             except Exception:
-                logger.error("Failed to load model %s", file)
+                logger.exception("Failed to load model %s", file)
     if not models:
         logger.warning("No trained models found in %s, using naive defaults", model_dir)
         for ticker in CONFIG.get("etfs", []):
@@ -146,7 +146,7 @@ def run_predictions(
                 "Predict moment": str(predict_dt),
             })
         except Exception:
-            logger.error("Prediction failed for %s", name)
+            logger.exception("Prediction failed for %s", name)
     result_df = pd.DataFrame(rows)
     pred_dir = RESULTS_DIR / "predicts"
     pred_dir.mkdir(exist_ok=True, parents=True)
@@ -160,7 +160,7 @@ def run_predictions(
         result_df.to_csv(out_file, index=False)
         logger.info("Saved predictions to %s", out_file)
     except Exception:
-        logger.error("Failed to save predictions to %s", out_file)
+        logger.exception("Failed to save predictions to %s", out_file)
     log_offline_mode("prediction")
     return result_df
 
