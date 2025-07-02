@@ -92,7 +92,7 @@ La carpeta `src` contiene las utilidades principales. Algunos scripts son planti
 
 * `abt/` crea la "Analytic Base Table" con datos diarios descargados y enriquecidos.
 * `models/` almacena ejemplos de modelos de machine learning y los modelos entrenados mensualmente.
-  Estos archivos `*.pkl` se rastrean mediante **Git LFS**, por lo que conviene ejecutar `git lfs install` tras clonar el proyecto.
+  Estos archivos `*.pkl` se rastrean mediante **Git LFS**, por lo que conviene ejecutar `git lfs install` y `git lfs pull` tras clonar el proyecto.
 * `portfolio/` ofrece herramientas para backtesting y optimizacion de cartera.
 * `notify/` muestra como enviar un mensaje con los resultados.
 * `features.py` implementa indicadores técnicos usados en el ABT.

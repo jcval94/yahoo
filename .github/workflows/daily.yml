@@ -13,6 +13,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
+          lfs: true
+      - name: Setup Git LFS
+        run: git lfs install
+      - name: Fetch LFS models
+        run: git lfs pull
       - uses: actions/setup-python@v5
         with:
           python-version: 3.11
