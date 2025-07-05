@@ -41,7 +41,9 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add models/*.joblib models/*.json models/*.keras
+          git add models/*.joblib 2>/dev/null || true
+          git add models/*.json 2>/dev/null || true
+          git add models/*.keras 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No model changes to commit"
           else
