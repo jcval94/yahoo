@@ -132,6 +132,9 @@ def run_predictions(
                 "%s missing column %s, falling back to 'Close'", ticker, target_col
             )
             target_col = "Close"
+        df = df.copy()
+        if "delta" not in df.columns:
+            df["delta"] = df[target_col].diff()
         logger.info("Using target column %s for %s", target_col, ticker)
         log_df_details(f"predict data {ticker}", df)
         X = df.drop(columns=[target_col], errors="ignore")
