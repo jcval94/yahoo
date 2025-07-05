@@ -62,7 +62,7 @@ def train_lstm(
     X_train: np.ndarray,
     y_train: np.ndarray,
     param_space: Mapping[str, Sequence] | None = None,
-    n_iter: int = 4,
+    n_iter: int = 2,
     cv_splits: int = 3,
     verbose: int = 0,
 ) -> tf.keras.Model:
@@ -71,10 +71,11 @@ def train_lstm(
 
     # -- defaults -------------------------
     if param_space is None:
+        # small search space to keep runtime low
         param_space = {
-            "units": [32, 64, 96],
+            "units": [16, 32],
             "batch": [64],
-            "epochs": [30],
+            "epochs": [10],
             "l2_reg": [0.0, 1e-3],
         }
 

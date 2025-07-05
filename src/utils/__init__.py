@@ -135,7 +135,9 @@ def rolling_cv(
         this value provides better validation while keeping runtime
         reasonable.
     """
-    n_splits = min(max_splits, max(1, n_samples - train_size))
+    available = max(0, n_samples - train_size)
+    possible = available // max(1, horizon)
+    n_splits = min(max_splits, max(1, possible))
     return TimeSeriesSplit(
         n_splits=n_splits,
         test_size=horizon,

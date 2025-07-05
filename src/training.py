@@ -346,17 +346,18 @@ def train_models(
 
         with timed_stage(f"train LSTM {ticker}"):
             try:
+                # narrow search space to speed up LSTM training
                 lstm_grid = {
-                    "units": [8, 16],
+                    "units": [16],
                     "batch": [64],
                     "epochs": [2],
-                    "l2_reg": [0.001, 0.01],
+                    "l2_reg": [0.001],
                 }
                 lstm = train_lstm(
                     X_train,
                     y_train,
                     param_space=lstm_grid,
-                    n_iter=2,
+                    n_iter=1,
                     cv_splits=cv_splitter.n_splits,
                 )
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"

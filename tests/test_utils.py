@@ -81,6 +81,13 @@ def test_rolling_cv_small_samples():
     assert cv.n_splits == 2
 
 
+def test_rolling_cv_horizon_limit():
+    cv = rolling_cv(n_samples=200, train_size=90, horizon=20, max_splits=10)
+    expected = min(10, (200 - 90) // 20)
+    assert cv.n_splits == expected
+    assert cv.test_size == 20
+    assert cv.max_train_size == 90
+
 def test_hybrid_cv_split_basic():
     data = list(range(200))
     folds = list(hybrid_cv_split(data))
