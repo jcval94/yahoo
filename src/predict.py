@@ -1,5 +1,6 @@
 """Apply trained models to new data and store predictions."""
 import logging
+import re
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any
@@ -61,9 +62,23 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
     if not model_dir.exists():
         logger.warning("Model directory %s does not exist, using naive defaults", model_dir)
         return {f"{t}_naive": _NaiveModel() for t in CONFIG.get("etfs", [])}
+
+    # keep only the most recent version of each model to avoid stale schemas
+    latest: Dict[str, Path] = {}
+    hash_re = re.compile(r"_[0-9a-f]{10}$")
     for file in model_dir.iterdir():
         if not file.is_file():
             continue
+        if file.suffix not in {".pkl", ".joblib", ".keras"}:
+            continue
+        if file.stem.endswith("_features"):
+            continue
+        base = hash_re.sub("", file.stem)
+        prev = latest.get(base)
+        if not prev or file.stat().st_mtime > prev.stat().st_mtime:
+            latest[base] = file
+
+    for file in latest.values():
         if _is_lfs_pointer(file):
             logger.error(
                 "%s appears to be a Git LFS pointer. Run 'git lfs pull' to fetch the model",
@@ -100,10 +115,12 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
                     logger.error("%s does not appear to be a trained model", file)
             except Exception:
                 logger.exception("Failed to load model %s", file)
+
     if not models:
         logger.warning("No trained models found in %s, using naive defaults", model_dir)
         for ticker in CONFIG.get("etfs", []):
             models[f"{ticker}_naive"] = _NaiveModel()
+
     return models
 
 
@@ -146,7 +163,11 @@ def run_predictions(
             logger.warning("All rows have NaN values for %s", ticker)
             continue
         if feature_list is not None:
-            validate_schema(feature_list, X, schema_hash)
+            try:
+                validate_schema(feature_list, X, schema_hash)
+            except SystemExit:
+                logger.exception("Schema mismatch for %s", name)
+                continue
             X = X.reindex(columns=feature_list, fill_value=0)
         else:
             feature_file = MODEL_DIR / f"{name}_features.json"
@@ -162,7 +183,13 @@ def run_predictions(
         train_end = df.index.max().date()
         predict_dt = df.index.max().date()
         try:
-            preds = getattr(model, "predict", lambda X: None)(X)
+            if keras is not None and isinstance(model, keras.Model):
+                arr = np.asarray(X, dtype=np.float32)
+                if len(getattr(model, "input_shape", [])) == 3 and arr.ndim == 2:
+                    arr = arr[:, None, :]
+                preds = model.predict(arr, verbose=0)
+            else:
+                preds = getattr(model, "predict", lambda X: None)(X)
             if preds is None:
                 continue
             pred_array = np.asarray(preds).reshape(-1)
