@@ -1,11 +1,14 @@
 import hashlib
 import json
 import sys
+import logging
 from pathlib import Path
 from typing import Iterable, Tuple, Any
 
 import joblib
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def hash_schema(df: pd.DataFrame) -> str:
@@ -38,8 +41,8 @@ def validate_schema(feature_list: Iterable[str], df: pd.DataFrame, schema_hash: 
     if live_hash != schema_hash:
         exp_cols = len(feature_list)
         recv_cols = df.shape[1]
-        print("\u2716 SCHEMA MISMATCH \u2716", file=sys.stderr)
-        print(f"- Esperado: {exp_cols} columnas (hash {schema_hash})", file=sys.stderr)
-        print(f"- Recibido: {recv_cols} columnas (hash {live_hash})", file=sys.stderr)
-        print("Sugerencia: re-entrena con build_abt actual.", file=sys.stderr)
-        sys.exit(99)
+        logger.error("\u2716 SCHEMA MISMATCH \u2716")
+        logger.error("- Esperado: %s columnas (hash %s)", exp_cols, schema_hash)
+        logger.error("- Recibido: %s columnas (hash %s)", recv_cols, live_hash)
+        logger.error("Sugerencia: re-entrena con build_abt actual.")
+        raise SystemExit(99)

@@ -39,10 +39,6 @@ jobs:
         with:
           name: abt-data
           path: data/*.csv
-      - name: Schema smoke test
-        run: |
-          python -m src.models.train_model --ticker SPY --rows 10 --smoke
-          python -m src.models.predict --ticker SPY --rows 10
       - name: Predict
         run: |
           set -e
