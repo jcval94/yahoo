@@ -65,6 +65,7 @@ spec = importlib.util.spec_from_file_location('utils', UTILS_PATH)
 utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(utils)
 rolling_cv = utils.rolling_cv
+hybrid_cv_split = utils.hybrid_cv_split
 
 
 def test_rolling_cv_params():
@@ -78,3 +79,19 @@ def test_rolling_cv_params():
 def test_rolling_cv_small_samples():
     cv = rolling_cv(n_samples=62, train_size=60, horizon=1, max_splits=5)
     assert cv.n_splits == 2
+
+
+def test_hybrid_cv_split_basic():
+    data = list(range(200))
+    folds = list(hybrid_cv_split(data))
+    assert 1 <= len(folds) <= 10
+
+    train_idx, test_idx = folds[0]
+    assert len(train_idx) == 90
+    assert len(test_idx) == 1
+    assert test_idx[0] - train_idx[-1] == 6
+
+    if len(folds) > 1:
+        first_test = folds[0][1][0]
+        second_test = folds[1][1][0]
+        assert second_test - first_test == 7

@@ -51,7 +51,7 @@ jobs:
             token=${PUSH_TOKEN:-$GITHUB_TOKEN}
             git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
           fi
-      - name: Commit metrics
+      - name: Commit metrics y features
         env:
           PUSH_TOKEN: ${{ secrets.GH_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -59,10 +59,11 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add results/metrics/*.csv
+          git add results/features/*.csv 2>/dev/null || true
           if git diff --cached --quiet; then
-            echo "No metrics changes to commit"
+            echo "No metric or feature changes to commit"
           else
-            git commit -m "Update monthly metrics"
+            git commit -m "Update monthly metrics and features"
             token=${PUSH_TOKEN:-$GITHUB_TOKEN}
             git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
           fi
