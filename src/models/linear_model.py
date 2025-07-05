@@ -5,7 +5,7 @@ from typing import Any, Union, Sequence
 
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import (
-    RandomizedSearchCV,
+    GridSearchCV,
     TimeSeriesSplit,
     BaseCrossValidator,
 )
@@ -18,7 +18,6 @@ def train_linear(
     y_train,
     cv: Union[int, BaseCrossValidator] = 5,
     alphas: Sequence[float] | None = None,
-    n_iter: int = 10,
     **kwargs,
 ) -> Any:
     """Train a ridge regression model with basic cross-validation.
@@ -26,10 +25,7 @@ def train_linear(
     Parameters
     ----------
     alphas
-        Optional list of ``alpha`` values to evaluate during the random search.
-    n_iter
-        Maximum number of parameter settings sampled by
-        :class:`RandomizedSearchCV`.
+        Optional list of ``alpha`` values to evaluate during grid search.
     """
     start = time.perf_counter()
     logger.info("Training Ridge Regression model")
@@ -40,13 +36,12 @@ def train_linear(
 
         splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
         base_model = Ridge(solver="svd", **kwargs)
-        search = RandomizedSearchCV(
+        search = GridSearchCV(
             base_model,
-            param_distributions={"alpha": alphas},
+            param_grid={"alpha": alphas},
             cv=splitter,
             scoring="neg_mean_absolute_error",
             n_jobs=-1,
-            n_iter=n_iter,
         )
         search.fit(X_train, y_train)
         model = search.best_estimator_

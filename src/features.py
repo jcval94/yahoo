@@ -58,6 +58,15 @@ def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _add_return_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add log returns and simple volatility estimates."""
+    df = df.copy()
+    df["log_return"] = np.log(df["Close"]).diff()
+    df["volatility_5"] = df["log_return"].rolling(window=5, min_periods=1).std()
+    df["volatility_10"] = df["log_return"].rolling(window=10, min_periods=1).std()
+    return df
+
+
 def _add_lag_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add lagged values and short moving averages of the close price."""
     df = df.copy()
@@ -137,6 +146,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     def enrich(group: pd.DataFrame) -> pd.DataFrame:
         group = _add_basic_indicators(group)
         group = _add_advanced_indicators(group)
+        group = _add_return_features(group)
         group = _add_lag_features(group)
         group = _add_window_stats(group)
         group = _add_seasonal_features(group)
