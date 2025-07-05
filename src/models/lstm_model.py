@@ -23,14 +23,21 @@ for gpu in tf.config.list_physical_devices("GPU"):
     tf.config.experimental.set_memory_growth(gpu, True)
 
 # ---------- Dataset helper ----------
-def _make_ds(X: np.ndarray, y: np.ndarray,
-             batch: int, shuffle: bool = False) -> tf.data.Dataset:
+def _make_ds(
+    X: np.ndarray,
+    y: np.ndarray,
+    batch: int,
+    shuffle: bool = False,
+) -> tf.data.Dataset:
+    """Return a ``tf.data`` pipeline with a fixed batch shape."""
     ds = tf.data.Dataset.from_tensor_slices((X, y))
     if shuffle:
         ds = ds.shuffle(len(X), seed=42)
-    return (ds.cache()
-              .batch(batch)
-              .prefetch(tf.data.AUTOTUNE))
+    return (
+        ds.cache()
+        .batch(batch, drop_remainder=True)
+        .prefetch(tf.data.AUTOTUNE)
+    )
 
 # ---------- Model factory ----------
 def _build_lstm(input_shape: tuple[int, int],
@@ -55,7 +62,7 @@ def train_lstm(
     X_train: np.ndarray,
     y_train: np.ndarray,
     param_space: Mapping[str, Sequence] | None = None,
-    n_iter: int = 8,
+    n_iter: int = 4,
     cv_splits: int = 3,
     verbose: int = 0,
 ) -> tf.keras.Model:
@@ -65,10 +72,10 @@ def train_lstm(
     # -- defaults -------------------------
     if param_space is None:
         param_space = {
-            "units":     [32, 64, 96],
-            "batch":     [64, 128, 256],
-            "epochs":    [30],
-            "l2_reg":    [0.0, 1e-3],
+            "units": [32, 64, 96],
+            "batch": [64],
+            "epochs": [30],
+            "l2_reg": [0.0, 1e-3],
         }
 
     # -- reshape --------------------------
@@ -136,8 +143,14 @@ def train_lstm(
     return final_model
 
 
-def predict_lstm(model: tf.keras.Model, X_new: np.ndarray) -> np.ndarray:
+def prepare_prediction_data(X_new: np.ndarray) -> np.ndarray:
+    """Format new samples for inference with the trained LSTM."""
     X = np.asarray(X_new, dtype=np.float32)
     if X.ndim == 2:
         X = X[:, None, :]
+    return X
+
+
+def predict_lstm(model: tf.keras.Model, X_new: np.ndarray) -> np.ndarray:
+    X = prepare_prediction_data(X_new)
     return model.predict(X, verbose=0).ravel()
