@@ -45,6 +45,25 @@ FEATURE_DIR = Path(__file__).resolve().parents[1] / CONFIG.get(
 FEATURE_DIR.mkdir(exist_ok=True, parents=True)
 
 
+def split_train_test(df: pd.DataFrame, val_weeks: int = VAL_WEEKS):
+    """Return train and test splits ensuring no overlap."""
+    if df.empty:
+        return df, df
+
+    val_start = df.index.max() - pd.Timedelta(weeks=val_weeks)
+    df_train = df[df.index < val_start]
+    df_test = df[df.index >= val_start]
+
+    if not df_train.empty and not df_test.empty:
+        latest_train = df_train.index.max()
+        earliest_test = df_test.index.min()
+        if latest_train >= earliest_test:
+            raise ValueError(
+                f"Train end {latest_train} overlaps test start {earliest_test}"
+            )
+    return df_train, df_test
+
+
 def train_models(
     data: Union[Dict[str, Union[pd.DataFrame, Path]], pd.DataFrame],
     frequency: str = "daily",
@@ -89,15 +108,16 @@ def train_models(
         y = df_recent["target"]
         log_df_details(f"features {ticker}", X)
 
-        val_start = df_recent.index.max() - pd.Timedelta(weeks=VAL_WEEKS)
-        df_train = df_recent[df_recent.index < val_start]
-        df_test = df_recent[df_recent.index >= val_start]
+        df_train, df_test = split_train_test(df_recent)
 
         abt_start = df_recent.index.min().date()
         abt_end = df_recent.index.max().date()
+        train_start = df_train.index.min().date()
+        train_end = df_train.index.max().date()
         test_start = df_test.index.min().date()
         test_end = df_test.index.max().date()
         abt_window = f"{abt_start} a {abt_end}"
+        train_window = f"{train_start} a {train_end}"
         test_window = f"{test_start} a {test_end}"
         predict_date = test_end
         logger.info(
@@ -147,6 +167,7 @@ def train_models(
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -158,6 +179,7 @@ def train_models(
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -201,6 +223,7 @@ def train_models(
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -212,6 +235,7 @@ def train_models(
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -257,6 +281,7 @@ def train_models(
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -268,6 +293,7 @@ def train_models(
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -312,6 +338,7 @@ def train_models(
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -323,6 +350,7 @@ def train_models(
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -376,6 +404,7 @@ def train_models(
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -387,6 +416,7 @@ def train_models(
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -416,6 +446,7 @@ def train_models(
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
@@ -427,6 +458,7 @@ def train_models(
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
                         "ABT Window": abt_window,
+                        "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
                     })
