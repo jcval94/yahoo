@@ -1,4 +1,5 @@
 # Yahoo Finance Pipeline
+![Schema-Checked](https://img.shields.io/badge/Schema--Checked-%E2%9C%85-brightgreen)
 
 ¡Bienvenido a este pequeño experimento! Aquí encontrarás un pipeline educativo que procesa datos de Yahoo Finance de principio a fin. Cada fase está separada en módulos para que puedas revisarla, jugar con ella y adaptarla a tu antojo. No necesitas ser un gurú de Python; basta con seguir las instrucciones y ver qué pasa.
 
