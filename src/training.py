@@ -84,6 +84,14 @@ def train_models(
         val_start = df_recent.index.max() - pd.Timedelta(days=7)
         df_train = df_recent[df_recent.index < val_start]
         df_test = df_recent[df_recent.index >= val_start]
+
+        abt_start = df_recent.index.min().date()
+        abt_end = df_recent.index.max().date()
+        test_start = df_test.index.min().date()
+        test_end = df_test.index.max().date()
+        abt_window = f"{abt_start} a {abt_end}"
+        test_window = f"{test_start} a {test_end}"
+        predict_date = test_end
         logger.info(
             "%s train %s to %s | validation %s to %s",
             ticker,
@@ -130,6 +138,9 @@ def train_models(
                         "dataset": "train",
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     preds_test = lin.predict(X_test)
                     test_metrics = evaluate_predictions(y_test, preds_test)
@@ -138,6 +149,9 @@ def train_models(
                         "dataset": "test",
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     logger.info(
                         "Linear train metrics %s | test metrics %s",
@@ -169,6 +183,9 @@ def train_models(
                         "dataset": "train",
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     preds_test = rf.predict(X_test)
                     test_metrics = evaluate_predictions(y_test, preds_test)
@@ -177,6 +194,9 @@ def train_models(
                         "dataset": "test",
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     logger.info(
                         "RF train metrics %s | test metrics %s",
@@ -208,6 +228,9 @@ def train_models(
                         "dataset": "train",
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     preds_test = xgb.predict(X_test)
                     test_metrics = evaluate_predictions(y_test, preds_test)
@@ -216,6 +239,9 @@ def train_models(
                         "dataset": "test",
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     logger.info(
                         "XGB train metrics %s | test metrics %s",
@@ -247,6 +273,9 @@ def train_models(
                         "dataset": "train",
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     preds_test = lgbm.predict(X_test)
                     test_metrics = evaluate_predictions(y_test, preds_test)
@@ -255,6 +284,9 @@ def train_models(
                         "dataset": "test",
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     logger.info(
                         "LGBM train metrics %s | test metrics %s",
@@ -291,6 +323,9 @@ def train_models(
                         "dataset": "train",
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     preds_test = lstm.predict(X_test)
                     preds_test = preds_test.flatten() if hasattr(preds_test, "flatten") else preds_test
@@ -300,6 +335,9 @@ def train_models(
                         "dataset": "test",
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     logger.info(
                         "LSTM train metrics %s | test metrics %s",
@@ -326,6 +364,9 @@ def train_models(
                         "dataset": "train",
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     preds_test = arima.predict(X_test)
                     test_metrics = evaluate_predictions(y_test, preds_test)
@@ -334,6 +375,9 @@ def train_models(
                         "dataset": "test",
                         **test_metrics,
                         "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
                     })
                     logger.info(
                         "ARIMA train metrics %s | test metrics %s",
