@@ -107,6 +107,9 @@ def download_ticker(
             df = df.copy()
             df.columns = df.columns.get_level_values(0)
 
+        # ensure rows are in chronological order for rolling features
+        df = df.sort_index()
+
     log_df_details(f"downloaded {ticker}", df)
     return df
 

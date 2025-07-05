@@ -162,13 +162,15 @@ def _add_decomposition(df: pd.DataFrame) -> pd.DataFrame:
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """Apply a set of technical indicators to a DataFrame.
 
-    If a ``Ticker`` column is present the indicators are computed
-    independently for each ticker.
+    The input series must be sorted in ascending date order. This function
+    enforces that ordering before computing indicators. If a ``Ticker`` column
+    is present the indicators are computed independently for each ticker.
     """
     if df.empty:
         return df
 
     def enrich(group: pd.DataFrame) -> pd.DataFrame:
+        group = group.sort_index()
         group = _add_basic_indicators(group)
         group = _add_advanced_indicators(group)
         group = _add_return_features(group)
