@@ -27,3 +27,35 @@ def test_lag_features_present():
     expected_sma13 = df["Close"].rolling(window=13, min_periods=1).mean().iloc[12]
     assert result["sma_13"].iloc[12] == expected_sma13
 
+
+def test_trend_line_columns_added():
+    idx = pd.date_range(start="2020-01-01", periods=100, freq="D")
+    df = pd.DataFrame({
+        "Open": range(100),
+        "High": range(100),
+        "Low": range(100),
+        "Close": range(100),
+        "Adj Close": range(100),
+        "Volume": range(100)
+    }, index=idx)
+    result = add_technical_indicators(df)
+    for w in [30, 60, 90]:
+        assert f"trend_line_{w}" in result.columns
+
+
+def test_stl_columns_added():
+    pytest.importorskip("statsmodels")
+    idx = pd.date_range(start="2020-01-01", periods=100, freq="D")
+    df = pd.DataFrame({
+        "Open": range(100),
+        "High": range(100),
+        "Low": range(100),
+        "Close": range(100),
+        "Adj Close": range(100),
+        "Volume": range(100)
+    }, index=idx)
+    result = add_technical_indicators(df)
+    for w in [30, 60, 90]:
+        for comp in ["trend", "seasonal", "resid"]:
+            assert f"stl_{comp}_{w}" in result.columns
+
