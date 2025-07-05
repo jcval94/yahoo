@@ -11,7 +11,15 @@ logger = logging.getLogger(__name__)
 
 def _fetch_history(ticker: str, start: str, end: str) -> pd.DataFrame:
     """Download OHLCV data for a ticker."""
-    return yf.download(ticker, start=start, end=end, progress=False)
+    # Explicitly disable auto_adjust to keep raw prices consistent across
+    # yfinance versions (the default switched to True in 0.2.37).
+    return yf.download(
+        ticker,
+        start=start,
+        end=end,
+        progress=False,
+        auto_adjust=False,
+    )
 
 
 def select_tickers(candidates: List[str], end_date: str) -> List[str]:

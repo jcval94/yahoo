@@ -52,6 +52,7 @@ def _download_yahoo(ticker, start, end, interval):
         interval=interval,
         progress=False,
         threads=False,
+        auto_adjust=False,
     )
 
 

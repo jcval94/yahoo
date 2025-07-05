@@ -22,7 +22,9 @@ def extract_data(tickers: List[str], start: str) -> Dict[str, pd.DataFrame]:
     for t in tickers:
         with timed_stage(f"download {t}"):
             try:
-                df = yf.download(t, start=start, progress=False)
+                # yfinance 0.2.37 changed auto_adjust default to True.
+                # Force False to maintain the schema used during training.
+                df = yf.download(t, start=start, progress=False, auto_adjust=False)
             except Exception:
                 logger.exception("Failed to download %s, using sample", t)
                 df = generate_sample_data(start)
