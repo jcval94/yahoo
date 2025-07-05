@@ -1,5 +1,6 @@
 import pytest
 pd = pytest.importorskip("pandas")
+np = pytest.importorskip("numpy")
 pytest.importorskip("ta")
 from src.features import add_technical_indicators
 
@@ -17,7 +18,11 @@ def test_lag_features_present():
     result = add_technical_indicators(df)
     for col in ["close_lag_1", "close_lag_7", "close_lag_14", "sma_13", "sma_26"]:
         assert col in result.columns
+    for col in ["log_return", "volatility_5", "volatility_10"]:
+        assert col in result.columns
     assert result.loc[idx[1], "close_lag_1"] == df.loc[idx[0], "Close"]
+    expected_lr = (np.log(df["Close"]).diff().iloc[1])
+    assert result["log_return"].iloc[1] == expected_lr
     assert result.loc[idx[7], "close_lag_7"] == df.loc[idx[0], "Close"]
     expected_sma13 = df["Close"].rolling(window=13, min_periods=1).mean().iloc[12]
     assert result["sma_13"].iloc[12] == expected_sma13

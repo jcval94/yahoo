@@ -7,6 +7,8 @@ results/*
 !results/predicts/*.csv
 !results/metrics/
 !results/metrics/**
+!results/features/
+!results/features/**
 
 # Byte-compiled / cache files
 __pycache__/
