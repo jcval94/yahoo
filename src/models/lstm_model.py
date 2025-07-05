@@ -35,7 +35,7 @@ def _make_ds(
         ds = ds.shuffle(len(X), seed=42)
     return (
         ds.cache()
-        .batch(batch, drop_remainder=True)
+        .batch(batch, drop_remainder=False)
         .prefetch(tf.data.AUTOTUNE)
     )
 
