@@ -83,6 +83,12 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
             try:
                 model, feats, schema = load_with_schema(file)
                 if _is_valid_model(model):
+                    if all(f.startswith("feat_") for f in feats):
+                        logger.warning(
+                            "%s uses demo features; skipping incompatible model",
+                            file,
+                        )
+                        continue
                     models[file.stem] = (model, feats, schema)
                 else:
                     logger.error("%s does not appear to be a trained model", file)
@@ -143,7 +149,11 @@ def run_predictions(
             logger.warning("All rows have NaN values for %s", ticker)
             continue
         if feature_list is not None:
-            validate_schema(feature_list, X, schema_hash)
+            try:
+                validate_schema(feature_list, X, schema_hash)
+            except SystemExit:
+                logger.warning("Schema mismatch for %s, skipping", name)
+                continue
             X = X.reindex(columns=feature_list, fill_value=0)
         else:
             feature_file = MODEL_DIR / f"{name}_features.json"

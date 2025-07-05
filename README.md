@@ -184,10 +184,16 @@ La funcion de evaluacion calcula los siguientes indicadores:
 
 8. **Limpieza opcional**
 
-   ```bash
-   python -m src.clean_models
-   ```
-   Elimina los modelos guardados para empezar de cero.
+  ```bash
+  python -m src.clean_models
+  ```
+  Elimina los modelos guardados para empezar de cero.
+
+   Si los logs mencionan variables `feat_0`, `feat_1` o `feat_2`, significa que
+   existe un modelo de ejemplo entrenado con `src/models/train_model.py`.
+   Dicho modelo usa columnas ficticias que no se generan en el pipeline normal
+   y provoca el mensaje de *schema mismatch*. Borra ese archivo o vuelve a
+   entrenar los modelos con `src/training.py` para evitar el problema.
 
 
 ## Flujo de entrenamiento y prediccion
