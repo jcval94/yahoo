@@ -88,7 +88,6 @@ def test_rolling_cv_horizon_limit():
     assert cv.test_size == 20
     assert cv.max_train_size == 90
 
-
 def test_hybrid_cv_split_basic():
     data = list(range(200))
     folds = list(hybrid_cv_split(data))
