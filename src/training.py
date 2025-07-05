@@ -341,6 +341,7 @@ def train_models(
             try:
                 lstm_grid = {
                     "units": [8, 16],
+                    "batch": [64, 128],
                     "epochs": [2, 3],
                     "dropout": [0.2, 0.4],
                     "l2_reg": [0.001, 0.01],
