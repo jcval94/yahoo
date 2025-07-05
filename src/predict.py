@@ -138,6 +138,10 @@ def run_predictions(
         if "Ticker" in X:
             X = X.drop(columns=["Ticker"])
         X = X.select_dtypes(exclude="object")
+        X = X.replace([np.inf, -np.inf], np.nan).dropna()
+        if X.empty:
+            logger.warning("All rows have NaN values for %s", ticker)
+            continue
         if feature_list is not None:
             validate_schema(feature_list, X, schema_hash)
             X = X.reindex(columns=feature_list, fill_value=0)
@@ -150,7 +154,7 @@ def run_predictions(
                     X = X.reindex(columns=selected, fill_value=0)
                 except Exception:
                     logger.exception("Failed to align features for %s", name)
-        y = df.get(target_col)
+        y = df.loc[X.index, target_col]
         train_start = df.index.min().date()
         train_end = df.index.max().date()
         predict_dt = df.index.max().date()
