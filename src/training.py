@@ -37,6 +37,10 @@ EVAL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get(
     "evaluation_dir", "results/metrics"
 )
 EVAL_DIR.mkdir(exist_ok=True, parents=True)
+VAR_DIR = Path(__file__).resolve().parents[1] / CONFIG.get(
+    "variable_dir", "results/variables"
+)
+VAR_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def train_models(
@@ -46,6 +50,7 @@ def train_models(
     """Train basic models, evaluate them and persist both models and metrics."""
     paths = {}
     metrics_rows = []
+    var_rows = []
 
     if isinstance(data, pd.DataFrame):
         grouped = {
@@ -148,6 +153,14 @@ def train_models(
                     logger.exception("Failed Linear evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed Linear training for %s", ticker)
+        if 'lin' in locals() and hasattr(lin, 'coef_'):
+            for feat, coef in zip(selected_cols, getattr(lin, 'coef_', [])):
+                var_rows.append({
+                    'model': f"{ticker}_linreg",
+                    'feature': feat,
+                    'importance': float(coef),
+                    'run_date': RUN_TIMESTAMP,
+                })
 
         with timed_stage(f"train RF {ticker}"):
             try:
@@ -187,6 +200,14 @@ def train_models(
                     logger.exception("Failed RF evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed RF training for %s", ticker)
+        if 'rf' in locals() and hasattr(rf, 'feature_importances_'):
+            for feat, imp in zip(selected_cols, getattr(rf, 'feature_importances_', [])):
+                var_rows.append({
+                    'model': f"{ticker}_rf",
+                    'feature': feat,
+                    'importance': float(imp),
+                    'run_date': RUN_TIMESTAMP,
+                })
 
         with timed_stage(f"train XGB {ticker}"):
             try:
@@ -226,6 +247,14 @@ def train_models(
                     logger.exception("Failed XGB evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed XGB training for %s", ticker)
+        if 'xgb' in locals() and hasattr(xgb, 'feature_importances_'):
+            for feat, imp in zip(selected_cols, getattr(xgb, 'feature_importances_', [])):
+                var_rows.append({
+                    'model': f"{ticker}_xgb",
+                    'feature': feat,
+                    'importance': float(imp),
+                    'run_date': RUN_TIMESTAMP,
+                })
 
         with timed_stage(f"train LGBM {ticker}"):
             try:
@@ -265,6 +294,14 @@ def train_models(
                     logger.exception("Failed LGBM evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed LGBM training for %s", ticker)
+        if 'lgbm' in locals() and hasattr(lgbm, 'feature_importances_'):
+            for feat, imp in zip(selected_cols, getattr(lgbm, 'feature_importances_', [])):
+                var_rows.append({
+                    'model': f"{ticker}_lgbm",
+                    'feature': feat,
+                    'importance': float(imp),
+                    'run_date': RUN_TIMESTAMP,
+                })
 
         with timed_stage(f"train LSTM {ticker}"):
             try:
@@ -344,6 +381,19 @@ def train_models(
                     logger.exception("Failed ARIMA evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed ARIMA training for %s", ticker)
+        if 'arima' in locals() and hasattr(arima, 'results'):
+            try:
+                params = getattr(arima.results, 'params', [])
+                names = getattr(arima.results, 'param_names', list(range(len(params))))
+                for name, coef in zip(names, params):
+                    var_rows.append({
+                        'model': f"{ticker}_arima",
+                        'feature': name,
+                        'importance': float(coef),
+                        'run_date': RUN_TIMESTAMP,
+                    })
+            except Exception:
+                logger.exception("Failed ARIMA coefficients for %s", ticker)
 
     if metrics_rows:
         metrics_df = pd.DataFrame(metrics_rows)
@@ -354,6 +404,15 @@ def train_models(
         except Exception:
             logger.exception("Failed to save metrics to %s", metrics_file)
         logger.info("Metrics summary:\n%s", metrics_df)
+
+    if var_rows:
+        var_df = pd.DataFrame(var_rows)
+        var_file = VAR_DIR / f"variables_{frequency}_{RUN_TIMESTAMP[:10]}.csv"
+        try:
+            var_df.to_csv(var_file, index=False)
+            logger.info("Saved variable importances to %s", var_file)
+        except Exception:
+            logger.exception("Failed to save variable importances to %s", var_file)
 
     log_offline_mode("training")
     return paths

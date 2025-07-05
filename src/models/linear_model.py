@@ -20,7 +20,10 @@ def train_linear(
     logger.info("Training Ridge Regression model")
 
     try:
-        model = Ridge(**kwargs)
+        # Use an SVD-based solver for numerical stability when the feature
+        # matrix is ill-conditioned. This avoids ``LinAlgWarning`` messages
+        # that can appear with the default solver on highly correlated data.
+        model = Ridge(solver="svd", **kwargs)
         splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
         scores = cross_val_score(
             model,
