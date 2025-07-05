@@ -7,7 +7,7 @@ from typing import Dict, Union, Iterable
 import pandas as pd
 import json
 
-from .models.lstm_model import train_lstm
+from .models.lstm_model import train_lstm, predict_lstm
 from .models.rf_model import train_rf
 from .models.xgb_model import train_xgb
 from .models.linear_model import train_linear
@@ -122,7 +122,7 @@ def train_models(
 
         with timed_stage(f"train Linear {ticker}"):
             try:
-                lin = train_linear(X_train, y_train, cv=cv_splitter)
+                lin = train_linear(X_train, y_train, cv=cv_splitter, alpha=2.0)
                 schema_hash = hash_schema(X_train)
                 lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg_{schema_hash}.joblib"
                 save_with_schema(lin, lin_path, selected_cols, schema_hash)
@@ -165,9 +165,9 @@ def train_models(
         with timed_stage(f"train RF {ticker}"):
             try:
                 rf_grid = {
-                    "n_estimators": [50, 100, 150],
-                    "max_depth": [3, 5, 7],
-                    "min_samples_leaf": [1, 2],
+                    "n_estimators": [50, 100],
+                    "max_depth": [3, 5],
+                    "min_samples_leaf": [2, 4],
                 }
                 rf = train_rf(X_train, y_train, param_grid=rf_grid, cv=cv_splitter)
                 schema_hash = hash_schema(X_train)
@@ -212,9 +212,10 @@ def train_models(
         with timed_stage(f"train XGB {ticker}"):
             try:
                 xgb_grid = {
-                    "n_estimators": [50, 100, 150],
-                    "max_depth": [3, 5, 7],
-                    "learning_rate": [0.05, 0.1, 0.2],
+                    "n_estimators": [50, 100],
+                    "max_depth": [3, 4],
+                    "learning_rate": [0.05, 0.1],
+                    "subsample": [0.8, 1.0],
                 }
                 xgb = train_xgb(X_train, y_train, param_grid=xgb_grid, cv=cv_splitter)
                 schema_hash = hash_schema(X_train)
@@ -259,9 +260,10 @@ def train_models(
         with timed_stage(f"train LGBM {ticker}"):
             try:
                 lgbm_grid = {
-                    "n_estimators": [50, 100, 150],
-                    "max_depth": [3, 5, 7],
-                    "learning_rate": [0.05, 0.1, 0.2],
+                    "n_estimators": [50, 100],
+                    "max_depth": [3, 5],
+                    "learning_rate": [0.05, 0.1],
+                    "subsample": [0.8, 1.0],
                 }
                 lgbm = train_lgbm(X_train, y_train, param_grid=lgbm_grid, cv=cv_splitter)
                 schema_hash = hash_schema(X_train)
@@ -306,10 +308,10 @@ def train_models(
         with timed_stage(f"train LSTM {ticker}"):
             try:
                 lstm_grid = {
-                    "units": [16, 32],
+                    "units": [8, 16],
                     "epochs": [2, 3],
-                    "dropout": [0.0, 0.2],
-                    "l2_reg": [0.0, 0.001],
+                    "dropout": [0.2, 0.4],
+                    "l2_reg": [0.001, 0.01],
                 }
                 lstm = train_lstm(X_train, y_train, param_grid=lstm_grid, cv=cv_splitter)
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
@@ -320,8 +322,7 @@ def train_models(
                     json.dump(selected_cols, fh)
                 paths[f"{ticker}_lstm"] = keras_path
                 try:
-                    preds_train = lstm.predict(X_train)
-                    preds_train = preds_train.flatten() if hasattr(preds_train, "flatten") else preds_train
+                    preds_train = predict_lstm(lstm, X_train)
                     train_metrics = evaluate_predictions(y_train, preds_train)
                     metrics_rows.append({
                         "model": f"{ticker}_lstm",
@@ -329,8 +330,7 @@ def train_models(
                         **train_metrics,
                         "run_date": RUN_TIMESTAMP,
                     })
-                    preds_test = lstm.predict(X_test)
-                    preds_test = preds_test.flatten() if hasattr(preds_test, "flatten") else preds_test
+                    preds_test = predict_lstm(lstm, X_test)
                     test_metrics = evaluate_predictions(y_test, preds_test)
                     metrics_rows.append({
                         "model": f"{ticker}_lstm",
