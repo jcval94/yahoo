@@ -35,6 +35,12 @@ def load_with_schema(path: str | Path) -> Tuple[Any, list[str], str]:
 
 def validate_schema(feature_list: Iterable[str], df: pd.DataFrame, schema_hash: str) -> None:
     """Validate columns against stored schema, exit 99 on mismatch."""
+    missing = [c for c in feature_list if c not in df.columns]
+    if missing:
+        logger.error("\u2716 SCHEMA MISMATCH \u2716")
+        logger.error("Columnas faltantes: %s", ", ".join(missing))
+        raise SystemExit(99)
+
     subset = df[list(feature_list)]
     live_hash = hash_schema(subset)
     if live_hash != schema_hash:
