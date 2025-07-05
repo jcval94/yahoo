@@ -10,7 +10,6 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-
 def hash_schema(df: pd.DataFrame) -> str:
     """Return short SHA-1 hash of DataFrame column names."""
     joined = tuple(df.columns)
@@ -46,3 +45,4 @@ def validate_schema(feature_list: Iterable[str], df: pd.DataFrame, schema_hash: 
         logger.error("- Recibido: %s columnas (hash %s)", recv_cols, live_hash)
         logger.error("Sugerencia: re-entrena con build_abt actual.")
         raise SystemExit(99)
+
