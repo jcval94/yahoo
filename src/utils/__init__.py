@@ -2,7 +2,7 @@ import logging
 import time
 from pathlib import Path
 from contextlib import contextmanager
-from typing import Optional, Union
+from typing import Iterator, Optional, Union
 
 from sklearn.model_selection import TimeSeriesSplit
 
@@ -135,7 +135,9 @@ def rolling_cv(
         this value provides better validation while keeping runtime
         reasonable.
     """
-    n_splits = min(max_splits, max(1, n_samples - train_size))
+    available = max(0, n_samples - train_size)
+    possible = available // max(1, horizon)
+    n_splits = min(max_splits, max(1, possible))
     return TimeSeriesSplit(
         n_splits=n_splits,
         test_size=horizon,
@@ -148,3 +150,66 @@ def log_offline_mode(stage: str) -> None:
     logger = logging.getLogger(__name__)
     if SAMPLE_DATA_USED:
         logger.info("Using generated sample data in %s stage", stage)
+
+
+def hybrid_cv_split(
+    X,
+    train_window: int = 90,
+    test_window: int = 1,
+    gap: int = 5,
+    stride: int = 7,
+    max_folds: int = 10,
+) -> Iterator[tuple["np.ndarray", "np.ndarray"]]:
+    """Yield rolling train/test indices for time series cross-validation.
+
+    Parameters
+    ----------
+    X
+        Sequence of observations. Only the length is used.
+    train_window
+        Size of each training window. Defaults to ``90`` observations.
+    test_window
+        Size of the test window. Defaults to ``1`` observation.
+    gap
+        Number of observations to skip between training and test sets to avoid
+        leakage. Defaults to ``5``.
+    stride
+        Step size between consecutive folds. Defaults to ``7`` observations.
+    max_folds
+        Maximum number of folds to generate. Defaults to ``10``.
+
+    Yields
+    ------
+    (train_idx, test_idx)
+        Indices for the training and test sets of each fold.
+    """
+
+    n_samples = len(X)
+    start = 0
+    folds = 0
+    while True:
+        train_start = start
+        train_end = train_start + train_window
+        test_start = train_end + gap
+        test_end = test_start + test_window
+
+        if test_end > n_samples or folds >= max_folds:
+            break
+
+        if hasattr(np, "arange"):
+            train_idx = np.arange(train_start, train_end)
+            test_idx = np.arange(test_start, test_end)
+        else:
+            train_idx = list(range(train_start, train_end))
+            test_idx = list(range(test_start, test_end))
+        yield train_idx, test_idx
+
+        start += stride
+        folds += 1
+
+
+if __name__ == "__main__":
+    # Minimal example using a fake series of 200 observations
+    series = list(range(200))
+    for i, (tr, te) in enumerate(hybrid_cv_split(series)):
+        print(f"Fold {i}: train {tr[0]}-{tr[-1]}, test {te[0]}")
