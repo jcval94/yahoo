@@ -126,11 +126,11 @@ def train_models(
         log_df_details(f"test features {ticker}", X_test)
 
         n_samples = len(df_train)
-        cv_splitter = rolling_cv(n_samples, max_splits=12)
+        cv_splitter = rolling_cv(n_samples, horizon=1, max_splits=24)
 
         with timed_stage(f"train Linear {ticker}"):
             try:
-                lin = train_linear(X_train, y_train, cv=cv_splitter, alpha=2.0)
+                lin = train_linear(X_train, y_train, cv=cv_splitter)
                 schema_hash = hash_schema(X_train)
                 lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg_{schema_hash}.joblib"
                 save_with_schema(lin, lin_path, selected_cols, schema_hash)

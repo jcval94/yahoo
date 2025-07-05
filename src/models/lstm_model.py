@@ -6,6 +6,7 @@ from typing import Any, Dict, Sequence, Union
 import numpy as np
 from tensorflow import keras
 from tensorflow.keras import layers
+from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.model_selection import TimeSeriesSplit, BaseCrossValidator
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,14 @@ def train_lstm(
                                 layers.Dense(1, kernel_regularizer=reg),
                             ])
                             model.compile(optimizer="adam", loss="mse")
-                            model.fit(X_tr, y_tr, epochs=epochs, verbose=0)
+                            es = EarlyStopping(patience=2, restore_best_weights=True)
+                            model.fit(
+                                X_tr,
+                                y_tr,
+                                epochs=epochs,
+                                verbose=0,
+                                callbacks=[es],
+                            )
                             val_pred = model.predict(X_val, verbose=0).flatten()
                             scores.append(np.mean(np.abs(y_val - val_pred)))
 
@@ -95,7 +103,14 @@ def train_lstm(
             layers.Dense(1, kernel_regularizer=final_reg),
         ])
         model.compile(optimizer="adam", loss="mse")
-        model.fit(X, y, epochs=best_params["epochs"], verbose=0)
+        es_final = EarlyStopping(patience=2, restore_best_weights=True)
+        model.fit(
+            X,
+            y,
+            epochs=best_params["epochs"],
+            verbose=0,
+            callbacks=[es_final],
+        )
     except Exception:
         logger.exception("Error while training LSTM")
         raise
