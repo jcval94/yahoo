@@ -77,7 +77,7 @@ flowchart TB
       direction TB
       A1[abt] -- build_abt.py --> A2[Generar ABT]
       B1[models] -- rf_model.py --> B2[Modelos ML]
-      C1[portfolio] -- backtest.py --> C2[Portafolio]
+      C1[portfolio] -- optimize.py --> C2[Portafolio]
       D1[features] -- features.py --> D2[Indicadores]
       E1[var_selection] -- variable_selection.py --> E2[Seleccion]
     end
@@ -94,7 +94,7 @@ La carpeta `src` contiene las utilidades principales. Algunos scripts son planti
 * `abt/` crea la "Analytic Base Table" con datos diarios descargados y enriquecidos.
 * `models/` almacena ejemplos de modelos de machine learning y los modelos entrenados mensualmente.
   Estos archivos `.joblib`, `.json` y `.keras` se rastrean mediante **Git LFS**, por lo que conviene ejecutar `git lfs install` y `git lfs pull` tras clonar el proyecto.
-* `portfolio/` ofrece herramientas para backtesting y optimizacion de cartera.
+* `portfolio/` ofrece herramientas para optimizacion de cartera.
 * `notify/` muestra como enviar un mensaje con los resultados.
 * `features.py` implementa indicadores técnicos usados en el ABT.
 * `variable_selection.py` ayuda a elegir las columnas más relevantes.
