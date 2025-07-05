@@ -1,10 +1,9 @@
 """Model training pipeline."""
 import logging
 from .utils import load_config
+from .utils.schema_guard import hash_schema, save_with_schema
 from pathlib import Path
 from typing import Dict, Union, Iterable
-
-import joblib
 import pandas as pd
 import json
 
@@ -119,11 +118,9 @@ def train_models(
         with timed_stage(f"train Linear {ticker}"):
             try:
                 lin = train_linear(X_train, y_train, cv=cv_splitter)
-                lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg.pkl"
-                joblib.dump(lin, lin_path)
-                features_path = lin_path.with_name(lin_path.stem + '_features.json')
-                with open(features_path, 'w') as fh:
-                    json.dump(selected_cols, fh)
+                schema_hash = hash_schema(X_train)
+                lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg_{schema_hash}.joblib"
+                save_with_schema(lin, lin_path, selected_cols, schema_hash)
                 paths[f"{ticker}_linreg"] = lin_path
                 try:
                     preds_train = lin.predict(X_train)
@@ -160,11 +157,9 @@ def train_models(
                     "min_samples_leaf": [1, 2],
                 }
                 rf = train_rf(X_train, y_train, param_grid=rf_grid, cv=cv_splitter)
-                rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf.pkl"
-                joblib.dump(rf, rf_path)
-                features_path = rf_path.with_name(rf_path.stem + '_features.json')
-                with open(features_path, 'w') as fh:
-                    json.dump(selected_cols, fh)
+                schema_hash = hash_schema(X_train)
+                rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf_{schema_hash}.joblib"
+                save_with_schema(rf, rf_path, selected_cols, schema_hash)
                 paths[f"{ticker}_rf"] = rf_path
                 try:
                     preds_train = rf.predict(X_train)
@@ -201,11 +196,9 @@ def train_models(
                     "learning_rate": [0.05, 0.1, 0.2],
                 }
                 xgb = train_xgb(X_train, y_train, param_grid=xgb_grid, cv=cv_splitter)
-                xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb.pkl"
-                joblib.dump(xgb, xgb_path)
-                features_path = xgb_path.with_name(xgb_path.stem + '_features.json')
-                with open(features_path, 'w') as fh:
-                    json.dump(selected_cols, fh)
+                schema_hash = hash_schema(X_train)
+                xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb_{schema_hash}.joblib"
+                save_with_schema(xgb, xgb_path, selected_cols, schema_hash)
                 paths[f"{ticker}_xgb"] = xgb_path
                 try:
                     preds_train = xgb.predict(X_train)
@@ -242,11 +235,9 @@ def train_models(
                     "learning_rate": [0.05, 0.1, 0.2],
                 }
                 lgbm = train_lgbm(X_train, y_train, param_grid=lgbm_grid, cv=cv_splitter)
-                lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm.pkl"
-                joblib.dump(lgbm, lgbm_path)
-                features_path = lgbm_path.with_name(lgbm_path.stem + '_features.json')
-                with open(features_path, 'w') as fh:
-                    json.dump(selected_cols, fh)
+                schema_hash = hash_schema(X_train)
+                lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm_{schema_hash}.joblib"
+                save_with_schema(lgbm, lgbm_path, selected_cols, schema_hash)
                 paths[f"{ticker}_lgbm"] = lgbm_path
                 try:
                     preds_train = lgbm.predict(X_train)
@@ -323,11 +314,9 @@ def train_models(
         with timed_stage(f"train ARIMA {ticker}"):
             try:
                 arima = train_arima(y_train)
-                arima_path = MODEL_DIR / f"{ticker}_{frequency}_arima.pkl"
-                joblib.dump(arima, arima_path)
-                features_path = arima_path.with_name(arima_path.stem + '_features.json')
-                with open(features_path, 'w') as fh:
-                    json.dump(selected_cols, fh)
+                schema_hash = hash_schema(X_train)
+                arima_path = MODEL_DIR / f"{ticker}_{frequency}_arima_{schema_hash}.joblib"
+                save_with_schema(arima, arima_path, selected_cols, schema_hash)
                 paths[f"{ticker}_arima"] = arima_path
                 try:
                     preds_train = arima.predict(X_train)

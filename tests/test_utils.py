@@ -60,7 +60,7 @@ except ModuleNotFoundError:
     sys.modules['sklearn.model_selection'] = ms
 
 # Load utils module directly
-UTILS_PATH = pathlib.Path(__file__).resolve().parents[1] / 'src' / 'utils.py'
+UTILS_PATH = pathlib.Path(__file__).resolve().parents[1] / 'src' / 'utils' / '__init__.py'
 spec = importlib.util.spec_from_file_location('utils', UTILS_PATH)
 utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(utils)

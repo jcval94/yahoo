@@ -8,6 +8,8 @@ import json
 import joblib
 import pandas as pd
 
+from .utils.schema_guard import load_with_schema, validate_schema
+
 try:
     from tensorflow import keras
 except Exception:  # pragma: no cover - optional dependency
@@ -77,6 +79,15 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
                     logger.error("%s does not appear to be a trained model", file)
             except Exception:
                 logger.exception("Failed to load model %s", file)
+        elif file.suffix == ".joblib":
+            try:
+                model, feats, schema = load_with_schema(file)
+                if _is_valid_model(model):
+                    models[file.stem] = (model, feats, schema)
+                else:
+                    logger.error("%s does not appear to be a trained model", file)
+            except Exception:
+                logger.exception("Failed to load model %s", file)
         elif file.suffix == ".keras":
             if keras is None:
                 logger.error("TensorFlow unavailable; cannot load %s", file)
@@ -103,7 +114,13 @@ def run_predictions(
 ) -> pd.DataFrame:
     """Run predictions for the given data."""
     rows = []
-    for name, model in models.items():
+    for name, model_info in models.items():
+        if isinstance(model_info, tuple):
+            model, feature_list, schema_hash = model_info
+        else:
+            model = model_info
+            feature_list = None
+            schema_hash = None
         ticker = name.split("_")[0]
         target_col = TARGET_COLS.get(ticker, "Close")
         df = data.get(ticker)
@@ -121,14 +138,18 @@ def run_predictions(
         if "Ticker" in X:
             X = X.drop(columns=["Ticker"])
         X = X.select_dtypes(exclude="object")
-        feature_file = MODEL_DIR / f"{name}_features.json"
-        if feature_file.exists():
-            try:
-                with feature_file.open() as fh:
-                    selected = json.load(fh)
-                X = X.reindex(columns=selected, fill_value=0)
-            except Exception:
-                logger.exception("Failed to align features for %s", name)
+        if feature_list is not None:
+            validate_schema(feature_list, X, schema_hash)
+            X = X.reindex(columns=feature_list, fill_value=0)
+        else:
+            feature_file = MODEL_DIR / f"{name}_features.json"
+            if feature_file.exists():
+                try:
+                    with feature_file.open() as fh:
+                        selected = json.load(fh)
+                    X = X.reindex(columns=selected, fill_value=0)
+                except Exception:
+                    logger.exception("Failed to align features for %s", name)
         y = df.get(target_col)
         train_start = df.index.min().date()
         train_end = df.index.max().date()
