@@ -46,16 +46,10 @@ def train_lstm(
     random_state: int | None = 42,
     verbose: int = 0,
 ) -> tf.keras.Model:
-    """
-    Entrena un LSTM con búsqueda en rejilla + CV temporal.
-
-    Devuelve el mejor modelo entrenado con **todos** los datos.
-    """
     t0 = time.perf_counter()
     logger.info("Training LSTM model with CV")
 
-    # Parámetros por defecto
-    if param_grid is None:
+    if param_grid is None:  # grid por defecto
         param_grid = {
             "units": [32, 64],
             "epochs": [10],
@@ -64,95 +58,118 @@ def train_lstm(
             "batch_size": [32],
         }
 
-    # Forzar shapes: (n_samples, timesteps, n_features)
-    X = np.asarray(X_train, dtype=float)
-    y = np.asarray(y_train, dtype=float)
-    if X.ndim == 2:               # si falta dimensión temporal
-        X = X[:, None, :]         # (samples, 1, features)
+    # ---------- Pre-procesamiento seguro ----------
+    try:
+        X = np.asarray(X_train, dtype=float)
+        y = np.asarray(y_train, dtype=float)
+    except Exception as exc:
+        logger.exception("Falló la conversión de X/y a numpy: %s", exc)
+        raise
 
-    best_params: dict[str, Any] | None = None
-    best_score = np.inf
+    if X.ndim == 2:        # añade dimensión temporal
+        X = X[:, None, :]
 
+    best_params, best_score = None, np.inf
     splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
 
-    # Búsqueda en rejilla
-    for params in ParameterGrid(param_grid):
-        fold_scores = []
-        for fold, (tr_idx, val_idx) in enumerate(splitter.split(X), 1):
-            X_tr, X_val = X[tr_idx], X[val_idx]
-            y_tr, y_val = y[tr_idx], y[val_idx]
+    # ---------- Búsqueda en rejilla con try/except ----------
+    try:
+        for params in ParameterGrid(param_grid):
+            fold_scores = []
+            for tr_idx, val_idx in splitter.split(X):
+                try:
+                    X_tr, X_val = X[tr_idx], X[val_idx]
+                    y_tr, y_val = y[tr_idx], y[val_idx]
 
-            # -------- Modelo por fold --------
-            model = _build_lstm(
-                input_shape=X_tr.shape[1:],
-                units=params["units"],
-                dropout=params["dropout"],
-                l2_reg=params["l2_reg"],
-            )
+                    model = _build_lstm(
+                        input_shape=X_tr.shape[1:],
+                        units=params["units"],
+                        dropout=params["dropout"],
+                        l2_reg=params["l2_reg"],
+                    )
 
-            es = callbacks.EarlyStopping(
-                patience=3,
-                monitor="val_loss",
-                restore_best_weights=True,
-            )
+                    es = callbacks.EarlyStopping(
+                        patience=3, monitor="val_loss", restore_best_weights=True
+                    )
 
-            model.fit(
-                X_tr,
-                y_tr,
-                validation_data=(X_val, y_val),
-                epochs=params["epochs"],
-                batch_size=params["batch_size"],
-                verbose=verbose,
-            )
+                    model.fit(
+                        X_tr,
+                        y_tr,
+                        validation_data=(X_val, y_val),
+                        epochs=params["epochs"],
+                        batch_size=params["batch_size"],
+                        verbose=verbose,
+                    )
 
-            # MAE por fold
-            val_pred = model.predict(X_val, verbose=0).ravel()
-            fold_mae = np.mean(np.abs(y_val - val_pred))
-            fold_scores.append(fold_mae)
+                    val_pred = model.predict(X_val, verbose=0).ravel()
+                    mae = np.mean(np.abs(y_val - val_pred))
+                    fold_scores.append(mae)
 
-            # Limpieza
-            K.clear_session()
-            del model
-            gc.collect()
+                except Exception as fold_exc:
+                    logger.exception(
+                        "Error en fold con params %s: %s. Se omite el fold.",
+                        params,
+                        fold_exc,
+                    )
+                    # opcional: fold_scores.append(np.inf)
 
-        avg_mae = float(np.mean(fold_scores))
-        logger.debug("Params %s → MAE %.4f", params, avg_mae)
+                finally:
+                    tf.keras.backend.clear_session()
+                    gc.collect()
 
-        if avg_mae < best_score:
-            best_score, best_params = avg_mae, params
+            avg_mae = float(np.mean(fold_scores))
+            logger.debug("Params %s → MAE %.4f", params, avg_mae)
 
-    assert best_params is not None, "Grid vacío"
+            if avg_mae < best_score:
+                best_score, best_params = avg_mae, params
+
+    except Exception as grid_exc:
+        logger.exception("Error durante la búsqueda de hiperparámetros: %s", grid_exc)
+        raise
+
+    if best_params is None:
+        raise RuntimeError("No se encontró ningún conjunto de parámetros válido.")
 
     logger.info("Best params: %s (MAE=%.4f)", best_params, best_score)
 
-    # -------- Modelo final con todos los datos --------
-    final_model = _build_lstm(
-        input_shape=X.shape[1:],
-        units=best_params["units"],
-        dropout=best_params["dropout"],
-        l2_reg=best_params["l2_reg"],
-    )
-    es_final = callbacks.EarlyStopping(
-        patience=3,
-        monitor="loss",
-        restore_best_weights=True,
-    )
-    final_model.fit(
-        X,
-        y,
-        epochs=best_params["epochs"],
-        batch_size=best_params["batch_size"],
-        verbose=verbose,
-        callbacks=[es_final],
-    )
+    # ---------- Entrenamiento final ----------
+    try:
+        final_model = _build_lstm(
+            input_shape=X.shape[1:],
+            units=best_params["units"],
+            dropout=best_params["dropout"],
+            l2_reg=best_params["l2_reg"],
+        )
+        es_final = callbacks.EarlyStopping(
+            patience=3, monitor="loss", restore_best_weights=True
+        )
+
+        final_model.fit(
+            X,
+            y,
+            epochs=best_params["epochs"],
+            batch_size=best_params["batch_size"],
+            verbose=verbose,
+            callbacks=[es_final],
+        )
+
+    except Exception as final_exc:
+        logger.exception("Error al entrenar el modelo final: %s", final_exc)
+        raise
 
     logger.info("Finished in %.1f s", time.perf_counter() - t0)
     return final_model
 
 
 def predict_lstm(model: tf.keras.Model, X_new: np.ndarray) -> np.ndarray:
-    """Predicciones con un LSTM entrenado."""
-    X = np.asarray(X_new, dtype=float)
-    if X.ndim == 2:
-        X = X[:, None, :]
-    return model.predict(X, verbose=0).ravel()
+    """Predicciones con manejo de errores."""
+    try:
+        X = np.asarray(X_new, dtype=float)
+        if X.ndim == 2:
+            X = X[:, None, :]
+        preds = model.predict(X, verbose=0).ravel()
+        return preds
+    except Exception as exc:
+        logger.exception("Error en predict_lstm: %s", exc)
+        raise
+        
