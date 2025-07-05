@@ -135,11 +135,11 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
     Puedes ampliar la grilla de parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
    verás un resumen de las matrices de entrenamiento usadas para cada ticker.
    Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
-   `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento y las
-   métricas también se imprimen en los logs.
-   Además se genera `results/variables/variables_<frecuencia>_YYYY-MM-DD.csv`
-   con los coeficientes de regresión y las importancias de cada modelo cuando
-   corresponda.
+   `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento (`run_date`) y las
+   métricas también se imprimen en los logs. El CSV incluye además las columnas
+   `ABT Window`, `Test Window` y `Predict Date` para dejar constancia de los
+   rangos utilizados y la fecha que se pronostica.
+
 
 4. **Prediccion**
 
