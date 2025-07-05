@@ -210,7 +210,7 @@ sequenceDiagram
 En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma programada:
 
 
-* `Monthly_taining_dayly_prediction.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `.joblib`, `.json` o `.keras` nuevo o actualizado para mantener la version mas reciente en el repositorio.
+* `Monthly_taining_dayly_prediction.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `.joblib`, `.json` o `.keras` nuevo o actualizado para mantener la version mas reciente en el repositorio. Las métricas se escriben en `results/metrics` y las variables seleccionadas en `results/features`.
 * `weekly.yml` genera la version agregada semanalmente del ABT. Se ejecuta cada lunes y sube los archivos como artefactos.
 * `monthly_abt.yml` genera la version agregada mensual del ABT. Se ejecuta cada mes y sube los archivos como artefactos.
 * `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/daily_predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
@@ -236,3 +236,18 @@ Cada bloque representa la ejecucion de un modulo. Si prefieres hacerlo manualmen
 ## Contribuciones
 
 Este proyecto es un punto de partida. Puedes reemplazar las secciones marcadas como "placeholder" con implementaciones mas robustas. Se aceptan mejoras y comentarios.
+
+## Validación cruzada temporal
+
+La función `hybrid_cv_split` en `src/utils` genera índices de entrenamiento y prueba respetando una ventana fija de 90 observaciones, un `gap` de 5 días y un avance de 7 pasos entre folds. El siguiente ejemplo muestra su uso con un arreglo ficticio de 200 datos:
+
+```python
+from utils import hybrid_cv_split
+import numpy as np
+
+X = np.arange(200)
+for fold, (train_idx, test_idx) in enumerate(hybrid_cv_split(X)):
+    print(f"Fold {fold}: train {train_idx[0]}-{train_idx[-1]}, test {test_idx[0]}")
+```
+
+Esto produciría como máximo diez particiones desplazando la ventana a lo largo del tiempo.

@@ -20,6 +20,8 @@ from .evaluation import evaluate_predictions
 # Maximum days required by moving averages or lag features
 LOOKBACK_MONTHS = 12
 MAX_MA_DAYS = 50
+VAL_WEEKS = 8
+CV_HORIZON_DAYS = 20
 
 RUN_TIMESTAMP = pd.Timestamp.now(tz="UTC").isoformat()
 
@@ -37,10 +39,10 @@ EVAL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get(
     "evaluation_dir", "results/metrics"
 )
 EVAL_DIR.mkdir(exist_ok=True, parents=True)
-VAR_DIR = Path(__file__).resolve().parents[1] / CONFIG.get(
-    "variable_dir", "results/variables"
+FEATURE_DIR = Path(__file__).resolve().parents[1] / CONFIG.get(
+    "feature_dir", "results/features"
 )
-VAR_DIR.mkdir(exist_ok=True, parents=True)
+FEATURE_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def train_models(
@@ -79,14 +81,15 @@ def train_models(
         df_recent = df.loc[df.index >= feature_start]
 
         df_recent = df_recent.copy()
-        df_recent["target"] = df_recent[target_col].shift(-1)
+        df_recent["delta"] = df_recent[target_col].diff()
+        df_recent["target"] = df_recent["delta"].shift(-1)
         df_recent.dropna(inplace=True)
 
         X = df_recent.drop(columns=[target_col, "target"], errors="ignore")
         y = df_recent["target"]
         log_df_details(f"features {ticker}", X)
 
-        val_start = df_recent.index.max() - pd.Timedelta(days=7)
+        val_start = df_recent.index.max() - pd.Timedelta(weeks=VAL_WEEKS)
         df_train = df_recent[df_recent.index < val_start]
         df_test = df_recent[df_recent.index >= val_start]
 
@@ -126,7 +129,7 @@ def train_models(
         log_df_details(f"test features {ticker}", X_test)
 
         n_samples = len(df_train)
-        cv_splitter = rolling_cv(n_samples, horizon=1, max_splits=24)
+        cv_splitter = rolling_cv(n_samples, horizon=CV_HORIZON_DAYS, max_splits=24)
 
         with timed_stage(f"train Linear {ticker}"):
             try:
@@ -180,8 +183,9 @@ def train_models(
             try:
                 rf_grid = {
                     "n_estimators": [50, 100],
-                    "max_depth": [3, 5],
-                    "min_samples_leaf": [2, 4],
+                    "max_depth": [2, 3, 4],
+                    "max_features": [0.3, 0.5],
+                    "min_samples_leaf": [2, 5],
                 }
                 rf = train_rf(X_train, y_train, param_grid=rf_grid, cv=cv_splitter)
                 schema_hash = hash_schema(X_train)
@@ -233,9 +237,11 @@ def train_models(
             try:
                 xgb_grid = {
                     "n_estimators": [50, 100],
-                    "max_depth": [3, 4],
-                    "learning_rate": [0.05, 0.1],
-                    "subsample": [0.8, 1.0],
+                    "max_depth": [2, 3, 4],
+                    "min_child_weight": [5, 10],
+                    "learning_rate": [0.01, 0.05],
+                    "subsample": [0.6, 0.8],
+                    "colsample_bytree": [0.6, 0.8],
                 }
                 xgb = train_xgb(X_train, y_train, param_grid=xgb_grid, cv=cv_splitter)
                 schema_hash = hash_schema(X_train)
@@ -287,9 +293,10 @@ def train_models(
             try:
                 lgbm_grid = {
                     "n_estimators": [50, 100],
-                    "max_depth": [3, 5],
-                    "learning_rate": [0.05, 0.1],
-                    "subsample": [0.8, 1.0],
+                    "max_depth": [2, 3, 4],
+                    "learning_rate": [0.01, 0.05],
+                    "subsample": [0.6, 0.8],
+                    "colsample_bytree": [0.6, 0.8],
                 }
                 lgbm = train_lgbm(X_train, y_train, param_grid=lgbm_grid, cv=cv_splitter)
                 schema_hash = hash_schema(X_train)
@@ -457,7 +464,7 @@ def train_models(
 
     if var_rows:
         var_df = pd.DataFrame(var_rows)
-        var_file = VAR_DIR / f"variables_{frequency}_{RUN_TIMESTAMP[:10]}.csv"
+        var_file = FEATURE_DIR / f"features_{frequency}_{RUN_TIMESTAMP[:10]}.csv"
         try:
             var_df.to_csv(var_file, index=False)
             logger.info("Saved variable importances to %s", var_file)

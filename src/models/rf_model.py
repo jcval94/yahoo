@@ -5,7 +5,7 @@ from typing import Any, Dict, Sequence, Union
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import (
-    RandomizedSearchCV,
+    GridSearchCV,
     TimeSeriesSplit,
     BaseCrossValidator,
 )
@@ -18,7 +18,6 @@ def train_rf(
     y_train,
     param_grid: Dict[str, Sequence] | None = None,
     cv: Union[int, BaseCrossValidator] = 5,
-    n_iter: int = 10,
     **kwargs,
 ) -> Any:
     """Train a Random Forest with optional cross-validation.
@@ -28,12 +27,10 @@ def train_rf(
     X_train, y_train
         Training features and target.
     param_grid
-        Dictionary of parameter distributions for :class:`RandomizedSearchCV`.
+        Dictionary of parameter grids for :class:`GridSearchCV`.
         If ``None``, a small search space is used.
     cv
         Number of splits for :class:`TimeSeriesSplit`.
-    n_iter
-        Number of parameter settings that are sampled.
     kwargs
         Extra parameters passed directly to ``RandomForestRegressor``.
     """
@@ -43,21 +40,20 @@ def train_rf(
 
     if param_grid is None:
         param_grid = {
-            "n_estimators": [50, 100, 150],
-            "max_depth": [3, 5, 7],
+            "n_estimators": [50, 100],
+            "max_depth": [3, 5],
             "min_samples_leaf": [1, 2],
         }
 
     try:
         base_model = RandomForestRegressor(random_state=42, **kwargs)
         splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
-        search = RandomizedSearchCV(
+        search = GridSearchCV(
             base_model,
-            param_distributions=param_grid,
+            param_grid=param_grid,
             cv=splitter,
             scoring="neg_mean_absolute_error",
             n_jobs=-1,
-            n_iter=n_iter,
         )
         search.fit(X_train, y_train)
         model = search.best_estimator_
