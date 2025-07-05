@@ -59,3 +59,12 @@ def test_stl_columns_added():
         for comp in ["trend", "seasonal", "resid"]:
             assert f"stl_{comp}_{w}" in result.columns
 
+
+def test_unsorted_input_is_sorted_before_features():
+    idx = pd.date_range(start="2020-01-01", periods=10, freq="D")
+    df = pd.DataFrame({"Close": range(10)}, index=idx)
+    df_desc = df.iloc[::-1]
+    result = add_technical_indicators(df_desc)
+    expected = add_technical_indicators(df)
+    pd.testing.assert_frame_equal(result, expected)
+
