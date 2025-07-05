@@ -93,7 +93,7 @@ La carpeta `src` contiene las utilidades principales. Algunos scripts son planti
 
 * `abt/` crea la "Analytic Base Table" con datos diarios descargados y enriquecidos.
 * `models/` almacena ejemplos de modelos de machine learning y los modelos entrenados mensualmente.
-  Estos archivos `*.pkl` se rastrean mediante **Git LFS**, por lo que conviene ejecutar `git lfs install` y `git lfs pull` tras clonar el proyecto.
+  Estos archivos `.joblib`, `.json` y `.keras` se rastrean mediante **Git LFS**, por lo que conviene ejecutar `git lfs install` y `git lfs pull` tras clonar el proyecto.
 * `portfolio/` ofrece herramientas para backtesting y optimizacion de cartera.
 * `notify/` muestra como enviar un mensaje con los resultados.
 * `features.py` implementa indicadores técnicos usados en el ABT.
@@ -128,7 +128,7 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
 
    Se generan varios modelos de ejemplo y se guardan en `models/`. Actualmente
    se entrenan regresión lineal, Random Forest, XGBoost, LightGBM, LSTM y ARIMA.
-  Cada entrenamiento utiliza por defecto los últimos **9 meses** de datos
+  Cada entrenamiento utiliza por defecto los últimos **12 meses** de datos
    (más unos 50 días extra para calcular las medias móviles) y reserva la
    última semana como conjunto de validación. Se aplica validación
    cruzada temporal con ventanas de 60 días para predecir el día siguiente.
@@ -137,6 +137,9 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
    `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento y las
    métricas también se imprimen en los logs.
+   Además se genera `results/variables/variables_<frecuencia>_YYYY-MM-DD.csv`
+   con los coeficientes de regresión y las importancias de cada modelo cuando
+   corresponda.
 
 4. **Prediccion**
 
@@ -207,7 +210,7 @@ sequenceDiagram
 En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma programada:
 
 
-* `Monthly_taining_dayly_prediction.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `*.pkl` nuevo o actualizado para mantener la version mas reciente en el repositorio.
+* `Monthly_taining_dayly_prediction.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `.joblib`, `.json` o `.keras` nuevo o actualizado para mantener la version mas reciente en el repositorio.
 * `weekly.yml` genera la version agregada semanalmente del ABT. Se ejecuta cada lunes y sube los archivos como artefactos.
 * `monthly_abt.yml` genera la version agregada mensual del ABT. Se ejecuta cada mes y sube los archivos como artefactos.
 * `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/daily_predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
