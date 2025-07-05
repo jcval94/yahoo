@@ -1,138 +1,158 @@
-"""Utility functions to train and use an LSTM model with simple CV."""
-import logging
-import time
-from typing import Any, Dict, Sequence, Union
+"""
+Utility functions to train and use an LSTM model with proper
+time-series CV and resource management.
+"""
+
+from __future__ import annotations
+import logging, time, gc
+from typing import Any, Sequence, Mapping
 
 import numpy as np
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.callbacks import EarlyStopping
-from sklearn.model_selection import TimeSeriesSplit, BaseCrossValidator
+import tensorflow as tf
+from tensorflow.keras import layers, regularizers, callbacks, backend as K
+from sklearn.model_selection import TimeSeriesSplit, ParameterGrid
 
 logger = logging.getLogger(__name__)
 
 
-def train_lstm(
-    X_train,
-    y_train,
-    param_grid: Dict[str, Sequence] | None = None,
-    cv: Union[int, BaseCrossValidator] = 5,
-    **kwargs,
-) -> Any:
-    """Train a simple LSTM using manual cross-validation."""
+def _build_lstm(
+    input_shape: tuple[int, int],
+    units: int = 32,
+    dropout: float = 0.0,
+    l2_reg: float = 0.0,
+) -> tf.keras.Model:
+    """Factory que devuelve un modelo LSTM compilado."""
+    reg = regularizers.l2(l2_reg) if l2_reg else None
 
-    start = time.perf_counter()
-    logger.info("Training LSTM model")
-
-    if param_grid is None:
-        param_grid = {
-            "units": [16, 32],
-            "epochs": [2, 3],
-            "dropout": [0.0, 0.2],
-            "l2_reg": [0.0, 0.001],
-        }
-
-    X = np.asarray(X_train).astype(float)
-    y = np.asarray(y_train).astype(float)
-    X = np.expand_dims(X, axis=1)
-
-    best_score = float("inf")
-    best_params = {"units": 16, "epochs": 2, "dropout": 0.0, "l2_reg": 0.0}
-
-    splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
-
-    try:
-        for units in param_grid.get("units", [16]):
-            for epochs in param_grid.get("epochs", [2]):
-                for dropout in param_grid.get("dropout", [0.0]):
-                    for l2_reg in param_grid.get("l2_reg", [0.0]):
-                        scores = []
-                        for train_idx, val_idx in splitter.split(X):
-                            X_tr, X_val = X[train_idx], X[val_idx]
-                            y_tr, y_val = y[train_idx], y[val_idx]
-
-                            reg = keras.regularizers.l2(l2_reg) if l2_reg else None
-                            model = keras.Sequential([
-                                layers.Input(shape=(X_tr.shape[1], X_tr.shape[2])),
-                                layers.LSTM(
-                                    units,
-                                    activation="relu",
-                                    dropout=dropout,
-                                    kernel_regularizer=reg,
-                                ),
-                                layers.Dense(1, kernel_regularizer=reg),
-                            ])
-                            model.compile(optimizer="adam", loss="mse")
-                            es = EarlyStopping(patience=2, restore_best_weights=True)
-                            model.fit(
-                                X_tr,
-                                y_tr,
-                                epochs=epochs,
-                                verbose=0,
-                                callbacks=[es],
-                            )
-                            val_pred = model.predict(X_val, verbose=0).flatten()
-                            scores.append(np.mean(np.abs(y_val - val_pred)))
-
-                        avg_score = float(np.mean(scores))
-                        if avg_score < best_score:
-                            best_score = avg_score
-                            best_params = {
-                                "units": units,
-                                "epochs": epochs,
-                                "dropout": dropout,
-                                "l2_reg": l2_reg,
-                            }
-
-        logger.info("LSTM best params: %s", best_params)
-
-        # Train final model on full dataset
-        final_reg = (
-            keras.regularizers.l2(best_params["l2_reg"])
-            if best_params.get("l2_reg")
-            else None
-        )
-        model = keras.Sequential([
-            layers.Input(shape=(X.shape[1], X.shape[2])),
-            layers.LSTM(
-                best_params["units"],
-                activation="relu",
-                dropout=best_params.get("dropout", 0.0),
-                kernel_regularizer=final_reg,
-            ),
-            layers.Dense(1, kernel_regularizer=final_reg),
-        ])
-        model.compile(optimizer="adam", loss="mse")
-        es_final = EarlyStopping(patience=2, restore_best_weights=True)
-        model.fit(
-            X,
-            y,
-            epochs=best_params["epochs"],
-            verbose=0,
-            callbacks=[es_final],
-        )
-    except Exception:
-        logger.exception("Error while training LSTM")
-        raise
-    finally:
-        duration = time.perf_counter() - start
-        logger.info("LSTM training finished in %.2f seconds", duration)
-
+    model = tf.keras.Sequential(
+        [
+            layers.Input(shape=input_shape),
+            layers.LSTM(units, dropout=dropout,
+                        kernel_regularizer=reg,
+                        recurrent_regularizer=reg,
+                        activation="relu"),
+            layers.Dense(1, kernel_regularizer=reg),
+        ]
+    )
+    model.compile(optimizer="adam", loss="mse")
     return model
 
 
-def predict_lstm(model: Any, X) -> Any:
-    """Make predictions with a trained LSTM model."""
-    start = time.perf_counter()
-    logger.info("Running LSTM prediction")
-    try:
-        X = np.asarray(X).astype(float)
-        X = np.expand_dims(X, axis=1)
-        preds = model.predict(X, verbose=0).flatten()
-    except Exception:
-        logger.exception("Error during LSTM prediction")
-        raise
-    finally:
-        duration = time.perf_counter() - start
-        logger.info("Prediction finished in %.2f seconds", duration)
-    return preds
+def train_lstm(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    param_grid: Mapping[str, Sequence] | None = None,
+    cv: int | TimeSeriesSplit = 5,
+    random_state: int | None = 42,
+    verbose: int = 0,
+) -> tf.keras.Model:
+    """
+    Entrena un LSTM con búsqueda en rejilla + CV temporal.
+
+    Devuelve el mejor modelo entrenado con **todos** los datos.
+    """
+    t0 = time.perf_counter()
+    logger.info("Training LSTM model with CV")
+
+    # Parámetros por defecto
+    if param_grid is None:
+        param_grid = {
+            "units": [32, 64],
+            "epochs": [10],
+            "dropout": [0.0, 0.2],
+            "l2_reg": [0.0, 1e-3],
+            "batch_size": [32],
+        }
+
+    # Forzar shapes: (n_samples, timesteps, n_features)
+    X = np.asarray(X_train, dtype=float)
+    y = np.asarray(y_train, dtype=float)
+    if X.ndim == 2:               # si falta dimensión temporal
+        X = X[:, None, :]         # (samples, 1, features)
+
+    best_params: dict[str, Any] | None = None
+    best_score = np.inf
+
+    splitter = TimeSeriesSplit(n_splits=cv) if isinstance(cv, int) else cv
+
+    # Búsqueda en rejilla
+    for params in ParameterGrid(param_grid):
+        fold_scores = []
+        for fold, (tr_idx, val_idx) in enumerate(splitter.split(X), 1):
+            X_tr, X_val = X[tr_idx], X[val_idx]
+            y_tr, y_val = y[tr_idx], y[val_idx]
+
+            # -------- Modelo por fold --------
+            model = _build_lstm(
+                input_shape=X_tr.shape[1:],
+                units=params["units"],
+                dropout=params["dropout"],
+                l2_reg=params["l2_reg"],
+            )
+
+            es = callbacks.EarlyStopping(
+                patience=3,
+                monitor="val_loss",
+                restore_best_weights=True,
+            )
+
+            model.fit(
+                X_tr,
+                y_tr,
+                validation_data=(X_val, y_val),
+                epochs=params["epochs"],
+                batch_size=params["batch_size"],
+                verbose=verbose,
+            )
+
+            # MAE por fold
+            val_pred = model.predict(X_val, verbose=0).ravel()
+            fold_mae = np.mean(np.abs(y_val - val_pred))
+            fold_scores.append(fold_mae)
+
+            # Limpieza
+            K.clear_session()
+            del model
+            gc.collect()
+
+        avg_mae = float(np.mean(fold_scores))
+        logger.debug("Params %s → MAE %.4f", params, avg_mae)
+
+        if avg_mae < best_score:
+            best_score, best_params = avg_mae, params
+
+    assert best_params is not None, "Grid vacío"
+
+    logger.info("Best params: %s (MAE=%.4f)", best_params, best_score)
+
+    # -------- Modelo final con todos los datos --------
+    final_model = _build_lstm(
+        input_shape=X.shape[1:],
+        units=best_params["units"],
+        dropout=best_params["dropout"],
+        l2_reg=best_params["l2_reg"],
+    )
+    es_final = callbacks.EarlyStopping(
+        patience=3,
+        monitor="loss",
+        restore_best_weights=True,
+    )
+    final_model.fit(
+        X,
+        y,
+        epochs=best_params["epochs"],
+        batch_size=best_params["batch_size"],
+        verbose=verbose,
+        callbacks=[es_final],
+    )
+
+    logger.info("Finished in %.1f s", time.perf_counter() - t0)
+    return final_model
+
+
+def predict_lstm(model: tf.keras.Model, X_new: np.ndarray) -> np.ndarray:
+    """Predicciones con un LSTM entrenado."""
+    X = np.asarray(X_new, dtype=float)
+    if X.ndim == 2:
+        X = X[:, None, :]
+    return model.predict(X, verbose=0).ravel()
