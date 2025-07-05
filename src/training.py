@@ -345,7 +345,12 @@ def train_models(
                     "dropout": [0.2, 0.4],
                     "l2_reg": [0.001, 0.01],
                 }
-                lstm = train_lstm(X_train, y_train, param_grid=lstm_grid, cv=cv_splitter)
+                lstm = train_lstm(
+                    X_train,
+                    y_train,
+                    param_space=lstm_grid,
+                    cv_splits=cv_splitter.n_splits,
+                )
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
                 keras_path = lstm_path.with_suffix('.keras')
                 lstm.save(keras_path)
