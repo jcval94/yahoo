@@ -105,29 +105,54 @@ def _add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_trend_line(df: pd.DataFrame) -> pd.DataFrame:
-    """Add a simple linear trend line over the close price."""
+    """Add rolling linear trend estimates for multiple windows."""
     df = df.copy()
-    if len(df) < 2:
-        df["trend_line"] = df["Close"]
-        return df
 
-    x = np.arange(len(df))
-    coeffs = np.polyfit(x, df["Close"].values, 1)
-    df["trend_line"] = coeffs[0] * x + coeffs[1]
+    def linfit(arr: np.ndarray) -> float:
+        if len(arr) < 2:
+            return np.nan
+        x = np.arange(len(arr))
+        m, b = np.polyfit(x, arr, 1)
+        return m * (len(arr) - 1) + b
+
+    for w in [30, 60, 90]:
+        df[f"trend_line_{w}"] = (
+            df["Close"].rolling(window=w, min_periods=2).apply(linfit, raw=True)
+        )
+
     return df
 
 
 def _add_decomposition(df: pd.DataFrame) -> pd.DataFrame:
-    """Add STL decomposition components if statsmodels is available."""
+    """Add STL decomposition components for several rolling windows."""
     df = df.copy()
     try:
         from statsmodels.tsa.seasonal import STL
 
-        stl = STL(df["Close"], period=7, robust=True)
-        result = stl.fit()
-        df["stl_trend"] = result.trend
-        df["stl_seasonal"] = result.seasonal
-        df["stl_resid"] = result.resid
+        for w in [30, 60, 90]:
+            trends = []
+            seasonals = []
+            resids = []
+            roll = df["Close"].rolling(window=w, min_periods=2)
+            for arr in roll:
+                if len(arr) < 2 or len(arr) <= 7:
+                    trends.append(np.nan)
+                    seasonals.append(np.nan)
+                    resids.append(np.nan)
+                    continue
+                try:
+                    result = STL(arr, period=7, robust=True).fit()
+                    trends.append(result.trend.iloc[-1])
+                    seasonals.append(result.seasonal.iloc[-1])
+                    resids.append(result.resid.iloc[-1])
+                except Exception:
+                    trends.append(np.nan)
+                    seasonals.append(np.nan)
+                    resids.append(np.nan)
+
+            df[f"stl_trend_{w}"] = trends
+            df[f"stl_seasonal_{w}"] = seasonals
+            df[f"stl_resid_{w}"] = resids
     except Exception:
         # Statsmodels may not be installed or STL may fail
         pass
