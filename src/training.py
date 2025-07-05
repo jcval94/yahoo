@@ -341,15 +341,15 @@ def train_models(
             try:
                 lstm_grid = {
                     "units": [8, 16],
-                    "batch": [64, 128],
-                    "epochs": [2, 3],
-                    "dropout": [0.2, 0.4],
+                    "batch": [64],
+                    "epochs": [2],
                     "l2_reg": [0.001, 0.01],
                 }
                 lstm = train_lstm(
                     X_train,
                     y_train,
                     param_space=lstm_grid,
+                    n_iter=2,
                     cv_splits=cv_splitter.n_splits,
                 )
                 lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
