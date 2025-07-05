@@ -63,7 +63,13 @@ def train_lstm(
                                 layers.Dense(1, kernel_regularizer=reg),
                             ])
                             model.compile(optimizer="adam", loss="mse")
-                            es = EarlyStopping(patience=2, restore_best_weights=True)
+                            # Monitor training loss because no validation data
+                            # is provided during cross-validation
+                            es = EarlyStopping(
+                                monitor="loss",
+                                patience=2,
+                                restore_best_weights=True,
+                            )
                             model.fit(
                                 X_tr,
                                 y_tr,
@@ -103,7 +109,13 @@ def train_lstm(
             layers.Dense(1, kernel_regularizer=final_reg),
         ])
         model.compile(optimizer="adam", loss="mse")
-        es_final = EarlyStopping(patience=2, restore_best_weights=True)
+        # When fitting the final model we also monitor training loss
+        # because no validation set is used.
+        es_final = EarlyStopping(
+            monitor="loss",
+            patience=2,
+            restore_best_weights=True,
+        )
         model.fit(
             X,
             y,
