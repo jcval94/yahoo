@@ -5,6 +5,11 @@ etfs:
   - GLD
   - EEM
   - VNQ
+  - AMXL.MX
+  - WALMEX.MX
+  - BIMBOA.MX
+  - CEMEXCPO.MX
+  - GFNORTEO.MX
 start_date: "2015-01-01"
 prediction_horizon: 5
 risk_free_rate: 0.015
@@ -18,3 +23,8 @@ target_cols:
   GLD: Close
   EEM: Close
   VNQ: Close
+  AMXL.MX: Close
+  WALMEX.MX: Close
+  BIMBOA.MX: Close
+  CEMEXCPO.MX: Close
+  GFNORTEO.MX: Close
