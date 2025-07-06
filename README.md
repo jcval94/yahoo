@@ -146,8 +146,8 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    ```bash
    python -m src.predict
    ```
-   Aplica los modelos guardados y crea `results/predicts/daily_predictions.csv` (o la variante semanal/mensual).
-   El archivo contiene las columnas `ticker`, `model`, `parameters`, `actual`, `pred`, `Training Window` y `Predict moment`.
+   Aplica los modelos guardados y crea `results/predicts/<fecha>_daily_predictions.csv` (o la variante semanal/mensual).
+   El archivo contiene las columnas `ticker`, `model`, `actual`, `pred`, `Training Window`, `Predict moment` y `parameters`.
 
 5. **Evaluacion**
 
@@ -214,7 +214,7 @@ En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma 
   Adicionalmente, se genera `results/trainingpreds/fullpredict.csv` con las predicciones de entrenamiento para cada modelo.
 * `weekly.yml` genera la version agregada semanalmente del ABT. Se ejecuta cada lunes y sube los archivos como artefactos.
 * `monthly_abt.yml` genera la version agregada mensual del ABT. Se ejecuta cada mes y sube los archivos como artefactos.
-* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/daily_predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
+* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
 
 
 Para que estos flujos suban cambios por ti, revisa que `GITHUB_TOKEN` tenga permisos de escritura. Si trabajas en un fork, crea un *Personal Access Token* y guárdalo como `GH_PAT`. ¡Listo!
