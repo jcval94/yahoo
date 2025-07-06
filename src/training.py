@@ -72,6 +72,7 @@ def train_models(
     paths = {}
     metrics_rows = []
     var_rows = []
+    pred_rows = []
 
     if isinstance(data, pd.DataFrame):
         grouped = {
@@ -144,6 +145,24 @@ def train_models(
         y_train = df_train["target"]
         X_test = df_test[selected_cols]
         y_test = df_test["target"]
+
+        train_pred_df = pd.DataFrame(
+            {
+                "Fecha": X_train.index,
+                "ticker": ticker,
+                "Valor original": y_train.values,
+                "Dataset": "Train",
+            }
+        )
+        test_pred_df = pd.DataFrame(
+            {
+                "Fecha": X_test.index,
+                "ticker": ticker,
+                "Valor original": y_test.values,
+                "Dataset": "Test",
+            }
+        )
+
         logger.info("%s selected features: %s", ticker, selected_cols)
         log_df_details(f"train features {ticker}", X_train)
         log_df_details(f"test features {ticker}", X_test)
@@ -160,6 +179,7 @@ def train_models(
                 paths[f"{ticker}_linreg"] = lin_path
                 try:
                     preds_train = lin.predict(X_train)
+                    train_pred_df["LINREG"] = preds_train
                     train_metrics = evaluate_predictions(y_train, preds_train)
                     metrics_rows.append({
                         "model": f"{ticker}_linreg",
@@ -172,6 +192,7 @@ def train_models(
                         "Predict Date": predict_date,
                     })
                     preds_test = lin.predict(X_test)
+                    test_pred_df["LINREG"] = preds_test
                     test_metrics = evaluate_predictions(y_test, preds_test)
                     metrics_rows.append({
                         "model": f"{ticker}_linreg",
@@ -216,6 +237,7 @@ def train_models(
                 paths[f"{ticker}_rf"] = rf_path
                 try:
                     preds_train = rf.predict(X_train)
+                    train_pred_df["RF"] = preds_train
                     train_metrics = evaluate_predictions(y_train, preds_train)
                     metrics_rows.append({
                         "model": f"{ticker}_rf",
@@ -228,6 +250,7 @@ def train_models(
                         "Predict Date": predict_date,
                     })
                     preds_test = rf.predict(X_test)
+                    test_pred_df["RF"] = preds_test
                     test_metrics = evaluate_predictions(y_test, preds_test)
                     metrics_rows.append({
                         "model": f"{ticker}_rf",
@@ -274,6 +297,7 @@ def train_models(
                 paths[f"{ticker}_xgb"] = xgb_path
                 try:
                     preds_train = xgb.predict(X_train)
+                    train_pred_df["XGB"] = preds_train
                     train_metrics = evaluate_predictions(y_train, preds_train)
                     metrics_rows.append({
                         "model": f"{ticker}_xgb",
@@ -286,6 +310,7 @@ def train_models(
                         "Predict Date": predict_date,
                     })
                     preds_test = xgb.predict(X_test)
+                    test_pred_df["XGB"] = preds_test
                     test_metrics = evaluate_predictions(y_test, preds_test)
                     metrics_rows.append({
                         "model": f"{ticker}_xgb",
@@ -331,6 +356,7 @@ def train_models(
                 paths[f"{ticker}_lgbm"] = lgbm_path
                 try:
                     preds_train = lgbm.predict(X_train)
+                    train_pred_df["LGBM"] = preds_train
                     train_metrics = evaluate_predictions(y_train, preds_train)
                     metrics_rows.append({
                         "model": f"{ticker}_lgbm",
@@ -343,6 +369,7 @@ def train_models(
                         "Predict Date": predict_date,
                     })
                     preds_test = lgbm.predict(X_test)
+                    test_pred_df["LGBM"] = preds_test
                     test_metrics = evaluate_predictions(y_test, preds_test)
                     metrics_rows.append({
                         "model": f"{ticker}_lgbm",
@@ -397,6 +424,7 @@ def train_models(
                 paths[f"{ticker}_lstm"] = keras_path
                 try:
                     preds_train = predict_lstm(lstm, X_train)
+                    train_pred_df["LSTM"] = preds_train
                     train_metrics = evaluate_predictions(y_train, preds_train)
                     metrics_rows.append({
                         "model": f"{ticker}_lstm",
@@ -409,6 +437,7 @@ def train_models(
                         "Predict Date": predict_date,
                     })
                     preds_test = predict_lstm(lstm, X_test)
+                    test_pred_df["LSTM"] = preds_test
                     test_metrics = evaluate_predictions(y_test, preds_test)
                     metrics_rows.append({
                         "model": f"{ticker}_lstm",
@@ -439,6 +468,7 @@ def train_models(
                 paths[f"{ticker}_arima"] = arima_path
                 try:
                     preds_train = arima.predict(X_train)
+                    train_pred_df["ARIMA"] = preds_train
                     train_metrics = evaluate_predictions(y_train, preds_train)
                     metrics_rows.append({
                         "model": f"{ticker}_arima",
@@ -451,6 +481,7 @@ def train_models(
                         "Predict Date": predict_date,
                     })
                     preds_test = arima.predict(X_test)
+                    test_pred_df["ARIMA"] = preds_test
                     test_metrics = evaluate_predictions(y_test, preds_test)
                     metrics_rows.append({
                         "model": f"{ticker}_arima",
@@ -485,6 +516,8 @@ def train_models(
             except Exception:
                 logger.exception("Failed ARIMA coefficients for %s", ticker)
 
+        pred_rows.extend([train_pred_df, test_pred_df])
+
     if metrics_rows:
         metrics_df = pd.DataFrame(metrics_rows)
         metrics_file = EVAL_DIR / f"metrics_{frequency}_{RUN_TIMESTAMP[:10]}.csv"
@@ -503,6 +536,17 @@ def train_models(
             logger.info("Saved variable importances to %s", var_file)
         except Exception:
             logger.exception("Failed to save variable importances to %s", var_file)
+
+    if pred_rows:
+        preds_df = pd.concat(pred_rows, ignore_index=True)
+        pred_dir = Path(__file__).resolve().parents[1] / "results" / "trainingpreds"
+        pred_dir.mkdir(exist_ok=True, parents=True)
+        pred_file = pred_dir / "fullpredict.csv"
+        try:
+            preds_df.to_csv(pred_file, index=False)
+            logger.info("Saved training predictions to %s", pred_file)
+        except Exception:
+            logger.exception("Failed to save training predictions to %s", pred_file)
 
     log_offline_mode("training")
     return paths
