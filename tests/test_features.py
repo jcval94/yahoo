@@ -81,9 +81,32 @@ def test_diff_sign_features():
     }, index=idx)
     result = add_technical_indicators(df)
     assert "Close_up" in result.columns
-    assert "median_5_up" in result.columns
     expected_close = (df["Close"].diff() > 0).astype(int)
     pd.testing.assert_series_equal(result["Close_up"], expected_close, check_name=False)
-    expected_median = (result["median_5"].diff() > 0).astype(int)
-    pd.testing.assert_series_equal(result["median_5_up"], expected_median, check_name=False)
+
+    for w in [5, 10, 20, 50]:
+        col = f"median_{w}_up"
+        assert col in result.columns
+        expected = (result[f"median_{w}"].diff() > 0).astype(int)
+        pd.testing.assert_series_equal(result[col], expected, check_name=False)
+
+
+def test_ema_and_norm_band_and_simple_return():
+    idx = pd.date_range(start="2020-01-01", periods=60, freq="D")
+    df = pd.DataFrame({
+        "Open": range(60),
+        "High": range(60),
+        "Low": range(60),
+        "Close": range(60),
+        "Adj Close": range(60),
+        "Volume": range(60),
+    }, index=idx)
+    result = add_technical_indicators(df)
+    for w in [5, 10, 20, 50]:
+        assert f"ema_{w}" in result.columns
+        assert f"norm_band_{w}" in result.columns
+
+    assert "simple_return" in result.columns
+    expected_simple = df["Close"].pct_change()
+    pd.testing.assert_series_equal(result["simple_return"], expected_simple, check_name=False)
 
