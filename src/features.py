@@ -32,6 +32,13 @@ def _add_window_stats(df: pd.DataFrame) -> pd.DataFrame:
         # Additional indicators
         df[f"ema_{w}"] = df["Close"].ewm(span=w, adjust=False, min_periods=1).mean()
         df[f"norm_band_{w}"] = (df["Close"] - df[f"ma_{w}"]) / df[f"std_{w}"]
+
+        if w in [5, 10, 20]:
+            df[f"skew_{w}"] = roll.skew()
+            df[f"kurt_{w}"] = roll.kurt()
+
+    df["std_ratio_5_20"] = df["std_5"] / df["std_20"]
+
     return df
 
 
@@ -176,6 +183,21 @@ def _add_diff_sign_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _add_complexity_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a simple entropy-based complexity estimate."""
+    df = df.copy()
+    sign = (df["Close"].diff() > 0).astype(int)
+
+    def entropy(arr: np.ndarray) -> float:
+        counts = np.bincount(arr.astype(int), minlength=2)
+        probs = counts / counts.sum()
+        probs = probs[probs > 0]
+        return -np.sum(probs * np.log(probs))
+
+    df["entropy_20"] = sign.rolling(window=20, min_periods=1).apply(entropy, raw=True)
+    return df
+
+
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """Apply a set of technical indicators to a DataFrame.
 
@@ -194,6 +216,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         group = _add_lag_features(group)
         group = _add_window_stats(group)
         group = _add_diff_sign_features(group)
+        group = _add_complexity_feature(group)
         group = _add_seasonal_features(group)
         group = _add_trend_line(group)
         group = _add_decomposition(group)
