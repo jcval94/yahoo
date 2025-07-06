@@ -2,6 +2,7 @@ import importlib.util
 import pathlib
 import sys
 import types
+import pytest
 
 # Minimal numpy and pandas stubs so utils can be imported without dependencies
 if 'numpy' not in sys.modules:
@@ -67,6 +68,11 @@ spec.loader.exec_module(utils)
 rolling_cv = utils.rolling_cv
 hybrid_cv_split = utils.hybrid_cv_split
 
+
+def test_to_price_basic():
+    assert abs(utils.to_price(0.1, 100, "return") - 110) < 1e-6
+    assert abs(utils.to_price(5, 100, "diff") - 105) < 1e-6
+    assert abs(utils.to_price(50, 0, "price") - 50) < 1e-6
 
 def test_rolling_cv_params():
     cv = rolling_cv(n_samples=100, train_size=60, horizon=1, max_splits=5)

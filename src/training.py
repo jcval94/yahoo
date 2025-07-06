@@ -13,7 +13,13 @@ from .models.xgb_model import train_xgb
 from .models.linear_model import train_linear
 from .models.lightgbm_model import train_lgbm
 from .models.arima_model import train_arima
-from .utils import timed_stage, log_df_details, log_offline_mode, rolling_cv
+from .utils import (
+    timed_stage,
+    log_df_details,
+    log_offline_mode,
+    rolling_cv,
+    to_price,
+)
 from .variable_selection import select_features_rf_cv
 from .evaluation import evaluate_predictions
 
@@ -180,7 +186,10 @@ def train_models(
                 try:
                     preds_train = lin.predict(X_train)
                     train_pred_df["LINREG"] = preds_train
-                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    base_train = df_train.loc[X_train.index, target_col]
+                    train_pred_price = to_price(preds_train, base_train, "diff")
+                    train_true_price = to_price(y_train, base_train, "diff")
+                    train_metrics = evaluate_predictions(train_true_price, train_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_linreg",
                         "dataset": "train",
@@ -193,7 +202,10 @@ def train_models(
                     })
                     preds_test = lin.predict(X_test)
                     test_pred_df["LINREG"] = preds_test
-                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    base_test = df_test.loc[X_test.index, target_col]
+                    test_pred_price = to_price(preds_test, base_test, "diff")
+                    test_true_price = to_price(y_test, base_test, "diff")
+                    test_metrics = evaluate_predictions(test_true_price, test_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_linreg",
                         "dataset": "test",
@@ -238,7 +250,10 @@ def train_models(
                 try:
                     preds_train = rf.predict(X_train)
                     train_pred_df["RF"] = preds_train
-                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    base_train = df_train.loc[X_train.index, target_col]
+                    train_pred_price = to_price(preds_train, base_train, "diff")
+                    train_true_price = to_price(y_train, base_train, "diff")
+                    train_metrics = evaluate_predictions(train_true_price, train_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_rf",
                         "dataset": "train",
@@ -251,7 +266,10 @@ def train_models(
                     })
                     preds_test = rf.predict(X_test)
                     test_pred_df["RF"] = preds_test
-                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    base_test = df_test.loc[X_test.index, target_col]
+                    test_pred_price = to_price(preds_test, base_test, "diff")
+                    test_true_price = to_price(y_test, base_test, "diff")
+                    test_metrics = evaluate_predictions(test_true_price, test_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_rf",
                         "dataset": "test",
@@ -298,7 +316,10 @@ def train_models(
                 try:
                     preds_train = xgb.predict(X_train)
                     train_pred_df["XGB"] = preds_train
-                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    base_train = df_train.loc[X_train.index, target_col]
+                    train_pred_price = to_price(preds_train, base_train, "diff")
+                    train_true_price = to_price(y_train, base_train, "diff")
+                    train_metrics = evaluate_predictions(train_true_price, train_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_xgb",
                         "dataset": "train",
@@ -311,7 +332,10 @@ def train_models(
                     })
                     preds_test = xgb.predict(X_test)
                     test_pred_df["XGB"] = preds_test
-                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    base_test = df_test.loc[X_test.index, target_col]
+                    test_pred_price = to_price(preds_test, base_test, "diff")
+                    test_true_price = to_price(y_test, base_test, "diff")
+                    test_metrics = evaluate_predictions(test_true_price, test_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_xgb",
                         "dataset": "test",
@@ -357,7 +381,10 @@ def train_models(
                 try:
                     preds_train = lgbm.predict(X_train)
                     train_pred_df["LGBM"] = preds_train
-                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    base_train = df_train.loc[X_train.index, target_col]
+                    train_pred_price = to_price(preds_train, base_train, "diff")
+                    train_true_price = to_price(y_train, base_train, "diff")
+                    train_metrics = evaluate_predictions(train_true_price, train_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_lgbm",
                         "dataset": "train",
@@ -370,7 +397,10 @@ def train_models(
                     })
                     preds_test = lgbm.predict(X_test)
                     test_pred_df["LGBM"] = preds_test
-                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    base_test = df_test.loc[X_test.index, target_col]
+                    test_pred_price = to_price(preds_test, base_test, "diff")
+                    test_true_price = to_price(y_test, base_test, "diff")
+                    test_metrics = evaluate_predictions(test_true_price, test_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_lgbm",
                         "dataset": "test",
@@ -425,7 +455,10 @@ def train_models(
                 try:
                     preds_train = predict_lstm(lstm, X_train)
                     train_pred_df["LSTM"] = preds_train
-                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    base_train = df_train.loc[X_train.index, target_col]
+                    train_pred_price = to_price(preds_train, base_train, "diff")
+                    train_true_price = to_price(y_train, base_train, "diff")
+                    train_metrics = evaluate_predictions(train_true_price, train_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_lstm",
                         "dataset": "train",
@@ -438,7 +471,10 @@ def train_models(
                     })
                     preds_test = predict_lstm(lstm, X_test)
                     test_pred_df["LSTM"] = preds_test
-                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    base_test = df_test.loc[X_test.index, target_col]
+                    test_pred_price = to_price(preds_test, base_test, "diff")
+                    test_true_price = to_price(y_test, base_test, "diff")
+                    test_metrics = evaluate_predictions(test_true_price, test_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_lstm",
                         "dataset": "test",
@@ -469,7 +505,10 @@ def train_models(
                 try:
                     preds_train = arima.predict(X_train)
                     train_pred_df["ARIMA"] = preds_train
-                    train_metrics = evaluate_predictions(y_train, preds_train)
+                    base_train = df_train.loc[X_train.index, target_col]
+                    train_pred_price = to_price(preds_train, base_train, "diff")
+                    train_true_price = to_price(y_train, base_train, "diff")
+                    train_metrics = evaluate_predictions(train_true_price, train_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_arima",
                         "dataset": "train",
@@ -482,7 +521,10 @@ def train_models(
                     })
                     preds_test = arima.predict(X_test)
                     test_pred_df["ARIMA"] = preds_test
-                    test_metrics = evaluate_predictions(y_test, preds_test)
+                    base_test = df_test.loc[X_test.index, target_col]
+                    test_pred_price = to_price(preds_test, base_test, "diff")
+                    test_true_price = to_price(y_test, base_test, "diff")
+                    test_metrics = evaluate_predictions(test_true_price, test_pred_price)
                     metrics_rows.append({
                         "model": f"{ticker}_arima",
                         "dataset": "test",
