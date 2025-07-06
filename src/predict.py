@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
 CONFIG = load_config(CONFIG_PATH)
+RUN_TIMESTAMP = pd.Timestamp.now(tz="UTC").isoformat()
 
 TARGET_COLS = CONFIG.get("target_cols", {})
 
@@ -237,6 +238,9 @@ def run_predictions(
         except Exception:
             logger.exception("Prediction failed for %s", name)
     result_df = pd.DataFrame(rows)
+    if not result_df.empty and "parameters" in result_df.columns:
+        ordered_cols = [c for c in result_df.columns if c != "parameters"] + ["parameters"]
+        result_df = result_df[ordered_cols]
     pred_dir = RESULTS_DIR / "predicts"
     pred_dir.mkdir(exist_ok=True, parents=True)
     suffix = {
@@ -244,7 +248,7 @@ def run_predictions(
         "weekly": "weekly_predictions.csv",
         "monthly": "monthly_predictions.csv",
     }.get(frequency, "predictions.csv")
-    out_file = pred_dir / suffix
+    out_file = pred_dir / f"{RUN_TIMESTAMP[:10]}_{suffix}"
     try:
         result_df.to_csv(out_file, index=False)
         logger.info("Saved predictions to %s", out_file)
