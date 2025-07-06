@@ -152,6 +152,31 @@ def log_offline_mode(stage: str) -> None:
         logger.info("Using generated sample data in %s stage", stage)
 
 
+def to_price(pred: float, last_price: float, target_type: str) -> float:
+    """Convert model output to absolute price.
+
+    Parameters
+    ----------
+    pred
+        Raw prediction from the model.
+    last_price
+        Closing price at time ``t``.
+    target_type
+        One of ``"return"``, ``"diff"`` or ``"price"`` describing the
+        model target during training.
+
+    Returns
+    -------
+    float
+        Predicted closing price at ``t+1`` in dollars.
+    """
+    if target_type == "return":
+        return last_price * (1 + pred)
+    elif target_type == "diff":
+        return last_price + pred
+    return pred
+
+
 def hybrid_cv_split(
     X,
     train_window: int = 90,

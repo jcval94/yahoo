@@ -16,7 +16,7 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     keras = None
 
-from .utils import log_df_details, log_offline_mode, load_config
+from .utils import log_df_details, log_offline_mode, load_config, to_price
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +124,20 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
     return models
 
 
+def make_prediction(
+    model: Any,
+    last_close: float,
+    X_inputs: pd.DataFrame,
+    model_meta: Dict[str, Any] | None = None,
+) -> float:
+    """Return next-day price prediction for a single model."""
+    if model_meta is None:
+        model_meta = {}
+    raw_pred = model.predict(X_inputs)[0]
+    target_type = model_meta.get("target_type", "price")
+    return to_price(raw_pred, last_close, target_type)
+
+
 def run_predictions(
     models: Dict[str, Any],
     data: Dict[str, pd.DataFrame],
@@ -183,18 +197,26 @@ def run_predictions(
         train_end = df.index.max().date()
         predict_dt = df.index.max().date()
         try:
+            last_close = df[target_col].iloc[-1]
+            X_last = X.tail(1)
             if keras is not None and isinstance(model, keras.Model):
-                arr = np.asarray(X, dtype=np.float32)
+                arr = np.asarray(X_last, dtype=np.float32)
                 if len(getattr(model, "input_shape", [])) == 3 and arr.ndim == 2:
                     arr = arr[:, None, :]
-                preds = model.predict(arr, verbose=0)
+                pred_price = make_prediction(
+                    model,
+                    last_close,
+                    arr,
+                    {"target_type": "diff"},
+                )
             else:
-                preds = getattr(model, "predict", lambda X: None)(X)
-            if preds is None:
-                continue
-            pred_array = np.asarray(preds).reshape(-1)
-            last_pred = pred_array[-1] if pred_array.size else None
-
+                pred_price = make_prediction(
+                    model,
+                    last_close,
+                    X_last,
+                    {"target_type": "diff"},
+                )
+            
             model_name = getattr(model, "__class__", type(model)).__name__
             params = {}
             if hasattr(model, "get_params"):
@@ -207,8 +229,8 @@ def run_predictions(
                 "ticker": ticker,
                 "model": model_name,
                 "parameters": params,
-                "actual": y.iloc[-1],
-                "pred": last_pred,
+                "actual": last_close,
+                "pred": pred_price,
                 "Training Window": f"{train_start} a {train_end}",
                 "Predict moment": str(predict_dt),
             })
