@@ -68,3 +68,22 @@ def test_unsorted_input_is_sorted_before_features():
     expected = add_technical_indicators(df)
     pd.testing.assert_frame_equal(result, expected)
 
+
+def test_diff_sign_features():
+    idx = pd.date_range(start="2020-01-01", periods=3, freq="D")
+    df = pd.DataFrame({
+        "Open": [1, 2, 1],
+        "High": [1, 2, 1],
+        "Low": [1, 2, 1],
+        "Close": [1, 2, 1],
+        "Adj Close": [1, 2, 1],
+        "Volume": [1, 1, 1],
+    }, index=idx)
+    result = add_technical_indicators(df)
+    assert "Close_up" in result.columns
+    assert "median_5_up" in result.columns
+    expected_close = (df["Close"] > df["Close"].shift(1)).astype(int)
+    pd.testing.assert_series_equal(result["Close_up"], expected_close, check_name=False)
+    expected_median = (result["median_5"] > result["median_5"].shift(1)).astype(int)
+    pd.testing.assert_series_equal(result["median_5_up"], expected_median, check_name=False)
+
