@@ -29,6 +29,14 @@ def _add_window_stats(df: pd.DataFrame) -> pd.DataFrame:
         df[f"q75_{w}"] = roll.quantile(0.75)
         df[f"max_{w}"] = roll.max()
         df[f"std_{w}"] = roll.std()
+        # Additional indicators
+        df[f"ema_{w}"] = df["Close"].ewm(span=w, adjust=False, min_periods=1).mean()
+        df[f"norm_band_{w}"] = (df["Close"] - df[f"ma_{w}"]) / df[f"std_{w}"]
+        if w in [5, 10, 20]:
+            df[f"skew_{w}"] = roll.skew()
+            df[f"kurt_{w}"] = roll.kurt()
+
+    df["std_ratio_5_20"] = df["std_5"] / df["std_20"]
     return df
 
 
@@ -59,9 +67,10 @@ def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_return_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add log returns and simple volatility estimates."""
+    """Add returns and simple volatility estimates."""
     df = df.copy()
     df["log_return"] = np.log(df["Close"]).diff()
+    df["simple_return"] = df["Close"].pct_change()
     df["volatility_5"] = df["log_return"].rolling(window=5, min_periods=1).std()
     df["volatility_10"] = df["log_return"].rolling(window=10, min_periods=1).std()
     return df
@@ -160,13 +169,30 @@ def _add_decomposition(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_diff_sign_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add binary indicators for positive differences in key columns."""
+    """Add binary indicators for positive day-over-day changes."""
     df = df.copy()
+
     columns = ["Close"] + [f"median_{w}" for w in [5, 10, 20, 50]]
     for col in columns:
         if col in df.columns:
-            diff = df[col].diff()
+            # Use previous value only to avoid look-ahead bias
+            diff = df[col] - df[col].shift(1)
             df[f"{col}_up"] = (diff > 0).astype(int)
+    return df
+
+
+def _add_complexity_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a simple entropy-based complexity estimate."""
+    df = df.copy()
+    sign = (df["Close"].diff() > 0).astype(int)
+
+    def entropy(arr: np.ndarray) -> float:
+        counts = np.bincount(arr.astype(int), minlength=2)
+        probs = counts / counts.sum()
+        probs = probs[probs > 0]
+        return -np.sum(probs * np.log(probs))
+
+    df["entropy_20"] = sign.rolling(window=20, min_periods=1).apply(entropy, raw=True)
     return df
 
 
@@ -188,6 +214,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         group = _add_lag_features(group)
         group = _add_window_stats(group)
         group = _add_diff_sign_features(group)
+        group = _add_complexity_feature(group)
         group = _add_seasonal_features(group)
         group = _add_trend_line(group)
         group = _add_decomposition(group)
