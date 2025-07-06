@@ -159,6 +159,17 @@ def _add_decomposition(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _add_diff_sign_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add binary indicators for positive daily changes."""
+    df = df.copy()
+    columns = ["Close"] + [f"median_{w}" for w in [5, 10, 20, 50]]
+    for col in columns:
+        if col in df.columns:
+            prev = df[col].shift(1)
+            df[f"{col}_up"] = (df[col] > prev).astype(int)
+    return df
+
+
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """Apply a set of technical indicators to a DataFrame.
 
@@ -176,6 +187,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         group = _add_return_features(group)
         group = _add_lag_features(group)
         group = _add_window_stats(group)
+        group = _add_diff_sign_features(group)
         group = _add_seasonal_features(group)
         group = _add_trend_line(group)
         group = _add_decomposition(group)
