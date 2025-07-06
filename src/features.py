@@ -32,11 +32,13 @@ def _add_window_stats(df: pd.DataFrame) -> pd.DataFrame:
         # Additional indicators
         df[f"ema_{w}"] = df["Close"].ewm(span=w, adjust=False, min_periods=1).mean()
         df[f"norm_band_{w}"] = (df["Close"] - df[f"ma_{w}"]) / df[f"std_{w}"]
+
         if w in [5, 10, 20]:
             df[f"skew_{w}"] = roll.skew()
             df[f"kurt_{w}"] = roll.kurt()
 
     df["std_ratio_5_20"] = df["std_5"] / df["std_20"]
+
     return df
 
 
