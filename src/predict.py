@@ -17,6 +17,7 @@ except Exception:  # pragma: no cover - optional dependency
     keras = None
 
 from .utils import log_df_details, log_offline_mode, load_config, to_price
+from .evaluation import evaluate_predictions
 
 logger = logging.getLogger(__name__)
 
@@ -226,6 +227,8 @@ def run_predictions(
                 except Exception:
                     logger.warning("Could not retrieve parameters for %s", name)
 
+            predict_date = (df.index.max() + pd.offsets.BDay()).date()
+
             rows.append({
                 "ticker": ticker,
                 "model": model_name,
@@ -234,6 +237,7 @@ def run_predictions(
                 "pred": pred_price,
                 "Training Window": f"{train_start} a {train_end}",
                 "Predict moment": str(predict_dt),
+                "Predicted": str(predict_date),
             })
         except Exception:
             logger.exception("Prediction failed for %s", name)
@@ -258,6 +262,60 @@ def run_predictions(
     return result_df
 
 
+def save_edge_predictions(result_df: pd.DataFrame) -> Path:
+    """Aggregate predictions by ticker and persist as edge predictions."""
+    edge_dir = RESULTS_DIR / "predicts"
+    edge_dir.mkdir(exist_ok=True, parents=True)
+    if result_df.empty:
+        edge_file = edge_dir / f"{RUN_TIMESTAMP[:10]}_edge_prediction.csv"
+        pd.DataFrame().to_csv(edge_file, index=False)
+        return edge_file
+
+    agg = result_df.groupby("ticker")["pred"].mean().reset_index()
+    predict_date = result_df["Predicted"].iloc[0]
+    agg["Predicted"] = predict_date
+    edge_file = edge_dir / f"{RUN_TIMESTAMP[:10]}_edge_prediction.csv"
+    agg.to_csv(edge_file, index=False)
+    logger.info("Saved edge predictions to %s", edge_file)
+    return edge_file
+
+
+def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) -> pd.DataFrame | None:
+    """Compare edge predictions with actual values and save metrics."""
+    if not prev_file.exists():
+        logger.info("Previous edge prediction %s not found", prev_file)
+        return None
+
+    prev_df = pd.read_csv(prev_file)
+    if prev_df.empty:
+        logger.warning("Previous edge prediction file %s is empty", prev_file)
+        return None
+
+    predicted_date = pd.to_datetime(prev_df["Predicted"].iloc[0]).date()
+    rows = []
+    for _, row in prev_df.iterrows():
+        ticker = row["ticker"]
+        pred_val = row["pred"]
+        df = data.get(ticker)
+        if df is None or predicted_date not in df.index:
+            continue
+        target_col = TARGET_COLS.get(ticker, "Close")
+        actual_val = df.loc[predicted_date, target_col]
+        metrics = evaluate_predictions([actual_val], [pred_val])
+        rows.append({"ticker": ticker, **metrics})
+
+    if not rows:
+        return None
+
+    metrics_df = pd.DataFrame(rows)
+    metrics_dir = RESULTS_DIR / "metrics"
+    metrics_dir.mkdir(exist_ok=True, parents=True)
+    metrics_file = metrics_dir / f"edge_daily_{predicted_date}.csv"
+    metrics_df.to_csv(metrics_file, index=False)
+    logger.info("Saved edge metrics to %s", metrics_file)
+    return metrics_df
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -277,4 +335,8 @@ if __name__ == "__main__":
     data_paths = build_abt(args.frequency)
     data = {t: pd.read_csv(p, index_col=0, parse_dates=True) for t, p in data_paths.items()}
     models = load_models(MODEL_DIR)
-    run_predictions(models, data, frequency=args.frequency)
+    result = run_predictions(models, data, frequency=args.frequency)
+    edge_file = save_edge_predictions(result)
+    prev_date = (pd.to_datetime(RUN_TIMESTAMP).date() - pd.Timedelta(days=1))
+    prev_file = RESULTS_DIR / "predicts" / f"{prev_date}_edge_prediction.csv"
+    evaluate_edge_predictions(data, prev_file)
