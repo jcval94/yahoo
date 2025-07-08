@@ -187,3 +187,19 @@ def test_election_day_and_month_end_features():
     assert "is_month_end" in result2.columns
     assert result2.loc[pd.Timestamp("2020-01-31"), "is_month_end"]
 
+    idx3 = pd.DatetimeIndex([
+        "2021-07-05",
+        "2021-07-06",
+    ])
+    df3 = pd.DataFrame({
+        "Open": range(2),
+        "High": range(2),
+        "Low": range(2),
+        "Close": range(2),
+        "Adj Close": range(2),
+        "Volume": range(2),
+    }, index=idx3)
+    result3 = add_technical_indicators(df3)
+    assert "prev_is_holiday" in result3.columns
+    assert result3.loc[pd.Timestamp("2021-07-06"), "prev_is_holiday"]
+
