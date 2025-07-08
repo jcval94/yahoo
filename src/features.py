@@ -138,8 +138,11 @@ def _add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
     cal = USFederalHolidayCalendar()
-    holidays = cal.holidays(start=df.index.min(), end=df.index.max())
+    end = (df.index.max() + pd.offsets.BDay(1)).normalize()
+    holidays = cal.holidays(start=df.index.min(), end=end)
     df["is_holiday"] = df.index.normalize().isin(holidays)
+    next_days = (df.index + pd.offsets.BDay(1)).normalize()
+    df["next_is_holiday"] = next_days.isin(holidays)
     df["prev_is_holiday"] = (
         (df.index.normalize() - pd.Timedelta(days=1)).isin(holidays)
     )

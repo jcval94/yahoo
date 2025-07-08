@@ -150,7 +150,6 @@ def test_std_ratio_and_moments_and_entropy():
     expected_entropy = sign.rolling(window=20, min_periods=1).apply(entropy, raw=True)
     pd.testing.assert_series_equal(result["entropy_20"], expected_entropy, check_name=False)
 
-
 def test_election_day_and_month_end_features():
     idx = pd.DatetimeIndex([
         "2020-11-02",
@@ -202,4 +201,32 @@ def test_election_day_and_month_end_features():
     result3 = add_technical_indicators(df3)
     assert "prev_is_holiday" in result3.columns
     assert result3.loc[pd.Timestamp("2021-07-06"), "prev_is_holiday"]
+
+def test_next_is_holiday():
+    idx = pd.to_datetime([
+        "2020-12-23",
+        "2020-12-24",
+        "2020-12-28",
+        "2020-12-29",
+    ])
+    df = pd.DataFrame(
+        {
+            "Open": range(len(idx)),
+            "High": range(len(idx)),
+            "Low": range(len(idx)),
+            "Close": range(len(idx)),
+            "Adj Close": range(len(idx)),
+            "Volume": range(len(idx)),
+        },
+        index=idx,
+    )
+    result = add_technical_indicators(df)
+    cal = pd.tseries.holiday.USFederalHolidayCalendar()
+    end = (idx.max() + pd.offsets.BDay(1)).normalize()
+    holidays = cal.holidays(start=idx.min(), end=end)
+    expected = (idx + pd.offsets.BDay(1)).normalize().isin(holidays)
+    pd.testing.assert_series_equal(
+        result["next_is_holiday"],
+        pd.Series(expected, index=idx, name="next_is_holiday"),
+    )
 
