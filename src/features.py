@@ -7,6 +7,18 @@ import ta
 from pandas.tseries.holiday import USFederalHolidayCalendar
 
 
+def _us_election_days(start: pd.Timestamp, end: pd.Timestamp) -> pd.DatetimeIndex:
+    """Return US election days between ``start`` and ``end`` inclusive."""
+    years = range(start.year, end.year + 1)
+    days = []
+    for year in years:
+        if year % 2 == 0:
+            first_monday = pd.Timestamp(year=year, month=11, day=1) + pd.offsets.Week(weekday=0)
+            election = first_monday + pd.Timedelta(days=1)
+            days.append(election)
+    return pd.DatetimeIndex(days)
+
+
 
 def _add_basic_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -107,6 +119,8 @@ def _add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
     df["sin_year"] = np.sin(2 * np.pi * day_of_year / 365)
     df["cos_year"] = np.cos(2 * np.pi * day_of_year / 365)
 
+    df["is_month_end"] = df.index.is_month_end
+
 
     cal = USFederalHolidayCalendar()
     end = (df.index.max() + pd.offsets.BDay(1)).normalize()
@@ -114,6 +128,12 @@ def _add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
     df["is_holiday"] = df.index.normalize().isin(holidays)
     next_days = (df.index + pd.offsets.BDay(1)).normalize()
     df["next_is_holiday"] = next_days.isin(holidays)
+    prev_days = (df.index - pd.Timedelta(days=1)).normalize()
+    df["prev_is_holiday"] = prev_days.isin(holidays)
+
+    elections = _us_election_days(df.index.min(), df.index.max())
+    df["is_election_day"] = df.index.normalize().isin(elections)
+    df["next_is_election_day"] = next_days.isin(elections)
 
     return df
 
