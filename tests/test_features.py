@@ -179,3 +179,84 @@ def test_next_is_holiday():
         pd.Series(expected, index=idx, name="next_is_holiday"),
     )
 
+
+def test_election_day_columns():
+    idx = pd.to_datetime([
+        "2020-11-02",
+        "2020-11-03",
+        "2020-11-04",
+        "2022-11-07",
+        "2022-11-08",
+        "2022-11-09",
+    ])
+    df = pd.DataFrame(
+        {
+            "Open": range(len(idx)),
+            "High": range(len(idx)),
+            "Low": range(len(idx)),
+            "Close": range(len(idx)),
+            "Adj Close": range(len(idx)),
+            "Volume": range(len(idx)),
+        },
+        index=idx,
+    )
+    result = add_technical_indicators(df)
+
+    assert result.loc[pd.Timestamp("2020-11-03"), "is_election_day"]
+    assert result.loc[pd.Timestamp("2022-11-08"), "is_election_day"]
+    assert result.loc[pd.Timestamp("2020-11-02"), "next_is_election_day"]
+    assert result.loc[pd.Timestamp("2022-11-07"), "next_is_election_day"]
+    assert not result.loc[pd.Timestamp("2020-11-04"), "is_election_day"]
+
+
+def test_is_month_end_indicator():
+    idx = pd.to_datetime([
+        "2020-01-30",
+        "2020-01-31",
+        "2020-02-03",
+    ])
+    df = pd.DataFrame(
+        {
+            "Open": range(len(idx)),
+            "High": range(len(idx)),
+            "Low": range(len(idx)),
+            "Close": range(len(idx)),
+            "Adj Close": range(len(idx)),
+            "Volume": range(len(idx)),
+        },
+        index=idx,
+    )
+    result = add_technical_indicators(df)
+
+    assert result.loc[pd.Timestamp("2020-01-31"), "is_month_end"]
+    assert not result.loc[pd.Timestamp("2020-01-30"), "is_month_end"]
+
+
+def test_prev_is_holiday():
+    idx = pd.to_datetime([
+        "2020-11-25",
+        "2020-11-26",
+        "2020-11-27",
+        "2020-11-30",
+    ])
+    df = pd.DataFrame(
+        {
+            "Open": range(len(idx)),
+            "High": range(len(idx)),
+            "Low": range(len(idx)),
+            "Close": range(len(idx)),
+            "Adj Close": range(len(idx)),
+            "Volume": range(len(idx)),
+        },
+        index=idx,
+    )
+    result = add_technical_indicators(df)
+    cal = pd.tseries.holiday.USFederalHolidayCalendar()
+    end = (idx.max() + pd.offsets.BDay(1)).normalize()
+    holidays = cal.holidays(start=idx.min(), end=end)
+    expected = (idx - pd.Timedelta(days=1)).normalize().isin(holidays)
+    pd.testing.assert_series_equal(
+        result["prev_is_holiday"],
+        pd.Series(expected, index=idx, name="prev_is_holiday"),
+    )
+
