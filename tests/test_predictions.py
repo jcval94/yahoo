@@ -19,3 +19,21 @@ def test_predictions_file_and_order(tmp_path):
     pred_file = tmp_path / 'predicts' / '2025-07-07_daily_predictions.csv'
     assert pred_file.exists()
     assert result.columns[-1] == 'parameters'
+
+
+def test_edge_prediction_and_metrics(tmp_path):
+    df = pd.DataFrame(
+        {'Close': [1, 2, 3, 4, 5, 6]},
+        index=pd.date_range('2020-01-01', periods=6)
+    )
+    models = {'TEST_dummy': predict._NaiveModel()}
+    predict.RESULTS_DIR = tmp_path
+    predict.RUN_TIMESTAMP = '2025-07-08T00:00:00+00:00'
+
+    result = predict.run_predictions(models, {'TEST': df[:-1]}, frequency='daily')
+    edge_file = predict.save_edge_predictions(result)
+    assert edge_file.exists()
+
+    predict.evaluate_edge_predictions({'TEST': df}, edge_file)
+    metrics_file = tmp_path / 'metrics' / 'edge_daily_2020-01-06.csv'
+    assert metrics_file.exists()
