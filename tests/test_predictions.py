@@ -37,3 +37,14 @@ def test_edge_prediction_and_metrics(tmp_path):
     predict.evaluate_edge_predictions({'TEST': df}, edge_file)
     metrics_file = tmp_path / 'metrics' / 'edge_daily_2020-01-06.csv'
     assert metrics_file.exists()
+
+
+def test_edge_evaluation_no_file(tmp_path):
+    df = pd.DataFrame({'Close': [1, 2, 3]}, index=pd.date_range('2020-01-01', periods=3))
+    predict.RESULTS_DIR = tmp_path
+    predict.RUN_TIMESTAMP = '2025-07-09T00:00:00+00:00'
+
+    result = predict.evaluate_edge_predictions({'TEST': df}, tmp_path / 'missing.csv')
+    assert result is None
+    metrics_files = list((tmp_path / 'metrics').glob('edge_daily_*'))
+    assert not metrics_files
