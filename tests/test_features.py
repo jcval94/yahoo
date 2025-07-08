@@ -150,3 +150,56 @@ def test_std_ratio_and_moments_and_entropy():
     expected_entropy = sign.rolling(window=20, min_periods=1).apply(entropy, raw=True)
     pd.testing.assert_series_equal(result["entropy_20"], expected_entropy, check_name=False)
 
+
+def test_election_day_and_month_end_features():
+    idx = pd.DatetimeIndex([
+        "2020-11-02",
+        "2020-11-03",
+        "2022-11-07",
+        "2022-11-08",
+    ])
+    df = pd.DataFrame({
+        "Open": range(len(idx)),
+        "High": range(len(idx)),
+        "Low": range(len(idx)),
+        "Close": range(len(idx)),
+        "Adj Close": range(len(idx)),
+        "Volume": range(len(idx)),
+    }, index=idx)
+    result = add_technical_indicators(df)
+    assert "is_election_day" in result.columns
+    assert "next_is_election_day" in result.columns
+    assert result.loc[pd.Timestamp("2020-11-03"), "is_election_day"]
+    assert result.loc[pd.Timestamp("2020-11-02"), "next_is_election_day"]
+    assert result.loc[pd.Timestamp("2022-11-08"), "is_election_day"]
+    assert result.loc[pd.Timestamp("2022-11-07"), "next_is_election_day"]
+
+    idx2 = pd.date_range("2020-01-29", periods=5, freq="D")
+    df2 = pd.DataFrame({
+        "Open": range(5),
+        "High": range(5),
+        "Low": range(5),
+        "Close": range(5),
+        "Adj Close": range(5),
+        "Volume": range(5),
+    }, index=idx2)
+    result2 = add_technical_indicators(df2)
+    assert "is_month_end" in result2.columns
+    assert result2.loc[pd.Timestamp("2020-01-31"), "is_month_end"]
+
+    idx3 = pd.DatetimeIndex([
+        "2021-07-05",
+        "2021-07-06",
+    ])
+    df3 = pd.DataFrame({
+        "Open": range(2),
+        "High": range(2),
+        "Low": range(2),
+        "Close": range(2),
+        "Adj Close": range(2),
+        "Volume": range(2),
+    }, index=idx3)
+    result3 = add_technical_indicators(df3)
+    assert "prev_is_holiday" in result3.columns
+    assert result3.loc[pd.Timestamp("2021-07-06"), "prev_is_holiday"]
+

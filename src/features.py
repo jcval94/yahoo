@@ -5,6 +5,35 @@ import numpy as np
 import pandas as pd
 import ta
 from pandas.tseries.holiday import USFederalHolidayCalendar
+from pandas.tseries.offsets import BDay
+
+
+def _us_election_days(start: pd.Timestamp, end: pd.Timestamp) -> pd.DatetimeIndex:
+    """Return U.S. federal election days between start and end inclusive."""
+    start = pd.to_datetime(start)
+    end = pd.to_datetime(end)
+    years = range(start.year, end.year + 1)
+    days = []
+    for year in years:
+        if year % 2 != 0:
+            continue
+        nov_first = pd.Timestamp(year=year, month=11, day=1)
+        first_monday_delta = (0 - nov_first.weekday()) % 7
+        first_monday = nov_first + pd.DateOffset(days=first_monday_delta)
+        election_day = first_monday + pd.Timedelta(days=1)
+        if start <= election_day <= end:
+            days.append(election_day)
+    return pd.DatetimeIndex(days)
+
+
+def _is_month_end(dates: pd.DatetimeIndex) -> pd.Series:
+    """Boolean indicator for month-end dates."""
+    return dates.is_month_end
+
+
+def _is_quarter_end(dates: pd.DatetimeIndex) -> pd.Series:
+    """Boolean indicator for quarter-end dates."""
+    return dates.is_quarter_end
 
 
 
@@ -111,6 +140,18 @@ def _add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
     cal = USFederalHolidayCalendar()
     holidays = cal.holidays(start=df.index.min(), end=df.index.max())
     df["is_holiday"] = df.index.normalize().isin(holidays)
+    df["prev_is_holiday"] = (
+        (df.index.normalize() - pd.Timedelta(days=1)).isin(holidays)
+    )
+
+    elections = _us_election_days(df.index.min(), df.index.max())
+    df["is_election_day"] = df.index.normalize().isin(elections)
+    df["next_is_election_day"] = (
+        (df.index.normalize() + BDay()).isin(elections)
+    )
+
+    df["is_month_end"] = _is_month_end(df.index)
+    df["is_quarter_end"] = _is_quarter_end(df.index)
 
     return df
 
