@@ -1,4 +1,5 @@
 import importlib.util
+import pytest
 import pathlib
 import sys
 import types
@@ -78,3 +79,23 @@ def test_evaluate_predictions_basic():
         'EVS': round(metrics.explained_variance_score(y_true, y_pred), 4),
     }
     assert result == expected
+
+
+def test_detect_drift_threshold():
+    class FakeArray(list):
+        def __sub__(self, other):
+            return FakeArray([a - b for a, b in zip(self, other)])
+        def mean(self):
+            return sum(self) / len(self)
+
+    class FakeNP:
+        def array(self, seq):
+            return FakeArray(seq)
+        def abs(self, arr):
+            return FakeArray([abs(x) for x in arr])
+
+    evaluation.np = FakeNP()
+    prev = [1.0, 1.0, 1.0]
+    curr = [1.05, 1.05, 1.05]
+    assert not evaluation.detect_drift(prev, curr, threshold=0.1)
+    assert evaluation.detect_drift(prev, [1.2, 1.2, 1.2], threshold=0.1)
