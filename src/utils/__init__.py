@@ -78,7 +78,7 @@ def timed_stage(name: str):
         logger.info("-" * 40)
 
 
-def log_df_details(name: str, df: Optional[pd.DataFrame], head: int = 5) -> None:
+def log_df_details(name: str, df: Optional[pd.DataFrame], head: int = 3) -> None:
     """Log basic DataFrame information."""
     logger = logging.getLogger(__name__)
     if df is None:
