@@ -1,0 +1,87 @@
+name: Monthly_training_weekly_prediction
+permissions:
+  contents: write
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch: {}
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          lfs: true
+      - name: Setup Git LFS
+        run: git lfs install
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+      - name: Instalar dependencias
+        run: |
+          pip install --upgrade pip
+          pip install yfinance==0.2.61 ta==0.11.0 requests-cache==1.2.0 pandas>=2.2
+          pip install -r requirements.txt
+      - run: python -m src.training --frequency weekly
+      - name: Upload ABT artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: abt-data
+          path: data/*.csv
+      - name: Commit trained models
+        env:
+          PUSH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add models/*.joblib 2>/dev/null || true
+          git add models/*.json 2>/dev/null || true
+          git add models/*.keras 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No model changes to commit"
+          else
+            git commit -m "Update monthly models"
+            token=${PUSH_TOKEN:-$GITHUB_TOKEN}
+            git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
+          fi
+      - name: Commit metrics y features
+        env:
+          PUSH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add results/metrics/*.csv
+          git add results/features/*.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No metric or feature changes to commit"
+          else
+            git commit -m "Update monthly metrics and features"
+            token=${PUSH_TOKEN:-$GITHUB_TOKEN}
+            git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
+          fi
+      - name: Commit training predictions
+        env:
+          PUSH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add results/trainingpreds/fullpredict.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No training prediction changes to commit"
+          else
+            git commit -m "Update training predictions"
+            token=${PUSH_TOKEN:-$GITHUB_TOKEN}
+            git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
+          fi
+      - run: python -m src.predict --frequency weekly
+      - run: python -m src.portfolio.optimize
+      - run: python -m src.notify.notifier --message "Proceso mensual completado"
