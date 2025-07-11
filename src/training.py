@@ -79,7 +79,7 @@ def _retrain_with_perm_importance(
     predict_fn,
     save_fn=None,
     train_kwargs=None,
-    selected_cols: Iterable[str],
+    feature_cols: Iterable[str],
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
     y_train: pd.Series,
@@ -107,7 +107,7 @@ def _retrain_with_perm_importance(
 
     try:
         imp_df = compute_permutation_importance(
-            importance_model, X_test[list(selected_cols)], y_test
+            importance_model, X_test[list(feature_cols)], y_test
         )
         used_feats = set(imp_df.loc[imp_df.importance_mean > 0, "feature"])
         for row in imp_df.itertuples(index=False):
@@ -123,7 +123,7 @@ def _retrain_with_perm_importance(
                 }
             )
 
-        if used_feats and used_feats != set(selected_cols):
+        if used_feats and used_feats != set(feature_cols):
             X_train_f = X_train[list(used_feats)]
             X_test_f = X_test[list(used_feats)]
             base_train = df_train.loc[X_train_f.index, target_col]
@@ -256,9 +256,10 @@ def train_models(
 
         fs_df = df_train.drop(columns=[target_col], errors="ignore")
         selected_cols = select_features_rf_cv(fs_df, target_col="target")
-        X_train = df_train[selected_cols]
+        feature_cols = list(X.columns)
+        X_train = df_train[feature_cols]
         y_train = df_train["target"]
-        X_test = df_test[selected_cols]
+        X_test = df_test[feature_cols]
         y_test = df_test["target"]
 
         train_pred_df = pd.DataFrame(
@@ -290,7 +291,7 @@ def train_models(
                 lin = train_linear(X_train, y_train, cv=cv_splitter)
                 schema_hash = hash_schema(X_train)
                 lin_path = MODEL_DIR / f"{ticker}_{frequency}_linreg_{schema_hash}.joblib"
-                save_with_schema(lin, lin_path, selected_cols, schema_hash)
+                save_with_schema(lin, lin_path, feature_cols, schema_hash)
                 paths[f"{ticker}_linreg"] = lin_path
                 try:
                     preds_train = lin.predict(X_train)
@@ -343,7 +344,7 @@ def train_models(
                 train_fn=train_linear,
                 train_kwargs={'cv': cv_splitter},
                 predict_fn=lambda m, X: m.predict(X),
-                selected_cols=selected_cols,
+                feature_cols=feature_cols,
                 X_train=X_train,
                 X_test=X_test,
                 y_train=y_train,
@@ -365,15 +366,20 @@ def train_models(
         with timed_stage(f"train RF {ticker}"):
             try:
                 rf_grid = {
-                    "n_estimators": [50, 100],
-                    "max_depth": [2, 3, 4],
-                    "max_features": [0.3, 0.5],
+                    "max_depth": [3, 4],
+                    "max_features": [0.5],
                     "min_samples_leaf": [2, 5],
                 }
-                rf = train_rf(X_train, y_train, param_grid=rf_grid, cv=cv_splitter)
+                rf = train_rf(
+                    X_train,
+                    y_train,
+                    param_grid=rf_grid,
+                    cv=cv_splitter,
+                    n_estimators=100,
+                )
                 schema_hash = hash_schema(X_train)
                 rf_path = MODEL_DIR / f"{ticker}_{frequency}_rf_{schema_hash}.joblib"
-                save_with_schema(rf, rf_path, selected_cols, schema_hash)
+                save_with_schema(rf, rf_path, feature_cols, schema_hash)
                 paths[f"{ticker}_rf"] = rf_path
                 try:
                     preds_train = rf.predict(X_train)
@@ -424,9 +430,9 @@ def train_models(
                 rf,
                 model_label='rf',
                 train_fn=train_rf,
-                train_kwargs={'param_grid': rf_grid, 'cv': cv_splitter},
+                train_kwargs={'cv': cv_splitter},
                 predict_fn=lambda m, X: m.predict(X),
-                selected_cols=selected_cols,
+                feature_cols=feature_cols,
                 X_train=X_train,
                 X_test=X_test,
                 y_train=y_train,
@@ -448,17 +454,22 @@ def train_models(
         with timed_stage(f"train XGB {ticker}"):
             try:
                 xgb_grid = {
-                    "n_estimators": [50, 100],
-                    "max_depth": [2, 3, 4],
-                    "min_child_weight": [5, 10],
-                    "learning_rate": [0.01, 0.05],
-                    "subsample": [0.6, 0.8],
-                    "colsample_bytree": [0.6, 0.8],
+                    "max_depth": [3, 4],
+                    "min_child_weight": [5],
+                    "learning_rate": [0.05],
+                    "subsample": [0.8],
+                    "colsample_bytree": [0.8],
+                    "n_estimators": [100],
                 }
-                xgb = train_xgb(X_train, y_train, param_grid=xgb_grid, cv=cv_splitter)
+                xgb = train_xgb(
+                    X_train,
+                    y_train,
+                    param_grid=xgb_grid,
+                    cv=cv_splitter,
+                )
                 schema_hash = hash_schema(X_train)
                 xgb_path = MODEL_DIR / f"{ticker}_{frequency}_xgb_{schema_hash}.joblib"
-                save_with_schema(xgb, xgb_path, selected_cols, schema_hash)
+                save_with_schema(xgb, xgb_path, feature_cols, schema_hash)
                 paths[f"{ticker}_xgb"] = xgb_path
                 try:
                     preds_train = xgb.predict(X_train)
@@ -509,9 +520,9 @@ def train_models(
                 xgb,
                 model_label='xgb',
                 train_fn=train_xgb,
-                train_kwargs={'param_grid': xgb_grid, 'cv': cv_splitter},
+                train_kwargs={'cv': cv_splitter},
                 predict_fn=lambda m, X: m.predict(X),
-                selected_cols=selected_cols,
+                feature_cols=feature_cols,
                 X_train=X_train,
                 X_test=X_test,
                 y_train=y_train,
@@ -533,16 +544,21 @@ def train_models(
         with timed_stage(f"train LGBM {ticker}"):
             try:
                 lgbm_grid = {
-                    "n_estimators": [50, 100],
-                    "max_depth": [2, 3, 4],
-                    "learning_rate": [0.01, 0.05],
-                    "subsample": [0.6, 0.8],
-                    "colsample_bytree": [0.6, 0.8],
+                    "max_depth": [3, 4],
+                    "learning_rate": [0.05],
+                    "subsample": [0.8],
+                    "colsample_bytree": [0.8],
+                    "n_estimators": [100],
                 }
-                lgbm = train_lgbm(X_train, y_train, param_grid=lgbm_grid, cv=cv_splitter)
+                lgbm = train_lgbm(
+                    X_train,
+                    y_train,
+                    param_grid=lgbm_grid,
+                    cv=cv_splitter,
+                )
                 schema_hash = hash_schema(X_train)
                 lgbm_path = MODEL_DIR / f"{ticker}_{frequency}_lgbm_{schema_hash}.joblib"
-                save_with_schema(lgbm, lgbm_path, selected_cols, schema_hash)
+                save_with_schema(lgbm, lgbm_path, feature_cols, schema_hash)
                 paths[f"{ticker}_lgbm"] = lgbm_path
                 try:
                     preds_train = lgbm.predict(X_train)
@@ -593,9 +609,9 @@ def train_models(
                 lgbm,
                 model_label='lgbm',
                 train_fn=train_lgbm,
-                train_kwargs={'param_grid': lgbm_grid, 'cv': cv_splitter},
+                train_kwargs={'cv': cv_splitter},
                 predict_fn=lambda m, X: m.predict(X),
-                selected_cols=selected_cols,
+                feature_cols=feature_cols,
                 X_train=X_train,
                 X_test=X_test,
                 y_train=y_train,
@@ -634,7 +650,7 @@ def train_models(
                 lstm.save(keras_path)
                 features_path = keras_path.with_name(keras_path.stem + '_features.json')
                 with open(features_path, 'w') as fh:
-                    json.dump(selected_cols, fh)
+                    json.dump(feature_cols, fh)
                 paths[f"{ticker}_lstm"] = keras_path
                 try:
                     preds_train = predict_lstm(lstm, X_train)
@@ -693,13 +709,11 @@ def train_models(
                 train_fn=lambda X, y: train_lstm(
                     X,
                     y,
-                    param_space=lstm_grid,
-                    n_iter=1,
                     cv_splits=cv_splitter.n_splits,
                 ),
                 predict_fn=predict_lstm,
                 save_fn=_save_lstm,
-                selected_cols=selected_cols,
+                feature_cols=feature_cols,
                 X_train=X_train,
                 X_test=X_test,
                 y_train=y_train,
@@ -723,7 +737,7 @@ def train_models(
                 arima = train_arima(y_train)
                 schema_hash = hash_schema(X_train)
                 arima_path = MODEL_DIR / f"{ticker}_{frequency}_arima_{schema_hash}.joblib"
-                save_with_schema(arima, arima_path, selected_cols, schema_hash)
+                save_with_schema(arima, arima_path, feature_cols, schema_hash)
                 paths[f"{ticker}_arima"] = arima_path
                 try:
                     preds_train = arima.predict(X_train)
@@ -775,7 +789,7 @@ def train_models(
                 model_label='arima',
                 train_fn=lambda X, y: train_arima(y),
                 predict_fn=lambda m, X: m.predict(X),
-                selected_cols=selected_cols,
+                feature_cols=feature_cols,
                 X_train=X_train,
                 X_test=X_test,
                 y_train=y_train,
