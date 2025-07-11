@@ -1,7 +1,6 @@
 """Build analytic base tables enriched with technical indicators."""
 import logging
 from pathlib import Path
-from ..utils import load_config
 import pandas as pd
 import yfinance as yf
 import time
