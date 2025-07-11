@@ -445,8 +445,7 @@ def train_models(
                     n_iter=1,
                     cv_splits=cv_splitter.n_splits,
                 )
-                lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.pkl"
-                keras_path = lstm_path.with_suffix('.keras')
+                keras_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.keras"
                 lstm.save(keras_path)
                 features_path = keras_path.with_name(keras_path.stem + '_features.json')
                 with open(features_path, 'w') as fh:
