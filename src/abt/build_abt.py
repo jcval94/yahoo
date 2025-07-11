@@ -144,13 +144,15 @@ def _to_weekly(df: pd.DataFrame) -> pd.DataFrame:
         elif col == "Low":
             agg[col] = "min"
         elif col in {"Close", "Adj Close"}:
-            agg[col] = "last"
+            # use the mean close to approximate the average price of the week
+            agg[col] = "mean"
         elif col == "Volume":
             agg[col] = "sum"
         else:
             agg[col] = "last"
 
-    weekly = df.resample("W").agg(agg)
+    # Use Sunday as the label for each aggregated week
+    weekly = df.resample("W-SUN").agg(agg)
     return weekly
 
 

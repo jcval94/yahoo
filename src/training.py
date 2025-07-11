@@ -599,14 +599,25 @@ if __name__ == "__main__":
     logging.getLogger("yfinance").setLevel(logging.CRITICAL)
     from .abt.build_abt import build_abt
 
-    data_paths = build_abt()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Train models")
+    parser.add_argument(
+        "--frequency",
+        choices=["daily", "weekly", "monthly"],
+        default="daily",
+        help="data frequency to use",
+    )
+    args = parser.parse_args()
+
+    data_paths = build_abt(args.frequency)
     combined_path = data_paths.get("combined")
     if combined_path:
         combined_df = pd.read_csv(combined_path, index_col=0, parse_dates=True)
-        train_models(combined_df)
+        train_models(combined_df, frequency=args.frequency)
     else:
         data = {
             t: pd.read_csv(p, index_col=0, parse_dates=True)
             for t, p in data_paths.items()
         }
-        train_models(data)
+        train_models(data, frequency=args.frequency)
