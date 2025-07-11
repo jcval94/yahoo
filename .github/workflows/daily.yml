@@ -54,9 +54,9 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add "results/predicts/*_daily_predictions.csv" \
-                  "results/predicts/*_edge_prediction.csv" \
-                  "results/metrics/edge_daily_*.csv"
+          git add results/predicts/*_daily_predictions.csv 2>/dev/null || true
+          git add results/predicts/*_edge_prediction.csv 2>/dev/null || true
+          git add results/metrics/edge_daily_*.csv 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
