@@ -22,6 +22,7 @@ from .utils import (
 )
 from .variable_selection import select_features_rf_cv
 from .evaluation import evaluate_predictions
+from .permutation_importance import compute_permutation_importance
 
 # Maximum days required by moving averages or lag features
 LOOKBACK_MONTHS = 12
@@ -68,6 +69,114 @@ def split_train_test(df: pd.DataFrame, val_weeks: int = VAL_WEEKS):
                 f"Train end {latest_train} overlaps test start {earliest_test}"
             )
     return df_train, df_test
+
+
+def _retrain_with_perm_importance(
+    importance_model,
+    *,
+    model_label: str,
+    train_fn,
+    predict_fn,
+    save_fn=None,
+    train_kwargs=None,
+    selected_cols: Iterable[str],
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    df_train: pd.DataFrame,
+    df_test: pd.DataFrame,
+    target_col: str,
+    ticker: str,
+    frequency: str,
+    paths: Dict[str, Path],
+    metrics_rows: list[dict],
+    var_rows: list[dict],
+    abt_window: str,
+    train_window: str,
+    test_window: str,
+    predict_date,
+) -> None:
+    """Compute permutation importances and retrain model if needed."""
+    if predict_fn is None:
+        predict_fn = lambda m, X: m.predict(X)
+    if save_fn is None:
+        save_fn = save_with_schema
+    if train_kwargs is None:
+        train_kwargs = {}
+
+    try:
+        imp_df = compute_permutation_importance(
+            importance_model, X_test[list(selected_cols)], y_test
+        )
+        used_feats = set(imp_df.loc[imp_df.importance_mean > 0, "feature"])
+        for row in imp_df.itertuples(index=False):
+            var_rows.append(
+                {
+                    "model": f"{ticker}_{model_label}",
+                    "feature": row.feature,
+                    "importance_mean": float(row.importance_mean),
+                    "importance_std": float(row.importance_std),
+                    "importance_mean_minus_std": float(row.importance_mean_minus_std),
+                    "used_in_retrain": int(row.feature in used_feats),
+                    "run_date": RUN_TIMESTAMP,
+                }
+            )
+
+        if used_feats and used_feats != set(selected_cols):
+            X_train_f = X_train[list(used_feats)]
+            X_test_f = X_test[list(used_feats)]
+            base_train = df_train.loc[X_train_f.index, target_col]
+            base_test = df_test.loc[X_test_f.index, target_col]
+            with timed_stage(f"retrain {model_label.upper()} {ticker}"):
+                model = train_fn(X_train_f, y_train, **train_kwargs)
+            schema_hash = hash_schema(X_train_f)
+            model_path = MODEL_DIR / f"{ticker}_{frequency}_{model_label}_{schema_hash}.joblib"
+            save_fn(model, model_path, list(used_feats), schema_hash)
+            paths[f"{ticker}_{model_label}"] = model_path
+            try:
+                preds_train = predict_fn(model, X_train_f)
+                train_pred_price = to_price(preds_train, base_train, "diff")
+                train_true_price = to_price(y_train, base_train, "diff")
+                train_metrics = evaluate_predictions(train_true_price, train_pred_price)
+                metrics_rows.append(
+                    {
+                        "model": f"{ticker}_{model_label}",
+                        "dataset": "train",
+                        **train_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Train Window": train_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
+                        "retrained": 1,
+                    }
+                )
+                preds_test = predict_fn(model, X_test_f)
+                test_pred_price = to_price(preds_test, base_test, "diff")
+                test_true_price = to_price(y_test, base_test, "diff")
+                test_metrics = evaluate_predictions(test_true_price, test_pred_price)
+                metrics_rows.append(
+                    {
+                        "model": f"{ticker}_{model_label}",
+                        "dataset": "test",
+                        **test_metrics,
+                        "run_date": RUN_TIMESTAMP,
+                        "ABT Window": abt_window,
+                        "Train Window": train_window,
+                        "Test Window": test_window,
+                        "Predict Date": predict_date,
+                        "retrained": 1,
+                    }
+                )
+            except Exception:
+                logger.exception("Failed evaluation for retrained %s %s", model_label.upper(), ticker)
+        else:
+            for row in metrics_rows[-2:]:
+                row["retrained"] = 0
+    except Exception:
+        logger.exception("Failed permutation importance for %s %s", model_label.upper(), ticker)
+
 
 
 def train_models(
@@ -199,6 +308,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     preds_test = lin.predict(X_test)
                     test_pred_df["LINREG"] = preds_test
@@ -215,6 +325,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     logger.info(
                         "Linear train metrics %s | test metrics %s",
@@ -225,14 +336,31 @@ def train_models(
                     logger.exception("Failed Linear evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed Linear training for %s", ticker)
-        if 'lin' in locals() and hasattr(lin, 'coef_'):
-            for feat, coef in zip(selected_cols, getattr(lin, 'coef_', [])):
-                var_rows.append({
-                    'model': f"{ticker}_linreg",
-                    'feature': feat,
-                    'importance': float(coef),
-                    'run_date': RUN_TIMESTAMP,
-                })
+        if 'lin' in locals():
+            _retrain_with_perm_importance(
+                lin,
+                model_label='linreg',
+                train_fn=train_linear,
+                train_kwargs={'cv': cv_splitter},
+                predict_fn=lambda m, X: m.predict(X),
+                selected_cols=selected_cols,
+                X_train=X_train,
+                X_test=X_test,
+                y_train=y_train,
+                y_test=y_test,
+                df_train=df_train,
+                df_test=df_test,
+                target_col=target_col,
+                ticker=ticker,
+                frequency=frequency,
+                paths=paths,
+                metrics_rows=metrics_rows,
+                var_rows=var_rows,
+                abt_window=abt_window,
+                train_window=train_window,
+                test_window=test_window,
+                predict_date=predict_date,
+            )
 
         with timed_stage(f"train RF {ticker}"):
             try:
@@ -263,6 +391,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     preds_test = rf.predict(X_test)
                     test_pred_df["RF"] = preds_test
@@ -279,6 +408,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     logger.info(
                         "RF train metrics %s | test metrics %s",
@@ -289,14 +419,31 @@ def train_models(
                     logger.exception("Failed RF evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed RF training for %s", ticker)
-        if 'rf' in locals() and hasattr(rf, 'feature_importances_'):
-            for feat, imp in zip(selected_cols, getattr(rf, 'feature_importances_', [])):
-                var_rows.append({
-                    'model': f"{ticker}_rf",
-                    'feature': feat,
-                    'importance': float(imp),
-                    'run_date': RUN_TIMESTAMP,
-                })
+        if 'rf' in locals():
+            _retrain_with_perm_importance(
+                rf,
+                model_label='rf',
+                train_fn=train_rf,
+                train_kwargs={'param_grid': rf_grid, 'cv': cv_splitter},
+                predict_fn=lambda m, X: m.predict(X),
+                selected_cols=selected_cols,
+                X_train=X_train,
+                X_test=X_test,
+                y_train=y_train,
+                y_test=y_test,
+                df_train=df_train,
+                df_test=df_test,
+                target_col=target_col,
+                ticker=ticker,
+                frequency=frequency,
+                paths=paths,
+                metrics_rows=metrics_rows,
+                var_rows=var_rows,
+                abt_window=abt_window,
+                train_window=train_window,
+                test_window=test_window,
+                predict_date=predict_date,
+            )
 
         with timed_stage(f"train XGB {ticker}"):
             try:
@@ -329,6 +476,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     preds_test = xgb.predict(X_test)
                     test_pred_df["XGB"] = preds_test
@@ -345,6 +493,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     logger.info(
                         "XGB train metrics %s | test metrics %s",
@@ -355,14 +504,31 @@ def train_models(
                     logger.exception("Failed XGB evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed XGB training for %s", ticker)
-        if 'xgb' in locals() and hasattr(xgb, 'feature_importances_'):
-            for feat, imp in zip(selected_cols, getattr(xgb, 'feature_importances_', [])):
-                var_rows.append({
-                    'model': f"{ticker}_xgb",
-                    'feature': feat,
-                    'importance': float(imp),
-                    'run_date': RUN_TIMESTAMP,
-                })
+        if 'xgb' in locals():
+            _retrain_with_perm_importance(
+                xgb,
+                model_label='xgb',
+                train_fn=train_xgb,
+                train_kwargs={'param_grid': xgb_grid, 'cv': cv_splitter},
+                predict_fn=lambda m, X: m.predict(X),
+                selected_cols=selected_cols,
+                X_train=X_train,
+                X_test=X_test,
+                y_train=y_train,
+                y_test=y_test,
+                df_train=df_train,
+                df_test=df_test,
+                target_col=target_col,
+                ticker=ticker,
+                frequency=frequency,
+                paths=paths,
+                metrics_rows=metrics_rows,
+                var_rows=var_rows,
+                abt_window=abt_window,
+                train_window=train_window,
+                test_window=test_window,
+                predict_date=predict_date,
+            )
 
         with timed_stage(f"train LGBM {ticker}"):
             try:
@@ -394,6 +560,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     preds_test = lgbm.predict(X_test)
                     test_pred_df["LGBM"] = preds_test
@@ -410,6 +577,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     logger.info(
                         "LGBM train metrics %s | test metrics %s",
@@ -420,14 +588,31 @@ def train_models(
                     logger.exception("Failed LGBM evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed LGBM training for %s", ticker)
-        if 'lgbm' in locals() and hasattr(lgbm, 'feature_importances_'):
-            for feat, imp in zip(selected_cols, getattr(lgbm, 'feature_importances_', [])):
-                var_rows.append({
-                    'model': f"{ticker}_lgbm",
-                    'feature': feat,
-                    'importance': float(imp),
-                    'run_date': RUN_TIMESTAMP,
-                })
+        if 'lgbm' in locals():
+            _retrain_with_perm_importance(
+                lgbm,
+                model_label='lgbm',
+                train_fn=train_lgbm,
+                train_kwargs={'param_grid': lgbm_grid, 'cv': cv_splitter},
+                predict_fn=lambda m, X: m.predict(X),
+                selected_cols=selected_cols,
+                X_train=X_train,
+                X_test=X_test,
+                y_train=y_train,
+                y_test=y_test,
+                df_train=df_train,
+                df_test=df_test,
+                target_col=target_col,
+                ticker=ticker,
+                frequency=frequency,
+                paths=paths,
+                metrics_rows=metrics_rows,
+                var_rows=var_rows,
+                abt_window=abt_window,
+                train_window=train_window,
+                test_window=test_window,
+                predict_date=predict_date,
+            )
 
         with timed_stage(f"train LSTM {ticker}"):
             try:
@@ -467,6 +652,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     preds_test = predict_lstm(lstm, X_test)
                     test_pred_df["LSTM"] = preds_test
@@ -483,6 +669,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     logger.info(
                         "LSTM train metrics %s | test metrics %s",
@@ -493,6 +680,43 @@ def train_models(
                     logger.exception("Failed LSTM evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed LSTM training for %s", ticker)
+        if 'lstm' in locals():
+            def _save_lstm(model, path, feats, _hash):
+                model.save(path)
+                with open(path.with_name(path.stem + '_features.json'), 'w') as fh:
+                    json.dump(feats, fh)
+
+            wrapper = type('Wrapper', (), {'predict': lambda self, X: predict_lstm(lstm, X)})()
+            _retrain_with_perm_importance(
+                wrapper,
+                model_label='lstm',
+                train_fn=lambda X, y: train_lstm(
+                    X,
+                    y,
+                    param_space=lstm_grid,
+                    n_iter=1,
+                    cv_splits=cv_splitter.n_splits,
+                ),
+                predict_fn=predict_lstm,
+                save_fn=_save_lstm,
+                selected_cols=selected_cols,
+                X_train=X_train,
+                X_test=X_test,
+                y_train=y_train,
+                y_test=y_test,
+                df_train=df_train,
+                df_test=df_test,
+                target_col=target_col,
+                ticker=ticker,
+                frequency=frequency,
+                paths=paths,
+                metrics_rows=metrics_rows,
+                var_rows=var_rows,
+                abt_window=abt_window,
+                train_window=train_window,
+                test_window=test_window,
+                predict_date=predict_date,
+            )
 
         with timed_stage(f"train ARIMA {ticker}"):
             try:
@@ -517,6 +741,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     preds_test = arima.predict(X_test)
                     test_pred_df["ARIMA"] = preds_test
@@ -533,6 +758,7 @@ def train_models(
                         "Train Window": train_window,
                         "Test Window": test_window,
                         "Predict Date": predict_date,
+                        "retrained": 0,
                     })
                     logger.info(
                         "ARIMA train metrics %s | test metrics %s",
@@ -543,19 +769,30 @@ def train_models(
                     logger.exception("Failed ARIMA evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed ARIMA training for %s", ticker)
-        if 'arima' in locals() and hasattr(arima, 'results'):
-            try:
-                params = getattr(arima.results, 'params', [])
-                names = getattr(arima.results, 'param_names', list(range(len(params))))
-                for name, coef in zip(names, params):
-                    var_rows.append({
-                        'model': f"{ticker}_arima",
-                        'feature': name,
-                        'importance': float(coef),
-                        'run_date': RUN_TIMESTAMP,
-                    })
-            except Exception:
-                logger.exception("Failed ARIMA coefficients for %s", ticker)
+        if 'arima' in locals():
+            _retrain_with_perm_importance(
+                arima,
+                model_label='arima',
+                train_fn=lambda X, y: train_arima(y),
+                predict_fn=lambda m, X: m.predict(X),
+                selected_cols=selected_cols,
+                X_train=X_train,
+                X_test=X_test,
+                y_train=y_train,
+                y_test=y_test,
+                df_train=df_train,
+                df_test=df_test,
+                target_col=target_col,
+                ticker=ticker,
+                frequency=frequency,
+                paths=paths,
+                metrics_rows=metrics_rows,
+                var_rows=var_rows,
+                abt_window=abt_window,
+                train_window=train_window,
+                test_window=test_window,
+                predict_date=predict_date,
+            )
 
         pred_rows.extend([train_pred_df, test_pred_df])
 
