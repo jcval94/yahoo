@@ -5,6 +5,10 @@ import numpy as np
 import pandas as pd
 import ta
 from pandas.tseries.holiday import USFederalHolidayCalendar
+import logging
+from .utils import log_df_details
+
+logger = logging.getLogger(__name__)
 
 
 def _us_election_days(start: pd.Timestamp, end: pd.Timestamp) -> pd.DatetimeIndex:
@@ -246,5 +250,8 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         return group
 
     if "Ticker" in df.columns:
-        return df.groupby("Ticker", group_keys=False).apply(enrich)
-    return enrich(df)
+        result = df.groupby("Ticker", group_keys=False).apply(enrich)
+    else:
+        result = enrich(df)
+    log_df_details("technical indicators", result)
+    return result

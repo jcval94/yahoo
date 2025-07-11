@@ -3,6 +3,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import logging
+from .utils import log_df_details
+
+logger = logging.getLogger(__name__)
 
 
 def remove_multicollinearity(df: pd.DataFrame, threshold: float = 0.9) -> pd.DataFrame:
@@ -77,6 +81,7 @@ def select_features_rf_cv(
     from sklearn.model_selection import TimeSeriesSplit
 
     df = df.dropna(subset=[target_col])
+    log_df_details("feature selection input", df)
     features = df.drop(columns=[target_col])
     y = df[target_col]
 
@@ -99,4 +104,6 @@ def select_features_rf_cv(
     order = np.argsort(importances)[::-1]
     top_cols = features.columns[order[:max_features]]
     filtered = remove_multicollinearity(features[top_cols], threshold=corr_threshold)
+    logger.info("Selected features: %s", list(filtered.columns))
+    log_df_details("selected features df", filtered)
     return list(filtered.columns)

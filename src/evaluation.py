@@ -31,6 +31,7 @@ def evaluate_predictions(y_true: Sequence[float], y_pred: Sequence[float]) -> di
         "R2": r2,
         "EVS": evs,
     }
+    logger.info("Evaluation metrics: %s", metrics)
     return {k: round(v, 4) for k, v in metrics.items()}
 
 
