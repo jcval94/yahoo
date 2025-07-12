@@ -35,7 +35,7 @@ def test_edge_prediction_and_metrics(tmp_path):
     assert edge_file.exists()
 
     predict.evaluate_edge_predictions({'TEST': df}, edge_file)
-    metrics_file = tmp_path / 'metrics' / 'edge_daily_2020-01-06.csv'
+    metrics_file = tmp_path / 'edge_metrics' / 'edge_metrics_2020-01-06.csv'
     assert metrics_file.exists()
 
 
@@ -46,5 +46,5 @@ def test_edge_evaluation_no_file(tmp_path):
 
     result = predict.evaluate_edge_predictions({'TEST': df}, tmp_path / 'missing.csv')
     assert result is None
-    metrics_files = list((tmp_path / 'metrics').glob('edge_daily_*'))
+    metrics_files = list((tmp_path / 'edge_metrics').glob('edge_metrics_*'))
     assert not metrics_files
