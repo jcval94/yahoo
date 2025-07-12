@@ -16,13 +16,11 @@ jobs:
           lfs: true
       - name: Setup Git LFS
         run: git lfs install
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5.1.1
         with:
+          # v5.2.0 falla cuando el cache de pip no existe
           python-version: 3.11
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          cache: "pip"
       - name: Instalar dependencias
         run: |
           pip install --upgrade pip
