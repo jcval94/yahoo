@@ -1,1 +1,0 @@
-{"features": ["ema_50", "norm_band_5", "close_lag_14", "median_5_up", "median_20", "q25_20", "median_50_up", "stoch", "stoch_signal", "kurt_20", "entropy_20", "kurt_5", "rsi", "stl_seasonal_30", "sin_month", "std_5", "stl_resid_90", "sma_26", "stl_resid_60", "macd", "std_ratio_5_20", "Volume", "skew_20"], "schema_hash": "a82b2b397d"}
