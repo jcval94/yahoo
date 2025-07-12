@@ -29,7 +29,15 @@ TARGET_COLS = CONFIG.get("target_cols", {})
 
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 RESULTS_DIR.mkdir(exist_ok=True, parents=True)
-MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models")
+MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models/daily")
+
+
+def set_model_dir(frequency: str = "daily") -> None:
+    """Set the global MODEL_DIR based on frequency."""
+    global MODEL_DIR
+    key = "model_dir" if frequency == "daily" else f"model_dir_{frequency}"
+    dir_value = CONFIG.get(key, f"models/{frequency}")
+    MODEL_DIR = Path(__file__).resolve().parents[1] / dir_value
 
 
 def _is_lfs_pointer(path: Path) -> bool:
@@ -332,6 +340,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    set_model_dir(args.frequency)
     data_paths = build_abt(args.frequency)
     data = {t: pd.read_csv(p, index_col=0, parse_dates=True) for t, p in data_paths.items()}
     models = load_models(MODEL_DIR)

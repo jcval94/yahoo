@@ -92,7 +92,8 @@ flowchart TB
 La carpeta `src` contiene las utilidades principales. Algunos scripts son plantillas listas para que agregues tu logica.
 
 * `abt/` crea la "Analytic Base Table" con datos diarios descargados y enriquecidos.
-* `models/` almacena ejemplos de modelos de machine learning y los modelos entrenados mensualmente.
+* `models/daily/` almacena ejemplos de modelos de machine learning y los modelos entrenados mensualmente.
+* `models/weekly/` almacena los modelos entrenados con datos semanales.
   Estos archivos `.joblib`, `.json` y `.keras` se rastrean mediante **Git LFS**, por lo que conviene ejecutar `git lfs install` y `git lfs pull` tras clonar el proyecto.
 * `portfolio/` ofrece herramientas para optimizacion de cartera.
 * `notify/` muestra como enviar un mensaje con los resultados.
@@ -127,8 +128,9 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    python -m src.training
    ```
 
-   Se generan varios modelos de ejemplo y se guardan en `models/`. Actualmente
-   se entrenan regresión lineal, Random Forest, XGBoost, LightGBM, LSTM y ARIMA.
+   Se generan varios modelos de ejemplo y se guardan en `models/daily/`.
+   Con `--frequency weekly` los modelos se guardan en `models/weekly/`.
+   Actualmente se entrenan regresión lineal, Random Forest, XGBoost, LightGBM, LSTM y ARIMA.
   Cada entrenamiento utiliza por defecto los últimos **12 meses** de datos
    (más unos 50 días extra para calcular las medias móviles) y reserva la
    última semana como conjunto de validación. Se aplica validación
@@ -211,13 +213,13 @@ sequenceDiagram
 En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma programada:
 
 
-* `Monthly_training_daily_prediction.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/`. Tras entrenar se realiza un commit automatico con cualquier archivo `.joblib`, `.json` o `.keras` nuevo o actualizado para mantener la version mas reciente en el repositorio. Las métricas se escriben en `results/metrics` y las variables seleccionadas en `results/features`.
+* `Monthly_training_daily_prediction.yml` ejecuta el entrenamiento completo cada tres meses y guarda los modelos resultantes en la carpeta `models/daily/`. Tras entrenar se realiza un commit automatico con cualquier archivo `.joblib`, `.json` o `.keras` nuevo o actualizado para mantener la version mas reciente en el repositorio. Las métricas se escriben en `results/metrics` y las variables seleccionadas en `results/features`.
   Adicionalmente, se genera `results/trainingpreds/fullpredict.csv` con las predicciones de entrenamiento para cada modelo.
 * `weekly.yml` genera la version agregada semanalmente del ABT. Se ejecuta cada lunes y sube los archivos como artefactos.
 * `monthly_abt.yml` genera la version agregada mensual del ABT. Se ejecuta cada mes y sube los archivos como artefactos.
-* `Monthly_training_weekly_prediction.yml` reentrena los modelos cada mes usando datos semanales y realiza un pronóstico del promedio de la siguiente semana.
+* `Monthly_training_weekly_prediction.yml` reentrena los modelos cada mes usando datos semanales, guarda los modelos en `models/weekly/` y realiza un pronóstico del promedio de la siguiente semana.
 * `weekly_process.yml` utiliza los modelos almacenados para predecir la próxima semana. Guarda `results/predicts/<fecha>_weekly_predictions.csv` y realiza un commit automático si hay cambios.
-* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
+* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/daily/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
 
 
 Para que estos flujos suban cambios por ti, revisa que `GITHUB_TOKEN` tenga permisos de escritura. Si trabajas en un fork, crea un *Personal Access Token* y guárdalo como `GH_PAT`. ¡Listo!
