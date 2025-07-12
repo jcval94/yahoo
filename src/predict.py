@@ -135,7 +135,11 @@ def make_prediction(
     """Return next-day price prediction for a single model."""
     if model_meta is None:
         model_meta = {}
-    raw_pred = model.predict(X_inputs)[0]
+    raw_pred = model.predict(X_inputs)
+    try:
+        raw_pred = float(np.asarray(raw_pred).reshape(-1)[0])
+    except Exception:
+        raw_pred = float(raw_pred[0])
     target_type = model_meta.get("target_type", "price")
     return to_price(raw_pred, last_close, target_type)
 
@@ -154,7 +158,9 @@ def run_predictions(
             model = model_info
             feature_list = None
             schema_hash = None
-        ticker = name.split("_")[0]
+        parts = name.split("_")
+        ticker = parts[0]
+        algo = parts[2] if len(parts) > 2 else getattr(model, "__class__", type(model)).__name__
         target_col = TARGET_COLS.get(ticker, "Close")
         df = data.get(ticker)
         if df is None or len(df) < 2:
@@ -219,7 +225,7 @@ def run_predictions(
                     {"target_type": "diff"},
                 )
             
-            model_name = getattr(model, "__class__", type(model)).__name__
+            model_name = algo
             params = {}
             if hasattr(model, "get_params"):
                 try:
@@ -263,19 +269,59 @@ def run_predictions(
 
 
 def save_edge_predictions(result_df: pd.DataFrame) -> Path:
-    """Aggregate predictions by ticker and persist as edge predictions."""
+    """Persist edge predictions for top models and ensemble."""
     edge_dir = RESULTS_DIR / "predicts"
     edge_dir.mkdir(exist_ok=True, parents=True)
+
     if result_df.empty:
         edge_file = edge_dir / f"{RUN_TIMESTAMP[:10]}_edge_prediction.csv"
         pd.DataFrame().to_csv(edge_file, index=False)
         return edge_file
 
-    agg = result_df.groupby("ticker")["pred"].mean().reset_index()
-    predict_date = result_df["Predicted"].iloc[0]
-    agg["Predicted"] = predict_date
+    metrics_dir = RESULTS_DIR / "metrics"
+    files = sorted(metrics_dir.glob("metrics_*_*.csv"))
+    top_models: dict[str, list[str]] = {}
+    if files:
+        latest = files[-1]
+        try:
+            metrics_df = pd.read_csv(latest)
+            metrics_df = metrics_df[metrics_df["dataset"] == "test"].copy()
+            metrics_df["ticker"] = metrics_df["model"].str.split("_").str[0]
+            metrics_df["algo"] = metrics_df["model"].str.split("_").str[1]
+            for t, grp in metrics_df.groupby("ticker"):
+                best = grp.sort_values("RMSE").head(3)["algo"].tolist()
+                top_models[t] = best
+        except Exception:
+            logger.exception("Failed to load metrics from %s", latest)
+
+    rows = []
+    for ticker, group in result_df.groupby("ticker"):
+        subset = group
+        if top_models.get(ticker):
+            subset = subset[subset["model"].isin(top_models[ticker])]
+        for _, r in subset.iterrows():
+            rows.append(
+                {
+                    "ticker": r["ticker"],
+                    "model": r["model"],
+                    "pred": float(r["pred"]),
+                    "Predicted": r["Predicted"],
+                }
+            )
+        if not subset.empty:
+            ensemble_pred = float(subset["pred"].astype(float).mean())
+            rows.append(
+                {
+                    "ticker": ticker,
+                    "model": "Top3Ensamble",
+                    "pred": ensemble_pred,
+                    "Predicted": subset["Predicted"].iloc[0],
+                }
+            )
+
+    edge_df = pd.DataFrame(rows)
     edge_file = edge_dir / f"{RUN_TIMESTAMP[:10]}_edge_prediction.csv"
-    agg.to_csv(edge_file, index=False)
+    edge_df.to_csv(edge_file, index=False)
     logger.info("Saved edge predictions to %s", edge_file)
     return edge_file
 
@@ -291,26 +337,28 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
         logger.warning("Previous edge prediction file %s is empty", prev_file)
         return None
 
+    prev_df["pred"] = prev_df["pred"].apply(lambda x: float(np.asarray(x).reshape(-1)[0]))
     predicted_date = pd.to_datetime(prev_df["Predicted"].iloc[0]).date()
     rows = []
     for _, row in prev_df.iterrows():
         ticker = row["ticker"]
-        pred_val = row["pred"]
+        model_name = row["model"]
+        pred_val = float(row["pred"])
         df = data.get(ticker)
         if df is None or predicted_date not in df.index:
             continue
         target_col = TARGET_COLS.get(ticker, "Close")
         actual_val = df.loc[predicted_date, target_col]
         metrics = evaluate_predictions([actual_val], [pred_val])
-        rows.append({"ticker": ticker, **metrics})
+        rows.append({"ticker": ticker, "model": model_name, "pred": pred_val, "Predicted": str(predicted_date), **metrics})
 
     if not rows:
         return None
 
     metrics_df = pd.DataFrame(rows)
-    metrics_dir = RESULTS_DIR / "metrics"
+    metrics_dir = RESULTS_DIR / "edge_metrics"
     metrics_dir.mkdir(exist_ok=True, parents=True)
-    metrics_file = metrics_dir / f"edge_daily_{predicted_date}.csv"
+    metrics_file = metrics_dir / f"edge_metrics_{predicted_date}.csv"
     metrics_df.to_csv(metrics_file, index=False)
     logger.info("Saved edge metrics to %s", metrics_file)
     return metrics_df
