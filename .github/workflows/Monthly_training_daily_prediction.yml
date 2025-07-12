@@ -27,7 +27,9 @@ jobs:
           pip install yfinance==0.2.61 ta==0.11.0 requests-cache==1.2.0 pandas>=2.2
           pip install -r requirements.txt
       - name: Cleanup models
-        run: python -m src.clean_models
+        run: |
+          python -m src.clean_models_daily
+          python -m src.clean_models_weekly
       - run: python -m src.training
       - name: Upload ABT artifacts
         uses: actions/upload-artifact@v4

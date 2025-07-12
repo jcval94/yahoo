@@ -98,7 +98,8 @@ La carpeta `src` contiene las utilidades principales. Algunos scripts son planti
 * `notify/` muestra como enviar un mensaje con los resultados.
 * `features.py` implementa indicadores técnicos usados en el ABT.
 * `variable_selection.py` ayuda a elegir las columnas más relevantes.
-* `clean_models.py` borra modelos antiguos para un reinicio rápido.
+* `clean_models_daily.py` y `clean_models_weekly.py` eliminan modelos
+  almacenados para un reinicio rápido.
 
 Ademas existen scripts de seleccion y prediccion en la raiz del paquete para ejecutar el flujo sin complicaciones.
 
@@ -186,7 +187,8 @@ La funcion de evaluacion calcula los siguientes indicadores:
 8. **Limpieza opcional**
 
    ```bash
-   python -m src.clean_models
+   python -m src.clean_models_daily
+   python -m src.clean_models_weekly
    ```
    Elimina los modelos guardados para empezar de cero.
 
