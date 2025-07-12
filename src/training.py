@@ -40,8 +40,16 @@ logger = logging.getLogger(__name__)
 TARGET_COLS = CONFIG.get("target_cols", {})
 
 
-MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models")
-MODEL_DIR.mkdir(exist_ok=True, parents=True)
+MODEL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("model_dir", "models/daily")
+
+
+def set_model_dir(frequency: str = "daily") -> None:
+    """Set the global MODEL_DIR based on frequency."""
+    global MODEL_DIR
+    key = "model_dir" if frequency == "daily" else f"model_dir_{frequency}"
+    dir_value = CONFIG.get(key, f"models/{frequency}")
+    MODEL_DIR = Path(__file__).resolve().parents[1] / dir_value
+    MODEL_DIR.mkdir(exist_ok=True, parents=True)
 EVAL_DIR = Path(__file__).resolve().parents[1] / CONFIG.get(
     "evaluation_dir", "results/metrics"
 )
@@ -860,6 +868,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    set_model_dir(args.frequency)
     data_paths = build_abt(args.frequency)
     combined_path = data_paths.get("combined")
     if combined_path:
