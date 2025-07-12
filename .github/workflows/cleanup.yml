@@ -24,7 +24,9 @@ jobs:
           pip install --upgrade pip
           pip install yfinance==0.2.61 ta==0.11.0 requests-cache==1.2.0 pandas>=2.2
           pip install -r requirements.txt
-      - run: python -m src.clean_models
+      - run: |
+          python -m src.clean_models_daily
+          python -m src.clean_models_weekly
       - name: Commit removed models
         env:
           PUSH_TOKEN: ${{ secrets.GH_PAT }}
