@@ -1,0 +1,1 @@
+{"features": ["stl_seasonal_90", "cos_quarter", "ema_50", "cos_week", "norm_band_5", "simple_return", "close_lag_14", "dow", "stoch", "stoch_signal", "norm_band_10", "kurt_20", "std_20", "entropy_20", "min_50", "ma_50", "median_50", "std_5", "stl_seasonal_60", "std_ratio_5_20", "q25_50", "norm_band_20", "Volume", "skew_20"], "schema_hash": "21c4dbcf6b"}
