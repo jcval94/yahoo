@@ -356,11 +356,20 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
         return None
 
     metrics_df = pd.DataFrame(rows)
+
+    # Save metrics inside results/edge_metrics for backwards compatibility
     metrics_dir = RESULTS_DIR / "edge_metrics"
     metrics_dir.mkdir(exist_ok=True, parents=True)
     metrics_file = metrics_dir / f"edge_metrics_{predicted_date}.csv"
     metrics_df.to_csv(metrics_file, index=False)
     logger.info("Saved edge metrics to %s", metrics_file)
+
+    # Also store metrics in the main metrics folder
+    metrics_main_dir = RESULTS_DIR / "metrics"
+    metrics_main_dir.mkdir(exist_ok=True, parents=True)
+    metrics_main_file = metrics_main_dir / f"edge_metrics_{predicted_date}.csv"
+    metrics_df.to_csv(metrics_main_file, index=False)
+    logger.info("Saved edge metrics to %s", metrics_main_file)
     return metrics_df
 
 
