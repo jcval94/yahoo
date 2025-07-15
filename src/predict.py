@@ -338,17 +338,24 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
         return None
 
     prev_df["pred"] = prev_df["pred"].apply(lambda x: float(np.asarray(x).reshape(-1)[0]))
-    predicted_date = pd.to_datetime(prev_df["Predicted"].iloc[0]).date()
+    predicted_ts = pd.to_datetime(prev_df["Predicted"].iloc[0])
+    predicted_date = predicted_ts.date()
+    predicted_ts = predicted_ts.tz_localize(None) if predicted_ts.tzinfo else predicted_ts
     rows = []
     for _, row in prev_df.iterrows():
         ticker = row["ticker"]
         model_name = row["model"]
         pred_val = float(row["pred"])
         df = data.get(ticker)
-        if df is None or predicted_date not in df.index:
+        if df is None:
+            continue
+        idx = df.index
+        if getattr(idx, "tz", None) is not None:
+            idx = idx.tz_localize(None)
+        if predicted_ts not in idx:
             continue
         target_col = TARGET_COLS.get(ticker, "Close")
-        actual_val = df.loc[predicted_date, target_col]
+        actual_val = df.loc[df.index[idx.get_loc(predicted_ts)], target_col]
         metrics = evaluate_predictions([actual_val], [pred_val])
         rows.append({"ticker": ticker, "model": model_name, "pred": pred_val, "Predicted": str(predicted_date), **metrics})
 
