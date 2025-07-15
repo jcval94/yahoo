@@ -50,6 +50,8 @@ FEATURE_DIR = Path(__file__).resolve().parents[1] / CONFIG.get(
     "feature_dir", "results/features"
 )
 FEATURE_DIR.mkdir(exist_ok=True, parents=True)
+VIZ_DIR = Path(__file__).resolve().parents[1] / "results" / "viz"
+VIZ_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def split_train_test(df: pd.DataFrame, val_weeks: int = VAL_WEEKS):
@@ -810,6 +812,24 @@ def train_models(
 
         pred_rows.extend([train_pred_df, test_pred_df])
 
+    if pred_rows:
+        preds_df = pd.concat(pred_rows, ignore_index=True)
+        viz_file = VIZ_DIR / "viz_prediction.csv"
+        try:
+            preds_df.to_csv(viz_file, index=False)
+            logger.info("Saved visualization predictions to %s", viz_file)
+        except Exception:
+            logger.exception("Failed to save visualization predictions to %s", viz_file)
+
+        pred_dir = Path(__file__).resolve().parents[1] / "results" / "trainingpreds"
+        pred_dir.mkdir(exist_ok=True, parents=True)
+        pred_file = pred_dir / "fullpredict.csv"
+        try:
+            preds_df.to_csv(pred_file, index=False)
+            logger.info("Saved training predictions to %s", pred_file)
+        except Exception:
+            logger.exception("Failed to save training predictions to %s", pred_file)
+
     if metrics_rows:
         metrics_df = pd.DataFrame(metrics_rows)
         metrics_file = EVAL_DIR / f"metrics_{frequency}_{RUN_TIMESTAMP[:10]}.csv"
@@ -828,17 +848,6 @@ def train_models(
             logger.info("Saved variable importances to %s", var_file)
         except Exception:
             logger.exception("Failed to save variable importances to %s", var_file)
-
-    if pred_rows:
-        preds_df = pd.concat(pred_rows, ignore_index=True)
-        pred_dir = Path(__file__).resolve().parents[1] / "results" / "trainingpreds"
-        pred_dir.mkdir(exist_ok=True, parents=True)
-        pred_file = pred_dir / "fullpredict.csv"
-        try:
-            preds_df.to_csv(pred_file, index=False)
-            logger.info("Saved training predictions to %s", pred_file)
-        except Exception:
-            logger.exception("Failed to save training predictions to %s", pred_file)
 
     log_offline_mode("training")
     return paths
