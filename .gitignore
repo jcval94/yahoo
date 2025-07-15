@@ -9,6 +9,8 @@ results/*
 !results/metrics/**
 !results/features/
 !results/features/**
+!results/viz/
+!results/viz/**
 
 # Byte-compiled / cache files
 __pycache__/
