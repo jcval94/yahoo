@@ -250,7 +250,8 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         return group
 
     if "Ticker" in df.columns:
-        result = df.groupby("Ticker", group_keys=False).apply(enrich)
+        groups = [enrich(g) for _, g in df.groupby("Ticker", group_keys=False)]
+        result = pd.concat(groups)
     else:
         result = enrich(df)
     log_df_details("technical indicators", result)
