@@ -1,0 +1,39 @@
+name: Results Cleanup
+permissions:
+  contents: write
+on:
+  schedule:
+    - cron: '0 2 */30 * *'
+  workflow_dispatch: {}
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Delete old result files
+        run: python -m src.clean_results
+      - name: Commit cleaned results
+        env:
+          PUSH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add results
+          if git diff --cached --quiet; then
+            echo "No result files removed"
+          else
+            git commit -m "Remove old results"
+            token=${PUSH_TOKEN:-$GITHUB_TOKEN}
+            git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
+          fi
