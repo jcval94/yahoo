@@ -13,6 +13,8 @@ results/*
 !results/features/**
 !results/viz/
 !results/viz/**
+!results/drift/
+!results/drift/**
 
 # Byte-compiled / cache files
 __pycache__/
