@@ -52,6 +52,7 @@ def test_edge_prediction_and_metrics(tmp_path):
     assert (mdf['real'] == 6).all()
 
 
+
 def test_edge_evaluation_no_file(tmp_path):
     df = pd.DataFrame({'Close': [1, 2, 3]}, index=pd.date_range('2020-01-01', periods=3))
     predict.RESULTS_DIR = tmp_path
