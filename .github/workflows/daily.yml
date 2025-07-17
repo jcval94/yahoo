@@ -74,3 +74,5 @@ jobs:
             abt.log
             predict.log
       - run: python -m src.notify.notifier --message "Proceso diario completado"
+      - name: Generate viz tables
+        run: python -m src.visualization
