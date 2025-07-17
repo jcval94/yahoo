@@ -42,6 +42,15 @@ def test_edge_prediction_and_metrics(tmp_path):
     mdf = pd.read_csv(metrics_file_edge)
     assert 'pred' in mdf.columns
     assert 'real' in mdf.columns
+    assert 'pred_delta' in mdf.columns
+    assert 'real_delta' in mdf.columns
+    assert 'pred_delta_pct' in mdf.columns
+    assert 'real_delta_pct' in mdf.columns
+    assert 'direction' in mdf.columns
+    # verify actual value corresponds to prediction date
+    assert (mdf['Predicted'] == '2020-01-06').all()
+    assert (mdf['real'] == 6).all()
+
 
 
 def test_edge_evaluation_no_file(tmp_path):
