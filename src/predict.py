@@ -338,14 +338,15 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
         return None
 
     prev_df["pred"] = prev_df["pred"].apply(lambda x: float(np.asarray(x).reshape(-1)[0]))
-    predicted_ts = pd.to_datetime(prev_df["Predicted"].iloc[0])
-    predicted_date = predicted_ts.date()
-    predicted_ts = predicted_ts.tz_localize(None) if predicted_ts.tzinfo else predicted_ts
+    metrics_date = pd.to_datetime(prev_df["Predicted"].iloc[0]).date()
     rows = []
     for _, row in prev_df.iterrows():
         ticker = row["ticker"]
         model_name = row["model"]
         pred_val = float(row["pred"])
+        predicted_ts = pd.to_datetime(row["Predicted"])
+        predicted_ts = predicted_ts.tz_localize(None) if predicted_ts.tzinfo else predicted_ts
+        predicted_date = predicted_ts.date()
         df = data.get(ticker)
         if df is None:
             continue
@@ -355,9 +356,43 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
         if predicted_ts not in idx:
             continue
         target_col = TARGET_COLS.get(ticker, "Close")
-        actual_val = df.loc[df.index[idx.get_loc(predicted_ts)], target_col]
+        actual_idx = df.index[idx.get_loc(predicted_ts)]
+        if actual_idx.date() != predicted_date:
+            logger.warning(
+                "Mismatch between predicted date %s and actual index %s for %s",
+                predicted_date,
+                actual_idx.date(),
+                ticker,
+            )
+            continue
+        actual_val = df.loc[actual_idx, target_col]
+        prev_close = None
+        loc = idx.get_loc(predicted_ts)
+        if isinstance(loc, (int, np.integer)) and loc > 0:
+            prev_close = df.loc[df.index[loc - 1], target_col]
+        pred_delta = None if prev_close is None else pred_val - prev_close
+        real_delta = None if prev_close is None else actual_val - prev_close
+        pred_delta_pct = None
+        real_delta_pct = None
+        direction = None
+        if prev_close not in (None, 0):
+            pred_delta_pct = (pred_delta / prev_close) * 100
+            real_delta_pct = (real_delta / prev_close) * 100
+            direction = real_delta > 0
         metrics = evaluate_predictions([actual_val], [pred_val])
-        rows.append({"ticker": ticker, "model": model_name, "pred": pred_val, "Predicted": str(predicted_date), **metrics})
+        rows.append({
+            "ticker": ticker,
+            "model": model_name,
+            "pred": pred_val,
+            "real": actual_val,
+            "pred_delta": pred_delta,
+            "real_delta": real_delta,
+            "pred_delta_pct": pred_delta_pct,
+            "real_delta_pct": real_delta_pct,
+            "direction": direction,
+            "Predicted": str(predicted_date),
+            **metrics,
+        })
 
     if not rows:
         return None
@@ -367,14 +402,14 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
     # Save metrics inside results/edge_metrics for backwards compatibility
     metrics_dir = RESULTS_DIR / "edge_metrics"
     metrics_dir.mkdir(exist_ok=True, parents=True)
-    metrics_file = metrics_dir / f"edge_metrics_{predicted_date}.csv"
+    metrics_file = metrics_dir / f"edge_metrics_{metrics_date}.csv"
     metrics_df.to_csv(metrics_file, index=False)
     logger.info("Saved edge metrics to %s", metrics_file)
 
     # Also store metrics in the main metrics folder
     metrics_main_dir = RESULTS_DIR / "metrics"
     metrics_main_dir.mkdir(exist_ok=True, parents=True)
-    metrics_main_file = metrics_main_dir / f"edge_metrics_{predicted_date}.csv"
+    metrics_main_file = metrics_main_dir / f"edge_metrics_{metrics_date}.csv"
     metrics_df.to_csv(metrics_main_file, index=False)
     logger.info("Saved edge metrics to %s", metrics_main_file)
     return metrics_df
