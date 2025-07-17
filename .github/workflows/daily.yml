@@ -47,6 +47,9 @@ jobs:
         run: |
           set -e
           python -m src.predict 2>&1 | tee predict.log || { echo "::error::Prediction failed"; exit 1; }
+      - name: Evaluate drift
+        run: |
+          python -m src.edge_drift
       - name: Commit results
         env:
           PUSH_TOKEN: ${{ secrets.GH_PAT }}
@@ -58,6 +61,7 @@ jobs:
           git add results/predicts/*_edge_prediction.csv 2>/dev/null || true
           git add results/metrics/edge_metrics_*.csv 2>/dev/null || true
           git add results/edge_metrics/*.csv 2>/dev/null || true
+          git add results/drift/*/drift_metrics.csv 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
