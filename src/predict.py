@@ -372,13 +372,15 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
             prev_close = df.loc[df.index[loc - 1], target_col]
         pred_delta = None if prev_close is None else pred_val - prev_close
         real_delta = None if prev_close is None else actual_val - prev_close
-        pred_delta_pct = None
-        real_delta_pct = None
+        pred_inc = None
+        real_inc = None
         direction = None
         if prev_close not in (None, 0):
-            pred_delta_pct = (pred_delta / prev_close) * 100
-            real_delta_pct = (real_delta / prev_close) * 100
-            direction = real_delta > 0
+            pred_inc = (pred_val - prev_close) / prev_close
+            real_inc = (actual_val - prev_close) / prev_close
+            direction = (pred_inc > 0 and real_inc > 0) or (
+                pred_inc < 0 and real_inc < 0
+            )
         metrics = evaluate_predictions([actual_val], [pred_val])
         rows.append({
             "ticker": ticker,
@@ -387,8 +389,8 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
             "real": actual_val,
             "pred_delta": pred_delta,
             "real_delta": real_delta,
-            "pred_delta_pct": pred_delta_pct,
-            "real_delta_pct": real_delta_pct,
+            "pred_inc": pred_inc,
+            "real_inc": real_inc,
             "direction": direction,
             "Predicted": str(predicted_date),
             **metrics,
