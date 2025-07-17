@@ -170,21 +170,28 @@ La funcion de evaluacion calcula los siguientes indicadores:
 - **EVS**: varianza explicada por el modelo.
 
 
-6. **Optimizacion de portafolio**
+6. **Monitoreo de deriva**
+
+   ```bash
+   python -m src.edge_drift
+   ```
+   Genera un reporte con las metricas de los ultimos 15 dias de `results/edge_metrics` y calcula un puntaje de deriva.
+
+7. **Optimizacion de portafolio**
 
    ```bash
    python -m src.portfolio.optimize
    ```
    Ajusta los pesos segun tus reglas para armar un portafolio equilibrado.
 
-7. **Notificacion**
+8. **Notificacion**
 
    ```bash
    python -m src.notify.notifier --message "Proceso completo"
    ```
    Envía un aviso por correo o chat con los resultados finales.
 
-8. **Limpieza opcional**
+9. **Limpieza opcional**
 
    ```bash
    python -m src.clean_models_daily
@@ -219,7 +226,7 @@ En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma 
 * `monthly_abt.yml` genera la version agregada mensual del ABT. Se ejecuta cada mes y sube los archivos como artefactos.
 * `Monthly_training_weekly_prediction.yml` reentrena los modelos cada mes usando datos semanales y realiza un pronóstico del promedio de la siguiente semana.
 * `weekly_process.yml` utiliza los modelos almacenados para predecir la próxima semana. Guarda `results/predicts/<fecha>_weekly_predictions.csv` y realiza un commit automático si hay cambios.
-* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/daily/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv` y se suben mediante un commit automatico cuando existen cambios.
+* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/daily/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv`. Luego ejecuta `src.edge_drift` para evaluar la deriva y guarda un CSV en `results/drift/<fecha>` que también se sube mediante un commit automático cuando existen cambios.
 
 
 Para que estos flujos suban cambios por ti, revisa que `GITHUB_TOKEN` tenga permisos de escritura. Si trabajas en un fork, crea un *Personal Access Token* y guárdalo como `GH_PAT`. ¡Listo!
@@ -233,7 +240,8 @@ flowchart TD
     ABT --> TR[python -m src.training]
     TR --> PR[python -m src.predict]
     PR --> EV[python -m src.evaluation]
-    EV --> OP[python -m src.portfolio.optimize]
+    EV --> DR[python -m src.edge_drift]
+    DR --> OP[python -m src.portfolio.optimize]
     OP --> NT[python -m src.notify.notifier]
 ```
 
