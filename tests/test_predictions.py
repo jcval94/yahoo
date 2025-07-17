@@ -39,6 +39,9 @@ def test_edge_prediction_and_metrics(tmp_path):
     assert metrics_file_edge.exists()
     metrics_file_main = tmp_path / 'metrics' / 'edge_metrics_2020-01-06.csv'
     assert metrics_file_main.exists()
+    mdf = pd.read_csv(metrics_file_edge)
+    assert 'pred' in mdf.columns
+    assert 'real' in mdf.columns
 
 
 def test_edge_evaluation_no_file(tmp_path):

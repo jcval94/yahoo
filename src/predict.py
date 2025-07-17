@@ -357,7 +357,14 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
         target_col = TARGET_COLS.get(ticker, "Close")
         actual_val = df.loc[df.index[idx.get_loc(predicted_ts)], target_col]
         metrics = evaluate_predictions([actual_val], [pred_val])
-        rows.append({"ticker": ticker, "model": model_name, "pred": pred_val, "Predicted": str(predicted_date), **metrics})
+        rows.append({
+            "ticker": ticker,
+            "model": model_name,
+            "pred": pred_val,
+            "real": actual_val,
+            "Predicted": str(predicted_date),
+            **metrics,
+        })
 
     if not rows:
         return None
