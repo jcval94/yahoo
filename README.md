@@ -1,7 +1,7 @@
 # Yahoo Finance Pipeline
 ![Schema-Checked](https://img.shields.io/badge/Schema--Checked-%E2%9C%85-brightgreen)
 
-¡Bienvenido a este pequeño experimento! Aquí encontrarás un pipeline educativo que procesa datos de Yahoo Finance de principio a fin. Cada fase está separada en módulos para que puedas revisarla, jugar con ella y adaptarla a tu antojo. No necesitas ser un gurú de Python; basta con seguir las instrucciones y ver qué pasa.
+Bienvenido a este proyecto experimental. Aquí encontrará un pipeline educativo que procesa datos de Yahoo Finance de principio a fin. Cada fase está organizada en módulos para facilitar su revisión y personalización. No es necesario ser un experto en Python; basta con seguir las instrucciones correspondientes.
 
 El recorrido va desde elegir los tickers hasta entrenar modelos y armar un portafolio. Para rematar, incluye un ejemplo de notificación final.
 
@@ -18,7 +18,7 @@ flowchart LR
     G --> H[Notificacion]
 ```
 
-Puedes lanzarlo a mano o dejar que GitHub Actions lo haga por ti.
+Es posible ejecutarlo de forma manual o dejar que GitHub Actions lo realice de manera automática.
 
 ## Instalacion
 
@@ -46,7 +46,7 @@ prediction_horizon: 5
 risk_free_rate: 0.015
 ```
 
-Modifica este archivo segun tus necesidades.
+Modifique este archivo según sus necesidades.
 ## Variables de configuracion
 
 Estas son las claves principales de `config.yaml` y su uso:
@@ -65,7 +65,7 @@ para autorizar los commits automaticos.
 
 ## Registros y modo offline
 
-Si una descarga falla o no tienes conexion, los scripts generan datos de ejemplo para que puedas seguir el flujo. Ademas, cada etapa escribe mensajes detallados en la consola indicando su progreso y si se activo este modo.
+Si una descarga falla o no tiene conexión, los scripts generan datos de ejemplo para que pueda seguir el flujo. Además, cada etapa escribe mensajes detallados en la consola indicando su progreso y si se activó este modo.
 
 
 
@@ -89,7 +89,7 @@ flowchart TB
     src --> notify
 ```
 
-La carpeta `src` contiene las utilidades principales. Algunos scripts son plantillas listas para que agregues tu logica.
+La carpeta `src` contiene las utilidades principales. Algunos scripts son plantillas que puede completar con su propia lógica.
 
 * `abt/` crea la "Analytic Base Table" con datos diarios descargados y enriquecidos.
 * `models/daily/` almacena ejemplos de modelos de machine learning y los modelos entrenados mensualmente.
@@ -101,7 +101,7 @@ La carpeta `src` contiene las utilidades principales. Algunos scripts son planti
 * `clean_models_daily.py` y `clean_models_weekly.py` eliminan modelos
   almacenados para un reinicio rápido.
 
-Ademas existen scripts de seleccion y prediccion en la raiz del paquete para ejecutar el flujo sin complicaciones.
+Además, existen scripts de selección y predicción en la raíz del paquete que permiten ejecutar el flujo sin mayores complicaciones.
 
 ## Ejecucion paso a paso
 
@@ -110,15 +110,15 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    ```bash
    python -m src.selection
    ```
-   Verás una lista de tickers interesantes segun volumen, estabilidad y desempeño. Perfecta para empezar.
+  Se mostrará una lista de tickers interesantes según volumen, estabilidad y desempeño. Ideal para comenzar.
 
 2. **Descarga y preprocesamiento**
    
   ```bash
   python -m src.abt.build_abt
   ```
-  Puedes pasar `--frequency weekly` o `--frequency monthly` para obtener la ABT agregada en esas periodicidades.
-  Esto baja datos historicos y agrega indicadores tecnicos. Antes de ejecutarlo puedes editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecucion se imprimen las primeras filas de cada DataFrame y sus dimensiones para que puedas seguir el avance.
+  Es posible pasar `--frequency weekly` o `--frequency monthly` para obtener la ABT agregada en esas periodicidades.
+  Esto descarga datos históricos y agrega indicadores técnicos. Antes de ejecutarlo, puede editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecución se imprimen las primeras filas de cada DataFrame y sus dimensiones, de modo que se pueda seguir el avance.
    La ABT final incluye ademas las nuevas variables de rezago (1, 7 y 14 dias) y las medias moviles de 13 y 26 dias del cierre.
    Tambien se agregan columnas booleanas que marcan feriados (`is_holiday`, `next_is_holiday`, `prev_is_holiday`), el dia de elecciones en EE.UU. (`is_election_day`, `next_is_election_day`) y el cierre de mes (`is_month_end`).
 
@@ -134,8 +134,8 @@ Ademas existen scripts de seleccion y prediccion en la raiz del paquete para eje
    (más unos 50 días extra para calcular las medias móviles) y reserva la
    última semana como conjunto de validación. Se aplica validación
    cruzada temporal con ventanas de 60 días para predecir el día siguiente.
-    Puedes ampliar la grilla de parámetros en `src/training.py` si necesitas ajustes más robustos. En pantalla
-   verás un resumen de las matrices de entrenamiento usadas para cada ticker.
+    Es posible ampliar la grilla de parámetros en `src/training.py` si se requieren ajustes más robustos. En pantalla
+   se muestra un resumen de las matrices de entrenamiento utilizadas para cada ticker.
    Tras entrenar se calculan métricas y se guardan en la carpeta indicada por
    `evaluation_dir`. Cada archivo lleva la fecha del entrenamiento (`run_date`) y las
    métricas también se imprimen en los logs. El CSV incluye además las columnas
@@ -182,7 +182,7 @@ La funcion de evaluacion calcula los siguientes indicadores:
    ```bash
    python -m src.portfolio.optimize
    ```
-   Ajusta los pesos segun tus reglas para armar un portafolio equilibrado.
+  Ajuste los pesos según sus propias reglas para armar un portafolio equilibrado.
 
 8. **Notificacion**
 
@@ -229,7 +229,7 @@ En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma 
 * `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/daily/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv`. Luego ejecuta `src.edge_drift` para evaluar la deriva y guarda un CSV en `results/drift/edge_drift_evaluation_<fecha>.csv` que también se sube mediante un commit automático cuando existen cambios.
 
 
-Para que estos flujos suban cambios por ti, revisa que `GITHUB_TOKEN` tenga permisos de escritura. Si trabajas en un fork, crea un *Personal Access Token* y guárdalo como `GH_PAT`. ¡Listo!
+Para que estos flujos suban cambios por usted, asegúrese de que `GITHUB_TOKEN` cuente con permisos de escritura. Si trabaja en un fork, cree un *Personal Access Token* y guárdelo como `GH_PAT`. Listo.
 
 ## Diagrama del pipeline automatizado
 
@@ -245,11 +245,11 @@ flowchart TD
     OP --> NT[python -m src.notify.notifier]
 ```
 
-Cada bloque representa la ejecucion de un modulo. Si prefieres hacerlo manualmente, ejecuta cada comando en tu terminal siguiendo el orden del diagrama.
+Cada bloque representa la ejecución de un módulo. Si prefiere realizarlo de manera manual, ejecute cada comando en su terminal siguiendo el orden del diagrama.
 
 ## Contribuciones
 
-Este proyecto es un punto de partida. Puedes reemplazar las secciones marcadas como "placeholder" con implementaciones mas robustas. Se aceptan mejoras y comentarios.
+Este proyecto es un punto de partida. Puede reemplazar las secciones marcadas como "placeholder" con implementaciones más robustas. Se aceptan mejoras y comentarios.
 
 ## Validación cruzada temporal
 
@@ -268,11 +268,21 @@ Esto produciría como máximo diez particiones desplazando la ventana a lo largo
 
 ## Visualizaciones diarias
 
-Estas imágenes se generan a partir de los datos más recientes y se actualizan todos los días.
-Además de las versiones PNG, el flujo guarda copias en formato SVG dentro de la misma carpeta.
+Estas imágenes se generan a partir de los datos más recientes y se actualizan de forma automática.
+El flujo de trabajo guarda copias en formato SVG dentro de la carpeta correspondiente.
 
-![Gráfica de precios](results/viz/candlestick.png)
+![Gráfica de precios](results/viz/candlestick.svg)
 
-![Predicción vs Real](results/viz/pred_vs_real.png)
+![Predicción vs Real](results/viz/pred_vs_real.svg)
 
-![Variables destacadas](results/viz/best_variables.png)
+![Variables destacadas](results/viz/best_variables.svg)
+
+## Publicación en GitHub Pages
+
+Se puede habilitar un sitio estático para mostrar las gráficas en línea:
+
+1. Asegúrate de que exista la carpeta `docs/` con un `index.html`.
+2. Ejecuta `python -m src.visualization` para generar las imágenes en `results/viz/`.
+3. No es necesario versionar las imágenes; GitHub Actions las generará de manera automática.
+4. En la configuración del repositorio, abre **Settings > Pages** y selecciona la carpeta `/docs` en la rama `main`.
+5. Guarda y visita la URL indicada para ver el sitio publicado.
