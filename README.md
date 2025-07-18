@@ -269,6 +269,7 @@ Esto produciría como máximo diez particiones desplazando la ventana a lo largo
 ## Visualizaciones diarias
 
 Estas imágenes se generan a partir de los datos más recientes y se actualizan todos los días.
+Además de las versiones PNG, el flujo guarda copias en formato SVG dentro de la misma carpeta.
 
 ![Gráfica de precios](results/viz/candlestick.png)
 
