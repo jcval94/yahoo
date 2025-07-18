@@ -3,7 +3,7 @@
 
 Bienvenido a este proyecto experimental. Aquí encontrará un pipeline educativo que procesa datos de Yahoo Finance de principio a fin. Cada fase está organizada en módulos para facilitar su revisión y personalización. No es necesario ser un experto en Python; basta con seguir las instrucciones correspondientes.
 
-El recorrido va desde elegir los tickers hasta entrenar modelos y armar un portafolio. Para rematar, incluye un ejemplo de notificación final.
+El recorrido va desde elegir los tickers hasta entrenar modelos y armar un portafolio. Para rematar, incluye un ejemplo de notificación final. Puede consultar las gráficas y resultados en línea en <https://jcval94.github.io/yahoo/>.
 
 ## Diagrama general
 
