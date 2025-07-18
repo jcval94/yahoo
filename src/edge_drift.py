@@ -73,9 +73,13 @@ def main(days: int = 15) -> Path:
     df = _load_recent_metrics(metrics_dir, days)
     result = evaluate_drift(df)
     today = date.today().isoformat()
-    out_dir = base_dir / "results" / "drift" / f"edge_drift_evaluation_{today}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / "drift_metrics.csv"
+    out_file = (
+        base_dir
+        / "results"
+        / "drift"
+        / f"edge_drift_evaluation_{today}.csv"
+    )
+    out_file.parent.mkdir(parents=True, exist_ok=True)
     result.to_csv(out_file, index=False)
     logger.info("Saved drift evaluation to %s", out_file)
     return out_file
