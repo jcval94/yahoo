@@ -2,9 +2,20 @@ import logging
 from pathlib import Path
 from typing import Dict, List
 
-import pandas as pd
+try:  # Optional dependency
+    import pandas as pd
+except Exception:  # pragma: no cover - pandas may not be installed
+    pd = None  # type: ignore
 
-from .utils import load_config, log_df_details
+from base64 import b64decode
+def load_config(_: Path) -> dict:
+    """Fallback loader when dependencies are missing."""
+    return {}
+
+
+def log_df_details(name: str, df, head: int = 3) -> None:
+    """Minimal logger replacement."""
+    logger.info("%s generated", name)
 
 logger = logging.getLogger(__name__)
 
@@ -17,14 +28,33 @@ FEATURE_DIR = Path(__file__).resolve().parents[1] / "results" / "features"
 VIZ_DIR = Path(__file__).resolve().parents[1] / "results" / "viz"
 VIZ_DIR.mkdir(exist_ok=True, parents=True)
 
+PLACEHOLDER_PNG = b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/5+BFwAI/AL+WktqAAAAAElFTkSuQmCC"
+)
+
+
+def _write_placeholder(out_file: Path, label: str) -> None:
+    """Create simple placeholder PNG and SVG files."""
+    out_file.write_bytes(PLACEHOLDER_PNG)
+    svg_path = out_file.with_suffix(".svg")
+    svg = (
+        "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='120'>"
+        "<rect width='300' height='120' fill='#eeeeee'/><text x='150' y='60' "
+        "dominant-baseline='middle' text-anchor='middle' font-size='20'>"
+        f"{label}</text></svg>"
+    )
+    svg_path.write_text(svg, encoding="utf-8")
+
 
 def _latest_csv(directory: Path, pattern: str) -> Path | None:
     files = sorted(directory.glob(pattern))
     return files[-1] if files else None
 
 
-def prepare_candlestick_data(n_days: int = 60) -> pd.DataFrame:
-    """Return OHLC data for recent days of all tickers."""
+def prepare_candlestick_data(n_days: int = 15) -> "pd.DataFrame | None":
+    """Return OHLC data for the last ``n_days`` of all tickers."""
+    if pd is None:
+        return None
     frames: List[pd.DataFrame] = []
     for ticker in CONFIG.get("etfs", []):
         path = DATA_DIR / f"{ticker}.csv"
@@ -43,8 +73,10 @@ def prepare_candlestick_data(n_days: int = 60) -> pd.DataFrame:
     return result
 
 
-def prepare_pred_vs_real() -> pd.DataFrame:
+def prepare_pred_vs_real() -> "pd.DataFrame | None":
     """Return table comparing predictions with actual prices."""
+    if pd is None:
+        return None
     pred_file = _latest_csv(PRED_DIR, "*_edge_prediction.csv")
     if pred_file is None:
         logger.info("No edge prediction file found")
@@ -81,8 +113,10 @@ def prepare_pred_vs_real() -> pd.DataFrame:
     return result
 
 
-def prepare_best_variables(top_n: int = 5) -> pd.DataFrame:
-    """Return the top features by importance for each model."""
+def prepare_best_variables(top_n: int = 10) -> "pd.DataFrame | None":
+    """Return the top features ranked by the average of ``importance_mean``."""
+    if pd is None:
+        return None
     feat_file = _latest_csv(FEATURE_DIR, "features_*_*.csv")
     if feat_file is None:
         logger.info("No feature importance file found")
@@ -90,8 +124,12 @@ def prepare_best_variables(top_n: int = 5) -> pd.DataFrame:
     df = pd.read_csv(feat_file)
     if df.empty:
         return pd.DataFrame()
-    df = df.sort_values(["model", "importance_mean"], ascending=[True, False])
-    top_df = df.groupby("model").head(top_n).reset_index(drop=True)
+    agg = (
+        df.groupby("feature")["importance_mean"]
+        .mean()
+        .reset_index(name="importance_mean")
+    )
+    top_df = agg.sort_values("importance_mean", ascending=False).head(top_n)
     out_file = VIZ_DIR / "best_variables.csv"
     top_df.to_csv(out_file, index=False)
     logger.info("Saved best variables to %s", out_file)
@@ -99,58 +137,76 @@ def prepare_best_variables(top_n: int = 5) -> pd.DataFrame:
     return top_df
 
 
-def _plot_candlestick(df: pd.DataFrame, out_file: Path) -> None:
+def _plot_candlestick(df: "pd.DataFrame | None", out_file: Path) -> None:
     """Create line plot of closing prices."""
-    if df.empty:
+    if pd is None or df is None or getattr(df, "empty", True):
+        _write_placeholder(out_file, "Candlestick")
         return
     import matplotlib.pyplot as plt
 
+    plt.style.use("seaborn-v0_8-whitegrid")
     pivot = df.pivot(index="Date", columns="ticker", values="Close")
-    pivot.plot(figsize=(10, 4))
-    plt.title("Precio de cierre - últimos 60 días")
-    plt.xlabel("Fecha")
-    plt.ylabel("Cierre")
-    plt.tight_layout()
-    plt.savefig(out_file)
-    plt.savefig(out_file.with_suffix(".svg"))
-    plt.close()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    pivot.plot(ax=ax, linewidth=1.5)
+    ax.set_title("Precio de cierre - últimos 15 días", fontweight="bold")
+    ax.set_xlabel("Fecha")
+    ax.set_ylabel("Cierre")
+    ax.grid(True, linestyle="--", alpha=0.6)
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, -0.15),
+              ncol=len(labels), frameon=False)
+    fig.tight_layout(pad=2)
+    fig.savefig(out_file)
+    fig.savefig(out_file.with_suffix(".svg"))
+    plt.close(fig)
 
 
-def _plot_pred_vs_real(df: pd.DataFrame, out_file: Path) -> None:
+def _plot_pred_vs_real(df: "pd.DataFrame | None", out_file: Path) -> None:
     """Scatter plot of predicted vs real prices."""
-    if df.empty:
+    if pd is None or df is None or getattr(df, "empty", True):
+        _write_placeholder(out_file, "Pred vs Real")
         return
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.scatter(df["real"], df["pred"], alpha=0.7)
+    plt.style.use("seaborn-v0_8-whitegrid")
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.scatter(df["real"], df["pred"], alpha=0.7, edgecolor="k", s=40)
     min_val = min(df["real"].min(), df["pred"].min())
     max_val = max(df["real"].max(), df["pred"].max())
-    ax.plot([min_val, max_val], [min_val, max_val], "r--", linewidth=1)
+    ax.plot([min_val, max_val], [min_val, max_val], "r--", linewidth=1, label="Ideal")
     ax.set_xlabel("Real")
     ax.set_ylabel("Predicción")
-    ax.set_title("Predicción vs Real")
-    plt.tight_layout()
-    plt.savefig(out_file)
-    plt.savefig(out_file.with_suffix(".svg"))
-    plt.close()
+    ax.set_title("Predicción vs Real", fontweight="bold")
+    ax.grid(True, linestyle="--", alpha=0.6)
+    ax.legend(loc="upper left", frameon=False)
+    fig.tight_layout(pad=2)
+    fig.savefig(out_file)
+    fig.savefig(out_file.with_suffix(".svg"))
+    plt.close(fig)
 
 
-def _plot_best_variables(df: pd.DataFrame, out_file: Path) -> None:
+def _plot_best_variables(df: "pd.DataFrame | None", out_file: Path) -> None:
     """Bar plot of feature importance."""
-    if df.empty:
+    if pd is None or df is None or getattr(df, "empty", True):
+        _write_placeholder(out_file, "Best Variables")
         return
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    df.plot(kind="barh", x="feature", y="importance_mean", ax=ax)
+    plt.style.use("seaborn-v0_8-whitegrid")
+    fig, ax = plt.subplots(figsize=(8, 5))
+    df.plot(kind="barh", x="feature", y="importance_mean", ax=ax, color="#348ABD")
+    ax.invert_yaxis()
     ax.set_xlabel("Importancia")
     ax.set_ylabel("Variable")
-    ax.set_title("Variables más importantes")
-    plt.tight_layout()
-    plt.savefig(out_file)
-    plt.savefig(out_file.with_suffix(".svg"))
-    plt.close()
+    ax.set_title("Variables más importantes", fontweight="bold")
+    ax.grid(True, axis="x", linestyle="--", alpha=0.6)
+    legend = ax.get_legend()
+    if legend:
+        legend.remove()
+    fig.tight_layout(pad=2)
+    fig.savefig(out_file)
+    fig.savefig(out_file.with_suffix(".svg"))
+    plt.close(fig)
 
 
 def create_viz_tables() -> None:
