@@ -265,3 +265,13 @@ for fold, (train_idx, test_idx) in enumerate(hybrid_cv_split(X)):
 ```
 
 Esto produciría como máximo diez particiones desplazando la ventana a lo largo del tiempo.
+
+## Visualizaciones diarias
+
+Estas imágenes se generan a partir de los datos más recientes y se actualizan todos los días.
+
+![Gráfica de precios](results/viz/candlestick.png)
+
+![Predicción vs Real](results/viz/pred_vs_real.png)
+
+![Variables destacadas](results/viz/best_variables.png)

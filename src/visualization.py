@@ -99,11 +99,66 @@ def prepare_best_variables(top_n: int = 5) -> pd.DataFrame:
     return top_df
 
 
+def _plot_candlestick(df: pd.DataFrame, out_file: Path) -> None:
+    """Create line plot of closing prices."""
+    if df.empty:
+        return
+    import matplotlib.pyplot as plt
+
+    pivot = df.pivot(index="Date", columns="ticker", values="Close")
+    pivot.plot(figsize=(10, 4))
+    plt.title("Precio de cierre - últimos 60 días")
+    plt.xlabel("Fecha")
+    plt.ylabel("Cierre")
+    plt.tight_layout()
+    plt.savefig(out_file)
+    plt.close()
+
+
+def _plot_pred_vs_real(df: pd.DataFrame, out_file: Path) -> None:
+    """Scatter plot of predicted vs real prices."""
+    if df.empty:
+        return
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.scatter(df["real"], df["pred"], alpha=0.7)
+    min_val = min(df["real"].min(), df["pred"].min())
+    max_val = max(df["real"].max(), df["pred"].max())
+    ax.plot([min_val, max_val], [min_val, max_val], "r--", linewidth=1)
+    ax.set_xlabel("Real")
+    ax.set_ylabel("Predicción")
+    ax.set_title("Predicción vs Real")
+    plt.tight_layout()
+    plt.savefig(out_file)
+    plt.close()
+
+
+def _plot_best_variables(df: pd.DataFrame, out_file: Path) -> None:
+    """Bar plot of feature importance."""
+    if df.empty:
+        return
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    df.plot(kind="barh", x="feature", y="importance_mean", ax=ax)
+    ax.set_xlabel("Importancia")
+    ax.set_ylabel("Variable")
+    ax.set_title("Variables más importantes")
+    plt.tight_layout()
+    plt.savefig(out_file)
+    plt.close()
+
+
 def create_viz_tables() -> None:
     """Generate all visualization tables."""
-    prepare_candlestick_data()
-    prepare_pred_vs_real()
-    prepare_best_variables()
+    candle_df = prepare_candlestick_data()
+    pred_df = prepare_pred_vs_real()
+    best_df = prepare_best_variables()
+
+    _plot_candlestick(candle_df, VIZ_DIR / "candlestick.png")
+    _plot_pred_vs_real(pred_df, VIZ_DIR / "pred_vs_real.png")
+    _plot_best_variables(best_df, VIZ_DIR / "best_variables.png")
 
 
 if __name__ == "__main__":
