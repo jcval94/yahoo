@@ -112,6 +112,7 @@ def _plot_candlestick(df: pd.DataFrame, out_file: Path) -> None:
     plt.ylabel("Cierre")
     plt.tight_layout()
     plt.savefig(out_file)
+    plt.savefig(out_file.with_suffix(".svg"))
     plt.close()
 
 
@@ -131,6 +132,7 @@ def _plot_pred_vs_real(df: pd.DataFrame, out_file: Path) -> None:
     ax.set_title("Predicción vs Real")
     plt.tight_layout()
     plt.savefig(out_file)
+    plt.savefig(out_file.with_suffix(".svg"))
     plt.close()
 
 
@@ -147,6 +149,7 @@ def _plot_best_variables(df: pd.DataFrame, out_file: Path) -> None:
     ax.set_title("Variables más importantes")
     plt.tight_layout()
     plt.savefig(out_file)
+    plt.savefig(out_file.with_suffix(".svg"))
     plt.close()
 
 
