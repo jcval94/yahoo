@@ -3,32 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <title>Yahoo Finance Pipeline</title>
-<style>
-body { font-family: Arial, sans-serif; margin: 2rem; }
-h1 { color: #333; }
-section { margin-bottom: 2rem; }
-img { max-width: 600px; display:block; margin-bottom: 1rem; }
-</style>
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+<div class="container">
 <h1>Yahoo Finance Pipeline</h1>
-<p>Esta página se publica mediante <strong>GitHub Pages</strong> y se genera de forma automática a partir del contenido del repositorio.</p>
+<p>Este sitio resume de manera visual el flujo educativo para descargar, procesar y analizar precios de activos con Python.</p>
+<section>
+<h2>Datos generales</h2>
+<p>El proyecto usa Python 3.11, <code>yfinance</code> para las descargas y <code>scikit-learn</code> para los modelos. El código está pensado para ejecutarse de forma automática mediante GitHub Actions.</p>
+</section>
 <section>
 <h2>Visualizaciones diarias</h2>
-<p>Las gráficas mostradas provienen del módulo <code>visualization</code> y se almacenan en <code>results/viz/</code>.</p>
-<img src="../results/viz/candlestick.svg" alt="Gráfica de precios">
-<img src="../results/viz/pred_vs_real.svg" alt="Predicción vs real">
-<img src="../results/viz/best_variables.svg" alt="Variables destacadas">
+<p>Las gráficas provienen del módulo <code>visualization</code> y se actualizan de forma automática.</p>
+<img src="viz/candlestick.svg" alt="Gráfica de precios">
+<img src="viz/best_variables.svg" alt="Variables destacadas">
 </section>
 <section>
-<h2>Publicación con GitHub Pages</h2>
-<ol>
-<li>Crea la carpeta <code>docs/</code> en la raíz del proyecto (ya incluida).</li>
-<li>Añada un archivo <code>index.html</code> similar a este con la descripción del proyecto y las imágenes.</li>
-<li>Realice <em>commit</em> de todos los cambios y súbalos a su repositorio.</li>
-<li>En GitHub, ve a <em>Settings &gt; Pages</em> y elige la rama <code>main</code> y la carpeta <code>/docs</code> como fuente.</li>
-<li>Guarde la configuración. En pocos segundos el sitio estará disponible en <code>https://&lt;usuario&gt;.github.io/&lt;repositorio&gt;</code>.</li>
-</ol>
+<h2>Acerca del proyecto</h2>
+<p>El repositorio contiene scripts para cada fase del proceso:</p>
+<ul>
+  <li>Descarga y limpieza de datos financieros.</li>
+  <li>Ingenier&iacute;a de variables y selecci&oacute;n de caracter&iacute;sticas.</li>
+  <li>Entrenamiento y evaluaci&oacute;n de modelos de pron&oacute;stico.</li>
+  <li>Generaci&oacute;n de reportes y notificaci&oacute;n de resultados.</li>
+</ul>
 </section>
+
+</div>
+<script src="js/scripts.js"></script>
 </body>
 </html>

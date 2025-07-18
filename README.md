@@ -273,16 +273,8 @@ El flujo de trabajo guarda copias en formato SVG dentro de la carpeta correspond
 
 ![Gráfica de precios](results/viz/candlestick.svg)
 
-![Predicción vs Real](results/viz/pred_vs_real.svg)
-
 ![Variables destacadas](results/viz/best_variables.svg)
 
-## Publicación en GitHub Pages
+## Sitio en línea
 
-Se puede habilitar un sitio estático para mostrar las gráficas en línea:
-
-1. Asegúrate de que exista la carpeta `docs/` con un `index.html`.
-2. Ejecuta `python -m src.visualization` para generar las imágenes en `results/viz/`.
-3. No es necesario versionar las imágenes; GitHub Actions las generará de manera automática.
-4. En la configuración del repositorio, abre **Settings > Pages** y selecciona la carpeta `/docs` en la rama `main`.
-5. Guarda y visita la URL indicada para ver el sitio publicado.
+Las gráficas generadas por el proyecto pueden consultarse en: <https://jcval94.github.io/yahoo/>
