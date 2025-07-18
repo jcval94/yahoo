@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 from typing import Dict, List
+import shutil
 
 try:  # Optional dependency
     import pandas as pd
@@ -27,6 +28,8 @@ PRED_DIR = Path(__file__).resolve().parents[1] / "results" / "predicts"
 FEATURE_DIR = Path(__file__).resolve().parents[1] / "results" / "features"
 VIZ_DIR = Path(__file__).resolve().parents[1] / "results" / "viz"
 VIZ_DIR.mkdir(exist_ok=True, parents=True)
+DOCS_VIZ_DIR = Path(__file__).resolve().parents[1] / "docs" / "viz"
+DOCS_VIZ_DIR.mkdir(exist_ok=True, parents=True)
 
 PLACEHOLDER_PNG = b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/5+BFwAI/AL+WktqAAAAAElFTkSuQmCC"
@@ -209,6 +212,17 @@ def _plot_best_variables(df: "pd.DataFrame | None", out_file: Path) -> None:
     plt.close(fig)
 
 
+def _copy_viz_files() -> None:
+    """Copy generated SVG files to the docs directory."""
+    for svg_file in VIZ_DIR.glob("*.svg"):
+        target = DOCS_VIZ_DIR / svg_file.name
+        try:
+            shutil.copy2(svg_file, target)
+            logger.info("Copied %s to %s", svg_file.name, target)
+        except Exception as exc:  # pragma: no cover - safeguard
+            logger.warning("Failed to copy %s: %s", svg_file, exc)
+
+
 def create_viz_tables() -> None:
     """Generate all visualization tables."""
     candle_df = prepare_candlestick_data()
@@ -218,6 +232,7 @@ def create_viz_tables() -> None:
     _plot_candlestick(candle_df, VIZ_DIR / "candlestick.png")
     _plot_pred_vs_real(pred_df, VIZ_DIR / "pred_vs_real.png")
     _plot_best_variables(best_df, VIZ_DIR / "best_variables.png")
+    _copy_viz_files()
 
 
 if __name__ == "__main__":
