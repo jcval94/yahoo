@@ -226,7 +226,7 @@ En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma 
 * `monthly_abt.yml` genera la version agregada mensual del ABT. Se ejecuta cada mes y sube los archivos como artefactos.
 * `Monthly_training_weekly_prediction.yml` reentrena los modelos cada mes usando datos semanales y realiza un pronóstico del promedio de la siguiente semana.
 * `weekly_process.yml` utiliza los modelos almacenados para predecir la próxima semana. Guarda `results/predicts/<fecha>_weekly_predictions.csv` y realiza un commit automático si hay cambios.
-* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/daily/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv`. Luego ejecuta `src.edge_drift` para evaluar la deriva y guarda un CSV en `results/drift/<fecha>` que también se sube mediante un commit automático cuando existen cambios.
+* `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/daily/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv`. Luego ejecuta `src.edge_drift` para evaluar la deriva y guarda un CSV en `results/drift/edge_drift_evaluation_<fecha>.csv` que también se sube mediante un commit automático cuando existen cambios.
 
 
 Para que estos flujos suban cambios por ti, revisa que `GITHUB_TOKEN` tenga permisos de escritura. Si trabajas en un fork, crea un *Personal Access Token* y guárdalo como `GH_PAT`. ¡Listo!
