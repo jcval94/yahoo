@@ -9,7 +9,7 @@ import json
 
 try:  # optional dependency
     from .models.lstm_model import train_lstm, predict_lstm
-except Exception:  # pragma: no cover - optional tensorflow/keras
+except ImportError:  # pragma: no cover - optional tensorflow/keras
     train_lstm = predict_lstm = None
 from .models.rf_model import train_rf
 from .models.xgb_model import train_xgb
