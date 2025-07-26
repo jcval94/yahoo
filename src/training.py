@@ -7,7 +7,10 @@ from typing import Dict, Union, Iterable
 import pandas as pd
 import json
 
-from .models.lstm_model import train_lstm, predict_lstm
+try:  # optional dependency
+    from .models.lstm_model import train_lstm, predict_lstm
+except Exception:  # pragma: no cover - optional tensorflow/keras
+    train_lstm = predict_lstm = None
 from .models.rf_model import train_rf
 from .models.xgb_model import train_xgb
 from .models.linear_model import train_linear
