@@ -270,6 +270,10 @@ Esto produciría como máximo diez particiones desplazando la ventana a lo largo
 
 Estas imágenes se generan a partir de los datos más recientes y se actualizan de forma automática.
 El flujo de trabajo guarda copias en formato SVG dentro de la carpeta correspondiente.
+Si el paquete `pandas` no está instalado, `src.visualization` sólo creará
+archivos de marcador de posición. Asegúrate de ejecutar
+`pip install -r requirements.txt` antes de generar las gráficas para que los
+archivos de `results/viz/` se actualicen correctamente.
 
 ![Gráfica de precios](results/viz/candlestick.svg)
 
