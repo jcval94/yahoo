@@ -13,7 +13,7 @@ from .utils.schema_guard import load_with_schema, validate_schema
 
 try:
     from tensorflow import keras
-except Exception:  # pragma: no cover - optional dependency
+except ImportError:  # pragma: no cover - optional dependency
     keras = None
 
 from .utils import log_df_details, log_offline_mode, load_config, to_price
