@@ -1,15 +1,34 @@
 etfs:
-  - SPY
-  - QQQ
-  - IEF
-  - GLD
-  - EEM
-  - VNQ
-  - AMXL.MX
-  - WALMEX.MX
-  - BIMBOA.MX
-  - CEMEXCPO.MX
-  - GFNORTEO.MX
+  - NVDA
+  - MSFT
+  - AAPL
+  - GOOGL
+  - AMZN
+  - META
+  - AVGO
+  - TSM
+  - ASML
+  - AMD
+  - ORCL
+  - PLTR
+  - CRM
+  - TSLA
+  - LLY
+  - UNH
+  - MRK
+  - JNJ
+  - JPM
+  - V
+  - MA
+  - BRK-B
+  - WMT
+  - COST
+  - MCD
+  - PG
+  - XOM
+  - NEE
+  - CAT
+  - LMT
 start_date: "2015-01-01"
 prediction_horizon: 5
 risk_free_rate: 0.015
@@ -17,14 +36,33 @@ data_dir: "data"
 model_dir: "models/daily"
 evaluation_dir: "results/metrics"
 target_cols:
-  SPY: Close
-  QQQ: Close
-  IEF: Close
-  GLD: Close
-  EEM: Close
-  VNQ: Close
-  AMXL.MX: Close
-  WALMEX.MX: Close
-  BIMBOA.MX: Close
-  CEMEXCPO.MX: Close
-  GFNORTEO.MX: Close
+  NVDA: Close
+  MSFT: Close
+  AAPL: Close
+  GOOGL: Close
+  AMZN: Close
+  META: Close
+  AVGO: Close
+  TSM: Close
+  ASML: Close
+  AMD: Close
+  ORCL: Close
+  PLTR: Close
+  CRM: Close
+  TSLA: Close
+  LLY: Close
+  UNH: Close
+  MRK: Close
+  JNJ: Close
+  JPM: Close
+  V: Close
+  MA: Close
+  BRK-B: Close
+  WMT: Close
+  COST: Close
+  MCD: Close
+  PG: Close
+  XOM: Close
+  NEE: Close
+  CAT: Close
+  LMT: Close
