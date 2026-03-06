@@ -91,11 +91,82 @@ def _add_return_features(df: pd.DataFrame) -> pd.DataFrame:
     df["gap_pct"] = (df["Open"] - prev_close) / prev_close
     df["overnight_return"] = df["gap_pct"]
     df["open_to_close_return"] = (df["Close"] - df["Open"]) / df["Open"]
+    df["intraday_return"] = df["open_to_close_return"]
+    df["gap_abs"] = df["Open"] - prev_close
+    atr_safe = df.get("atr", pd.Series(np.nan, index=df.index)).replace(0, np.nan)
+    df["gap_atr_norm"] = df["gap_abs"] / atr_safe
     df["drawdown_from_prev_close"] = (df["Low"] - prev_close) / prev_close
     df["log_return"] = np.log(df["Close"]).diff()
     df["simple_return"] = df["Close"].pct_change()
     df["volatility_5"] = df["log_return"].rolling(window=5, min_periods=1).std()
     df["volatility_10"] = df["log_return"].rolling(window=10, min_periods=1).std()
+    return df
+
+
+def _session_bucket(ts: pd.Timestamp) -> str:
+    """Map a timestamp to an intraday session bucket."""
+    ts = pd.Timestamp(ts)
+    minute = ts.hour * 60 + ts.minute
+    if 570 <= minute < 690:  # 9:30-11:30
+        return "open"
+    if 690 <= minute < 900:  # 11:30-15:00
+        return "midday"
+    if 900 <= minute <= 960:  # 15:00-16:00
+        return "close"
+    return "close"
+
+
+def _add_intraday_bucket_features(df: pd.DataFrame, rolling_days: int = 5) -> pd.DataFrame:
+    """Add intraday bucket labels and predictive rolling stats by bucket."""
+    df = df.copy()
+    if not isinstance(df.index, pd.DatetimeIndex):
+        return df
+
+    has_intraday_resolution = (df.index.hour != 0).any() or (df.index.minute != 0).any()
+    if not has_intraday_resolution:
+        df["session_bucket"] = pd.Series(pd.NA, index=df.index, dtype="string")
+        for col in [
+            "bucket_return_mean_hist",
+            "bucket_return_vol_hist",
+            "bucket_volume_mean_hist",
+            f"bucket_return_mean_{rolling_days}d",
+            f"bucket_return_vol_{rolling_days}d",
+        ]:
+            df[col] = np.nan
+        return df
+
+    df["session_bucket"] = pd.Series(df.index.map(_session_bucket), index=df.index, dtype="string")
+    bucket_groups = df.groupby("session_bucket", dropna=False)
+
+    df["bucket_return_mean_hist"] = bucket_groups["intraday_return"].transform(
+        lambda s: s.shift(1).expanding(min_periods=1).mean()
+    )
+    df["bucket_return_vol_hist"] = bucket_groups["intraday_return"].transform(
+        lambda s: s.shift(1).expanding(min_periods=2).std()
+    )
+    df["bucket_volume_mean_hist"] = bucket_groups["Volume"].transform(
+        lambda s: s.shift(1).expanding(min_periods=1).mean()
+    )
+
+    df["trade_date"] = df.index.normalize()
+    by_day_bucket = (
+        df.groupby(["trade_date", "session_bucket"], dropna=False)
+        .agg(day_bucket_return_mean=("intraday_return", "mean"))
+        .sort_index()
+    )
+    bucket_level = by_day_bucket.groupby(level="session_bucket", dropna=False)["day_bucket_return_mean"]
+    by_day_bucket[f"bucket_return_mean_{rolling_days}d"] = bucket_level.transform(
+        lambda s: s.shift(1).rolling(window=rolling_days, min_periods=1).mean()
+    )
+    by_day_bucket[f"bucket_return_vol_{rolling_days}d"] = bucket_level.transform(
+        lambda s: s.shift(1).rolling(window=rolling_days, min_periods=2).std()
+    )
+
+    df = df.join(
+        by_day_bucket[[f"bucket_return_mean_{rolling_days}d", f"bucket_return_vol_{rolling_days}d"]],
+        on=["trade_date", "session_bucket"],
+    )
+    df = df.drop(columns=["trade_date"])
     return df
 
 
@@ -173,6 +244,17 @@ def _add_seasonal_features(df: pd.DataFrame) -> pd.DataFrame:
     df["cos_year"] = np.cos(2 * np.pi * day_of_year / 365)
 
     df["is_month_end"] = df.index.is_month_end
+    df["is_month_start"] = df.index.is_month_start
+    df["is_monday"] = df.index.dayofweek == 0
+    df["is_friday"] = df.index.dayofweek == 4
+    df["is_september"] = df.index.month == 9
+    dom = df.index.day
+    next_bday = df.index + pd.offsets.BDay(1)
+    df["is_turn_of_month"] = (dom >= 28) | (next_bday.day <= 3)
+    quarter_month = df.index.month.isin([3, 6, 9, 12])
+    third_friday = quarter_month & (df.index.dayofweek == 4) & (df.index.day >= 15) & (df.index.day <= 21)
+    witching_weeks = df.index.to_period("W-FRI").isin(df.index[third_friday].to_period("W-FRI"))
+    df["is_quadruple_witching_week"] = witching_weeks
 
 
     cal = USFederalHolidayCalendar()
@@ -295,6 +377,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         group = _add_diff_sign_features(group)
         group = _add_complexity_feature(group)
         group = _add_seasonal_features(group)
+        group = _add_intraday_bucket_features(group)
         group = _add_trend_line(group)
         group = _add_decomposition(group)
         return group
