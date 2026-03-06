@@ -260,3 +260,64 @@ def test_prev_is_holiday():
         pd.Series(expected, index=idx, name="prev_is_holiday"),
     )
 
+
+
+def test_gap_and_intraday_return_columns():
+    idx = pd.date_range(start="2021-01-01", periods=4, freq="D")
+    df = pd.DataFrame(
+        {
+            "Open": [100, 110, 105, 100],
+            "High": [102, 112, 107, 101],
+            "Low": [99, 108, 100, 96],
+            "Close": [100, 109, 104, 98],
+            "Adj Close": [100, 109, 104, 98],
+            "Volume": [1, 1, 1, 1],
+        },
+        index=idx,
+    )
+    result = add_technical_indicators(df)
+
+    prev_close = df["Close"].shift(1)
+    expected_gap = (df["Open"] - prev_close) / prev_close
+    expected_open_to_close = (df["Close"] - df["Open"]) / df["Open"]
+    expected_drawdown = (df["Low"] - prev_close) / prev_close
+
+    pd.testing.assert_series_equal(result["gap_pct"], expected_gap, check_name=False)
+    pd.testing.assert_series_equal(
+        result["overnight_return"], expected_gap, check_name=False
+    )
+    pd.testing.assert_series_equal(
+        result["open_to_close_return"], expected_open_to_close, check_name=False
+    )
+    pd.testing.assert_series_equal(
+        result["drawdown_from_prev_close"], expected_drawdown, check_name=False
+    )
+
+
+def test_recovery_bars_thresholds_without_lookahead():
+    idx = pd.date_range(start="2021-01-01", periods=6, freq="D")
+    df = pd.DataFrame(
+        {
+            "Open": [100, 100, 99, 95, 97, 100],
+            "High": [101, 101, 100, 96, 98, 101],
+            "Low": [99, 94, 97, 94, 96, 99],
+            "Close": [100, 99, 98, 95, 97, 100],
+            "Adj Close": [100, 99, 98, 95, 97, 100],
+            "Volume": [1, 1, 1, 1, 1, 1],
+        },
+        index=idx,
+    )
+
+    result = add_technical_indicators(df)
+
+    assert "recovery_bars_5pct" in result.columns
+    assert "recovery_bars_10pct" in result.columns
+    assert "recovery_bars_20pct" in result.columns
+
+    # Day 2 has a drawdown below -5% from previous close but has not recovered yet.
+    assert np.isnan(result.loc[idx[1], "recovery_bars_5pct"])
+    # Recovery happens on day 6 (close returns to prior close level), taking 4 bars.
+    assert result.loc[idx[5], "recovery_bars_5pct"] == 4.0
+    # No >10% or >20% drawdown event in this sample.
+    assert result["recovery_bars_10pct"].isna().all()
+    assert result["recovery_bars_20pct"].isna().all()

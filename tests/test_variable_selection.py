@@ -41,3 +41,33 @@ def test_select_features_rf_cv_basic():
     assert sum(f in selected for f in ['x1', 'x2']) == 1
     assert 'x3' in selected
     assert len(selected) <= int(np.sqrt(3)) + 7
+
+
+def test_select_features_keeps_event_predictors():
+    n = 40
+    x = np.linspace(0, 1, n)
+    target = np.sin(x)
+    df = pd.DataFrame(
+        {
+            'x': x,
+            'gap_pct': np.zeros(n),
+            'overnight_return': np.zeros(n),
+            'open_to_close_return': np.zeros(n),
+            'drawdown_from_prev_close': np.zeros(n),
+            'recovery_bars_5pct': np.zeros(n),
+            'recovery_bars_10pct': np.zeros(n),
+            'recovery_bars_20pct': np.zeros(n),
+            'target': target,
+        }
+    )
+    selected = select_features(df, 'target', relevance_threshold=0.99)
+    for col in [
+        'gap_pct',
+        'overnight_return',
+        'open_to_close_return',
+        'drawdown_from_prev_close',
+        'recovery_bars_5pct',
+        'recovery_bars_10pct',
+        'recovery_bars_20pct',
+    ]:
+        assert col in selected

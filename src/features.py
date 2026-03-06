@@ -87,10 +87,59 @@ def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
 def _add_return_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add returns and simple volatility estimates."""
     df = df.copy()
+    prev_close = df["Close"].shift(1)
+    df["gap_pct"] = (df["Open"] - prev_close) / prev_close
+    df["overnight_return"] = df["gap_pct"]
+    df["open_to_close_return"] = (df["Close"] - df["Open"]) / df["Open"]
+    df["drawdown_from_prev_close"] = (df["Low"] - prev_close) / prev_close
     df["log_return"] = np.log(df["Close"]).diff()
     df["simple_return"] = df["Close"].pct_change()
     df["volatility_5"] = df["log_return"].rolling(window=5, min_periods=1).std()
     df["volatility_10"] = df["log_return"].rolling(window=10, min_periods=1).std()
+    return df
+
+
+def _recovery_bars_from_drawdown(
+    drawdown: pd.Series,
+    close: pd.Series,
+    *,
+    threshold: float,
+) -> pd.Series:
+    """Return last observed recovery time in bars for a drawdown threshold.
+
+    The metric is updated only when a recovery is fully observed at the
+    current bar, so each value can be computed using information available up
+    to that timestamp (no look-ahead bias).
+    """
+
+    active_events: list[tuple[int, float]] = []
+    last_completed = np.nan
+    values: list[float] = []
+
+    for i, (dd_value, close_value) in enumerate(zip(drawdown.to_numpy(), close.to_numpy())):
+        if pd.notna(dd_value) and dd_value <= -threshold and i > 0:
+            active_events.append((i, close.to_numpy()[i - 1]))
+
+        remaining: list[tuple[int, float]] = []
+        for start_idx, recovery_level in active_events:
+            if pd.notna(close_value) and close_value >= recovery_level:
+                last_completed = float(i - start_idx)
+            else:
+                remaining.append((start_idx, recovery_level))
+        active_events = remaining
+        values.append(last_completed)
+
+    return pd.Series(values, index=drawdown.index)
+
+
+def _add_recovery_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add recovery-time features for multiple drawdown thresholds."""
+    df = df.copy()
+    for threshold in (0.05, 0.10, 0.20):
+        name = f"recovery_bars_{int(threshold * 100)}pct"
+        df[name] = _recovery_bars_from_drawdown(
+            df["drawdown_from_prev_close"], df["Close"], threshold=threshold
+        )
     return df
 
 
@@ -240,6 +289,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         group = _add_basic_indicators(group)
         group = _add_advanced_indicators(group)
         group = _add_return_features(group)
+        group = _add_recovery_features(group)
         group = _add_lag_features(group)
         group = _add_window_stats(group)
         group = _add_diff_sign_features(group)
