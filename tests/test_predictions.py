@@ -1,13 +1,8 @@
-import importlib.util
-import pathlib
 import pytest
 
 pd = pytest.importorskip("pandas")
 
-PRED_PATH = pathlib.Path(__file__).resolve().parents[1] / 'src' / 'predict.py'
-spec = importlib.util.spec_from_file_location('predict', PRED_PATH)
-predict = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(predict)
+from src import predict
 
 
 def test_predictions_file_and_order(tmp_path):
@@ -39,6 +34,10 @@ def test_edge_prediction_and_metrics(tmp_path):
     assert metrics_file_edge.exists()
     metrics_file_main = tmp_path / 'metrics' / 'edge_metrics_2020-01-06.csv'
     assert metrics_file_main.exists()
+    metrics_file_by_session = tmp_path / 'metrics' / 'edge_metrics_2020-01-06_by_session.csv'
+    metrics_file_by_event = tmp_path / 'metrics' / 'edge_metrics_2020-01-06_by_event.csv'
+    assert metrics_file_by_session.exists()
+    assert metrics_file_by_event.exists()
     mdf = pd.read_csv(metrics_file_edge)
     assert 'pred' in mdf.columns
     assert 'real' in mdf.columns
@@ -50,6 +49,11 @@ def test_edge_prediction_and_metrics(tmp_path):
     # verify actual value corresponds to prediction date
     assert (mdf['Predicted'] == '2020-01-06').all()
     assert (mdf['real'] == 6).all()
+
+    session_df = pd.read_csv(metrics_file_by_session)
+    event_df = pd.read_csv(metrics_file_by_event)
+    assert not session_df.empty
+    assert not event_df.empty
 
 
 

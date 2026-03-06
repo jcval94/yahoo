@@ -17,7 +17,7 @@ except ImportError:  # pragma: no cover - optional dependency
     keras = None
 
 from .utils import log_df_details, log_offline_mode, load_config, to_price
-from .evaluation import evaluate_predictions
+from .evaluation import evaluate_predictions, save_segmented_reports
 
 logger = logging.getLogger(__name__)
 
@@ -399,6 +399,10 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
             )
             continue
         actual_val = df.loc[actual_idx, target_col]
+        event_flags = {
+            "is_earnings_day": bool(df.loc[actual_idx, "is_earnings_day"]) if "is_earnings_day" in df.columns else False,
+            "is_macro_day": bool(df.loc[actual_idx, "is_macro_day"]) if "is_macro_day" in df.columns else False,
+        }
         prev_close = None
         loc = idx.get_loc(predicted_ts)
         if isinstance(loc, (int, np.integer)) and loc > 0:
@@ -420,12 +424,14 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
             "model": model_name,
             "pred": pred_val,
             "real": actual_val,
+            "timestamp": str(actual_idx),
             "pred_delta": pred_delta,
             "real_delta": real_delta,
             "pred_inc": pred_inc,
             "real_inc": real_inc,
             "direction": direction,
             "Predicted": str(predicted_date),
+            **event_flags,
             **metrics,
         })
 
@@ -447,6 +453,7 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
     metrics_main_file = metrics_main_dir / f"edge_metrics_{metrics_date}.csv"
     metrics_df.to_csv(metrics_main_file, index=False)
     logger.info("Saved edge metrics to %s", metrics_main_file)
+    save_segmented_reports(metrics_df, metrics_main_file)
     return metrics_df
 
 
