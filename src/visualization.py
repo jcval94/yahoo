@@ -8,6 +8,11 @@ try:  # Optional dependency
 except Exception:  # pragma: no cover - pandas may not be installed
     pd = None  # type: ignore
 
+try:  # Optional dependency
+    import matplotlib.pyplot as plt
+except Exception:  # pragma: no cover - matplotlib may not be installed
+    plt = None  # type: ignore
+
 from base64 import b64decode
 def load_config(_: Path) -> dict:
     """Fallback loader when dependencies are missing."""
@@ -142,10 +147,9 @@ def prepare_best_variables(top_n: int = 10) -> "pd.DataFrame | None":
 
 def _plot_candlestick(df: "pd.DataFrame | None", out_file: Path) -> None:
     """Create line plot of closing prices."""
-    if pd is None or df is None or getattr(df, "empty", True):
+    if pd is None or plt is None or df is None or getattr(df, "empty", True):
         _write_placeholder(out_file, "Candlestick")
         return
-    import matplotlib.pyplot as plt
 
     plt.style.use("seaborn-v0_8-whitegrid")
     pivot = df.pivot(index="Date", columns="ticker", values="Close")
@@ -166,10 +170,9 @@ def _plot_candlestick(df: "pd.DataFrame | None", out_file: Path) -> None:
 
 def _plot_pred_vs_real(df: "pd.DataFrame | None", out_file: Path) -> None:
     """Scatter plot of predicted vs real prices."""
-    if pd is None or df is None or getattr(df, "empty", True):
+    if pd is None or plt is None or df is None or getattr(df, "empty", True):
         _write_placeholder(out_file, "Pred vs Real")
         return
-    import matplotlib.pyplot as plt
 
     plt.style.use("seaborn-v0_8-whitegrid")
     fig, ax = plt.subplots(figsize=(6, 6))
@@ -190,10 +193,9 @@ def _plot_pred_vs_real(df: "pd.DataFrame | None", out_file: Path) -> None:
 
 def _plot_best_variables(df: "pd.DataFrame | None", out_file: Path) -> None:
     """Bar plot of feature importance."""
-    if pd is None or df is None or getattr(df, "empty", True):
+    if pd is None or plt is None or df is None or getattr(df, "empty", True):
         _write_placeholder(out_file, "Best Variables")
         return
-    import matplotlib.pyplot as plt
 
     plt.style.use("seaborn-v0_8-whitegrid")
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -225,6 +227,9 @@ def _copy_viz_files() -> None:
 
 def create_viz_tables() -> None:
     """Generate all visualization tables."""
+    if plt is None:
+        logger.warning("matplotlib is not installed; writing placeholder visualization files")
+
     candle_df = prepare_candlestick_data()
     pred_df = prepare_pred_vs_real()
     best_df = prepare_best_variables()
