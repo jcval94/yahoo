@@ -17,7 +17,7 @@ except ImportError:  # pragma: no cover - optional dependency
     keras = None
 
 from .utils import log_df_details, log_offline_mode, load_config, to_price
-from .evaluation import evaluate_predictions, save_segmented_reports
+from .evaluation import evaluate_predictions, save_regime_reports, save_segmented_reports
 
 logger = logging.getLogger(__name__)
 
@@ -454,6 +454,8 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
     metrics_df.to_csv(metrics_main_file, index=False)
     logger.info("Saved edge metrics to %s", metrics_main_file)
     save_segmented_reports(metrics_df, metrics_main_file)
+    regime_dir = metrics_main_dir / "regime"
+    save_regime_reports(metrics_df, regime_dir)
     return metrics_df
 
 
