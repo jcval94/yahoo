@@ -30,8 +30,11 @@ from .permutation_importance import compute_permutation_importance
 # Maximum days required by moving averages or lag features
 LOOKBACK_MONTHS = 12
 MAX_MA_DAYS = 50
+INTRADAY_LOOKBACK_BARS = 20000
 VAL_WEEKS = 8
+VAL_BARS = 200
 CV_HORIZON_DAYS = 20
+CV_HORIZON_BARS = 30
 
 RUN_TIMESTAMP = pd.Timestamp.now(tz="UTC").isoformat()
 
@@ -57,14 +60,25 @@ VIZ_DIR = Path(__file__).resolve().parents[1] / "results" / "viz"
 VIZ_DIR.mkdir(exist_ok=True, parents=True)
 
 
-def split_train_test(df: pd.DataFrame, val_weeks: int = VAL_WEEKS):
+def split_train_test(
+    df: pd.DataFrame,
+    *,
+    frequency: str = "daily",
+    val_weeks: int = VAL_WEEKS,
+    val_bars: int = VAL_BARS,
+):
     """Return train and test splits ensuring no overlap."""
     if df.empty:
         return df, df
 
-    val_start = df.index.max() - pd.Timedelta(weeks=val_weeks)
-    df_train = df[df.index < val_start]
-    df_test = df[df.index >= val_start]
+    if frequency == "intraday":
+        cutoff = max(len(df) - val_bars, 1)
+        df_train = df.iloc[:cutoff]
+        df_test = df.iloc[cutoff:]
+    else:
+        val_start = df.index.max() - pd.Timedelta(weeks=val_weeks)
+        df_train = df[df.index < val_start]
+        df_test = df[df.index >= val_start]
 
     if not df_train.empty and not df_test.empty:
         latest_train = df_train.index.max()
@@ -74,6 +88,12 @@ def split_train_test(df: pd.DataFrame, val_weeks: int = VAL_WEEKS):
                 f"Train end {latest_train} overlaps test start {earliest_test}"
             )
     return df_train, df_test
+
+
+def _frequency_params(frequency: str) -> tuple[int, int]:
+    if frequency == "intraday":
+        return CV_HORIZON_BARS, VAL_BARS
+    return CV_HORIZON_DAYS, VAL_WEEKS
 
 
 def _retrain_with_perm_importance(
@@ -206,6 +226,9 @@ def train_models(
                 df = pd.read_csv(df, index_col=0, parse_dates=True)
             grouped[t] = df
 
+    val_weeks = VAL_WEEKS
+    val_bars = VAL_BARS
+
     for ticker, df in grouped.items():
         log_df_details(f"training data {ticker}", df)
         target_col = TARGET_COLS.get(ticker, "Close")
@@ -215,12 +238,14 @@ def train_models(
             )
             target_col = "Close"
 
-        end_dt = df.index.max()
-        start_cv = end_dt - pd.DateOffset(months=LOOKBACK_MONTHS)
-        feature_start = start_cv - pd.Timedelta(days=MAX_MA_DAYS)
-        df_recent = df.loc[df.index >= feature_start]
+        if frequency == "intraday":
+            df_recent = df.tail(INTRADAY_LOOKBACK_BARS).copy()
+        else:
+            end_dt = df.index.max()
+            start_cv = end_dt - pd.DateOffset(months=LOOKBACK_MONTHS)
+            feature_start = start_cv - pd.Timedelta(days=MAX_MA_DAYS)
+            df_recent = df.loc[df.index >= feature_start].copy()
 
-        df_recent = df_recent.copy()
         df_recent["delta"] = df_recent[target_col].diff()
         df_recent["target"] = df_recent["delta"].shift(-1)
         df_recent.dropna(inplace=True)
@@ -229,7 +254,7 @@ def train_models(
         y = df_recent["target"]
         log_df_details(f"features {ticker}", X)
 
-        df_train, df_test = split_train_test(df_recent)
+        df_train, df_test = split_train_test(df_recent, frequency=frequency, val_bars=val_bars, val_weeks=val_weeks)
 
         abt_start = df_recent.index.min().date()
         abt_end = df_recent.index.max().date()
@@ -289,7 +314,8 @@ def train_models(
         log_df_details(f"test features {ticker}", X_test)
 
         n_samples = len(df_train)
-        cv_splitter = rolling_cv(n_samples, horizon=CV_HORIZON_DAYS, max_splits=24)
+        cv_horizon, _ = _frequency_params(frequency)
+        cv_splitter = rolling_cv(n_samples, horizon=cv_horizon, max_splits=24)
 
         with timed_stage(f"train Linear {ticker}"):
             try:
@@ -866,7 +892,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train models")
     parser.add_argument(
         "--frequency",
-        choices=["daily", "weekly", "monthly"],
+        choices=["daily", "weekly", "monthly", "intraday"],
         default="daily",
         help="data frequency to use",
     )
