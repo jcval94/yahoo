@@ -58,10 +58,53 @@ def _download_yahoo(ticker, start, end, interval):
 def _download_stooq(ticker, start, end):
     return StooqDailyReader(ticker, start=start, end=end).read()
 
+
+def _is_intraday_interval(interval: str) -> bool:
+    return interval in {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
+
+
+def _normalize_ts(ts: pd.Timestamp) -> pd.Timestamp:
+    if ts.tzinfo is not None:
+        return ts.tz_convert("America/New_York")
+    return ts.tz_localize("America/New_York")
+
+
+def _session_from_timestamp(ts: pd.Timestamp, labels: dict | None = None) -> str:
+    labels = labels or {}
+    label_open = labels.get("open", "open")
+    label_midday = labels.get("midday", "midday")
+    label_close = labels.get("close", "close")
+    label_ah = labels.get("after_hours", "after_hours")
+    label_pre = labels.get("premarket", label_ah)
+
+    ts_ny = _normalize_ts(pd.Timestamp(ts))
+    minute_of_day = ts_ny.hour * 60 + ts_ny.minute
+
+    if minute_of_day < 570:
+        return label_pre
+    if minute_of_day < 690:
+        return label_open
+    if minute_of_day < 900:
+        return label_midday
+    if minute_of_day <= 960:
+        return label_close
+    return label_ah
+
+
+def add_session_column(df: pd.DataFrame, labels: dict | None = None) -> pd.DataFrame:
+    if df.empty:
+        return df
+    out = df.copy()
+    out["session"] = [
+        _session_from_timestamp(ts, labels) for ts in out.index
+    ]
+    return out
+
 def download_ticker(
     ticker: str,
     start: str,
     interval: str = "1d",
+    include_prepost: bool = False,
     retries: int = 3,
 ) -> pd.DataFrame:
     """Download historical data with fallbacks for CI environments."""
@@ -78,12 +121,24 @@ def download_ticker(
         df = pd.DataFrame()
         for attempt in range(1, retries + 1):
             try:
-                df = _download_yahoo(
-                    ticker,
-                    start_dt.strftime("%Y-%m-%d"),
-                    today.strftime("%Y-%m-%d"),
-                    interval,
-                )
+                if _is_intraday_interval(interval):
+                    period = "60d" if interval in {"1m", "2m", "5m"} else "730d"
+                    df = yf.download(
+                        ticker,
+                        period=period,
+                        interval=interval,
+                        prepost=include_prepost,
+                        progress=False,
+                        threads=False,
+                        auto_adjust=False,
+                    )
+                else:
+                    df = _download_yahoo(
+                        ticker,
+                        start_dt.strftime("%Y-%m-%d"),
+                        today.strftime("%Y-%m-%d"),
+                        interval,
+                    )
                 if not df.empty:
                     break
             except Exception as exc:
@@ -183,6 +238,16 @@ def build_abt(frequency: str = "daily") -> dict:
     results = {}
     combined_frames = []
 
+    configured_interval = CONFIG.get("data_frequency", "1d")
+    include_prepost = bool(CONFIG.get("include_prepost", False))
+    session_labels = CONFIG.get("session_labels", {})
+
+    if frequency in {"daily", "weekly", "monthly"}:
+        interval = "1d"
+    else:
+        interval = configured_interval
+        frequency = "intraday"
+
     five_years_ago = pd.Timestamp.today().normalize() - pd.DateOffset(years=5)
     config_start = pd.to_datetime(CONFIG["start_date"])
     start_dt = max(config_start, five_years_ago)
@@ -190,11 +255,18 @@ def build_abt(frequency: str = "daily") -> dict:
     for ticker in CONFIG.get("etfs", []):
         try:
             with timed_stage(f"download {ticker}"):
-                df = download_ticker(ticker, start_dt.strftime("%Y-%m-%d"))
+                df = download_ticker(
+                    ticker,
+                    start_dt.strftime("%Y-%m-%d"),
+                    interval=interval,
+                    include_prepost=include_prepost,
+                )
                 if frequency == "weekly":
                     df = _to_weekly(df)
                 elif frequency == "monthly":
                     df = _to_monthly(df)
+                elif frequency == "intraday":
+                    df = add_session_column(df, session_labels)
                 df["Ticker"] = ticker
                 combined_frames.append(df)
         except Exception:
@@ -210,20 +282,22 @@ def build_abt(frequency: str = "daily") -> dict:
     for ticker, group_df in combined_df.groupby("Ticker"):
         with timed_stage(f"processing {ticker}"):
             group_df = enrich_indicators(group_df)
-        suffix = "" if frequency == "daily" else f"_{frequency}"
-        out_file = DATA_DIR / f"{ticker}{suffix}.csv"
+        if frequency == "intraday":
+            out_file = DATA_DIR / f"{ticker}_intraday.csv"
+        else:
+            suffix = "" if frequency == "daily" else f"_{frequency}"
+            out_file = DATA_DIR / f"{ticker}{suffix}.csv"
         group_df.index.name = "Date"
         group_df.to_csv(out_file, index_label="Date")
-        log_df_details(f"saved {ticker}{suffix}", group_df)
+        log_df_details(f"saved {out_file.stem}", group_df)
         results[ticker] = out_file
         processed_frames.append(group_df)
 
     combined_processed = pd.concat(processed_frames)
-    suffix = "" if frequency == "daily" else f"_{frequency}"
-    combined_file = DATA_DIR / f"etfs_combined{suffix}.csv"
+    combined_file = DATA_DIR / ("etfs_combined_intraday.csv" if frequency == "intraday" else f"etfs_combined{'' if frequency == 'daily' else f'_{frequency}'}.csv")
     combined_processed.index.name = "Date"
     combined_processed.to_csv(combined_file, index_label="Date")
-    log_df_details(f"saved combined{suffix}", combined_processed)
+    log_df_details(f"saved {combined_file.stem}", combined_processed)
     results["combined"] = combined_file
 
     log_offline_mode(f"build_{frequency}_abt")
@@ -249,7 +323,7 @@ def main():
     parser = argparse.ArgumentParser(description="Build analytic base tables")
     parser.add_argument(
         "--frequency",
-        choices=["daily", "weekly", "monthly"],
+        choices=["daily", "weekly", "monthly", "intraday"],
         default="daily",
         help="data frequency for the ABT",
     )

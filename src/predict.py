@@ -158,6 +158,21 @@ def make_prediction(
     return to_price(raw_pred, last_close, target_type)
 
 
+
+
+def _next_prediction_timestamp(index: pd.Index, frequency: str):
+    last_ts = index.max()
+    if frequency == "intraday":
+        if len(index) > 1:
+            step = index[-1] - index[-2]
+            if step <= pd.Timedelta(0):
+                step = pd.Timedelta(minutes=5)
+        else:
+            step = pd.Timedelta(minutes=5)
+        return last_ts + step
+    return last_ts + pd.offsets.BDay()
+
+
 def run_predictions(
     models: Dict[str, Any],
     data: Dict[str, pd.DataFrame],
@@ -173,6 +188,9 @@ def run_predictions(
             feature_list = None
             schema_hash = None
         parts = name.split("_")
+        model_frequency = parts[1] if len(parts) > 1 else "daily"
+        if model_frequency != frequency and not name.endswith("_naive"):
+            continue
         ticker = _model_ticker(name)
         algo = parts[2] if len(parts) > 2 else getattr(model, "__class__", type(model)).__name__
         target_col = TARGET_COLS.get(ticker, "Close")
@@ -247,7 +265,7 @@ def run_predictions(
                 except Exception:
                     logger.warning("Could not retrieve parameters for %s", name)
 
-            predict_date = (df.index.max() + pd.offsets.BDay()).date()
+            predict_date = _next_prediction_timestamp(df.index, frequency)
 
             rows.append({
                 "ticker": ticker,
@@ -271,6 +289,7 @@ def run_predictions(
         "daily": "daily_predictions.csv",
         "weekly": "weekly_predictions.csv",
         "monthly": "monthly_predictions.csv",
+        "intraday": "intraday_predictions.csv",
     }.get(frequency, "predictions.csv")
     out_file = pred_dir / f"{RUN_TIMESTAMP[:10]}_{suffix}"
     try:
@@ -441,7 +460,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run predictions")
     parser.add_argument(
         "--frequency",
-        choices=["daily", "weekly", "monthly"],
+        choices=["daily", "weekly", "monthly", "intraday"],
         default="daily",
         help="data frequency to use",
     )

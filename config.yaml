@@ -31,6 +31,14 @@ etfs:
   - LMT
 start_date: "2015-01-01"
 prediction_horizon: 5
+data_frequency: "1d"
+include_prepost: false
+session_labels:
+  premarket: "after_hours"
+  open: "open"
+  midday: "midday"
+  close: "close"
+  after_hours: "after_hours"
 risk_free_rate: 0.015
 data_dir: "data"
 model_dir: "models/daily"
