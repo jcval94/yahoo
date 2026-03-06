@@ -1,36 +1,183 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Yahoo Finance Pipeline</title>
-<link rel="stylesheet" href="css/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yahoo Finance Pipeline</title>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-<div class="container">
-<h1>Yahoo Finance Pipeline</h1>
-<p>Este sitio resume de manera visual el flujo educativo para descargar, procesar y analizar precios de activos con Python.</p>
-<section>
-<h2>Datos generales</h2>
-<p>El proyecto usa Python 3.11, <code>yfinance</code> para las descargas y <code>scikit-learn</code> para los modelos. El código está pensado para ejecutarse de forma automática mediante GitHub Actions.</p>
-</section>
-<section>
-<h2>Visualizaciones diarias</h2>
-<p>Las gráficas provienen del módulo <code>visualization</code> y se actualizan de forma automática.</p>
-<img src="viz/candlestick.svg" alt="Gráfica de precios">
-<img src="viz/best_variables.svg" alt="Variables destacadas">
-</section>
-<section>
-<h2>Acerca del proyecto</h2>
-<p>El repositorio contiene scripts para cada fase del proceso:</p>
-<ul>
-  <li>Descarga y limpieza de datos financieros.</li>
-  <li>Ingenier&iacute;a de variables y selecci&oacute;n de caracter&iacute;sticas.</li>
-  <li>Entrenamiento y evaluaci&oacute;n de modelos de pron&oacute;stico.</li>
-  <li>Generaci&oacute;n de reportes y notificaci&oacute;n de resultados.</li>
-</ul>
-</section>
+  <div class="background-glow" aria-hidden="true"></div>
+  <main class="layout">
+    <header class="hero card reveal">
+      <p class="eyebrow">Plataforma de análisis cuantitativo</p>
+      <h1>Yahoo Finance Pipeline</h1>
+      <p class="subtitle">Una experiencia visual limpia y ejecutiva para monitorear datos, modelos y resultados operativos en un solo tablero.</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#visualizaciones">Explorar visualizaciones</a>
+        <a class="button button-secondary" href="#arquitectura">Revisar arquitectura</a>
+      </div>
+    </header>
 
-</div>
-<script src="js/scripts.js"></script>
+    <section class="kpi-grid reveal" aria-label="Indicadores de plataforma">
+      <article class="kpi card">
+        <h2>Python</h2>
+        <p class="kpi-value">3.11</p>
+        <p class="kpi-caption">Stack estable para producción.</p>
+      </article>
+      <article class="kpi card">
+        <h2>Datos</h2>
+        <p class="kpi-value">Diario</p>
+        <p class="kpi-caption">Descarga y actualización automatizada.</p>
+      </article>
+      <article class="kpi card">
+        <h2>Modelado</h2>
+        <p class="kpi-value">ML + TS</p>
+        <p class="kpi-caption">Combinación de modelos estadísticos y de aprendizaje.</p>
+      </article>
+      <article class="kpi card">
+        <h2>Operación</h2>
+        <p class="kpi-value">24/7</p>
+        <p class="kpi-caption">Ejecución continua por GitHub Actions.</p>
+      </article>
+    </section>
+
+    <section class="card reveal" id="visualizaciones">
+      <div class="section-heading">
+        <p class="eyebrow">Monitoreo visual</p>
+        <h2>Visualizaciones diarias</h2>
+      </div>
+      <p>Las gráficas se construyen desde el módulo <code>visualization</code> y permiten interpretar tendencias de precios y variables clave del modelo con una presentación ejecutiva.</p>
+      <div class="viz-grid">
+        <figure class="viz-card">
+          <img src="viz/candlestick.svg" alt="Gráfica candlestick de precios" loading="lazy">
+          <figcaption>Evolución de precios por sesión.</figcaption>
+        </figure>
+        <figure class="viz-card">
+          <img src="viz/best_variables.svg" alt="Variables más importantes del modelo" loading="lazy">
+          <figcaption>Ranking de variables de mayor impacto predictivo.</figcaption>
+        </figure>
+      </div>
+
+      <div class="section-heading prediction-heading">
+        <p class="eyebrow">Model performance</p>
+        <h3>Predicción vs valor real</h3>
+      </div>
+      <figure class="viz-card prediction-card">
+        <img src="viz/pred_vs_real.svg" alt="Comparativa entre predicciones y valores reales" loading="lazy">
+        <figcaption>Seguimiento de desempeño del modelo sobre datos históricos recientes.</figcaption>
+      </figure>
+
+      <div class="section-heading prediction-heading">
+        <p class="eyebrow">Advanced analytics</p>
+        <h3>Diagnóstico integral de modelos</h3>
+        <p class="window-note">Todas las gráficas usan una ventana temporal fija de <span id="window-days">120</span> días (<span id="window-range">cargando rango...</span>) para mantener comparabilidad ejecutiva y reflejar la última ejecución disponible.</p>
+      </div>
+      <div class="viz-analysis-grid">
+        <article class="viz-analysis-card">
+          <figure class="viz-card">
+            <img src="viz/error_heatmap.svg" alt="Heatmap de MAE por ticker y modelo" loading="lazy">
+            <figcaption>Error por combinación ticker-modelo.</figcaption>
+          </figure>
+          <aside class="viz-explainer">
+            <h4>Cómo interpretarla</h4>
+            <p>Colores más intensos indican mayor error medio absoluto. Si un ticker permanece en tonos cálidos para varios modelos, suele señalar que el problema está en la calidad/señal del activo más que en un algoritmo puntual.</p>
+          </aside>
+        </article>
+
+        <article class="viz-analysis-card">
+          <figure class="viz-card">
+            <img src="viz/direction_accuracy.svg" alt="Accuracy direccional por ticker y modelo" loading="lazy">
+            <figcaption>Acierto direccional (sube/baja).</figcaption>
+          </figure>
+          <aside class="viz-explainer">
+            <h4>Cómo interpretarla</h4>
+            <p>Valores cercanos a 100% implican alta consistencia direccional. Si un modelo mantiene buen acierto aun con MAE moderado, puede seguir siendo útil para decisiones tácticas de entrada/salida.</p>
+          </aside>
+        </article>
+
+        <article class="viz-analysis-card">
+          <figure class="viz-card">
+            <img src="viz/residual_distribution.svg" alt="Distribución de residuales por modelo" loading="lazy">
+            <figcaption>Sesgo y dispersión de residuales.</figcaption>
+          </figure>
+          <aside class="viz-explainer">
+            <h4>Cómo interpretarla</h4>
+            <p>Medianas alejadas de 0 evidencian sesgo estructural (sobre/infraestimación). Bigotes y cajas amplias indican inestabilidad del error entre activos y periodos.</p>
+          </aside>
+        </article>
+
+        <article class="viz-analysis-card">
+          <figure class="viz-card">
+            <img src="viz/mae_trend.svg" alt="Tendencia temporal de MAE por modelo" loading="lazy">
+            <figcaption>Estabilidad temporal del error.</figcaption>
+          </figure>
+          <aside class="viz-explainer">
+            <h4>Cómo interpretarla</h4>
+            <p>Tendencias descendentes reflejan aprendizaje y estabilidad; cambios de régimen con picos persistentes suelen anticipar drift de mercado o necesidad de reentrenamiento.</p>
+          </aside>
+        </article>
+
+        <article class="viz-analysis-card">
+          <figure class="viz-card">
+            <img src="viz/risk_return_signals.svg" alt="Dispersión riesgo-retorno de señales" loading="lazy">
+            <figcaption>Retorno esperado vs error de señal.</figcaption>
+          </figure>
+          <aside class="viz-explainer">
+            <h4>Cómo interpretarla</h4>
+            <p>El cuadrante ideal está a la derecha-abajo (más retorno esperado con menor error). Clusters separados por color ayudan a identificar qué familia de modelos ofrece mejor frontera riesgo-retorno.</p>
+          </aside>
+        </article>
+
+        <article class="viz-analysis-card">
+          <figure class="viz-card">
+            <img src="viz/driver_stability.svg" alt="Estabilidad de drivers en el tiempo" loading="lazy">
+            <figcaption>Importancia de variables por fecha.</figcaption>
+          </figure>
+          <aside class="viz-explainer">
+            <h4>Cómo interpretarla</h4>
+            <p>Variaciones bruscas por fila indican que el modelo cambió de drivers de forma abrupta (alerta de drift conceptual). Bandas estables sugieren narrativa predictiva robusta en el tiempo.</p>
+          </aside>
+        </article>
+
+        <article class="viz-analysis-card">
+          <figure class="viz-card">
+            <img src="viz/operational_coverage.svg" alt="Curva de cobertura operativa" loading="lazy">
+            <figcaption>Cobertura de tickers por modelo.</figcaption>
+          </figure>
+          <aside class="viz-explainer">
+            <h4>Cómo interpretarla</h4>
+            <p>Coberturas altas y estables implican pipeline sano en datos, features y scoring. Caídas abruptas suelen asociarse a faltantes de mercado, retrasos de jobs o validaciones bloqueantes.</p>
+          </aside>
+        </article>
+      </div>
+    </section>
+
+    <section class="card reveal" id="arquitectura">
+      <div class="section-heading">
+        <p class="eyebrow">Arquitectura de solución</p>
+        <h2>Flujo de extremo a extremo</h2>
+      </div>
+      <div class="pipeline">
+        <article>
+          <h3>1. Ingesta y limpieza</h3>
+          <p>Adquisición de datos financieros y estandarización para asegurar calidad analítica.</p>
+        </article>
+        <article>
+          <h3>2. Ingeniería de variables</h3>
+          <p>Creación de señales, selección de atributos y control de consistencia estadística.</p>
+        </article>
+        <article>
+          <h3>3. Entrenamiento y evaluación</h3>
+          <p>Modelos de forecasting con métricas comparables y trazabilidad histórica.</p>
+        </article>
+        <article>
+          <h3>4. Reporte y notificación</h3>
+          <p>Generación de resultados y comunicación automática para equipos de negocio.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+  <script src="js/scripts.js"></script>
 </body>
 </html>

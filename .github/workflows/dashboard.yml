@@ -1,4 +1,6 @@
 name: Dashboard
+permissions:
+  contents: write
 on:
   workflow_dispatch: {}
 jobs:
@@ -6,7 +8,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          lfs: true
+      - name: Setup Git LFS
+        run: git lfs install
+      - name: Fetch LFS models
+        run: git lfs pull
       - uses: actions/setup-python@v5
         with:
           python-version: 3.11
-      - run: echo "Genera dashboard aquí"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+      - name: Instalar dependencias
+        run: |
+          pip install --upgrade pip
+          pip install yfinance==0.2.61 ta==0.11.0 requests-cache==1.2.0 pandas>=2.2
+          pip install -r requirements.txt
+      - name: Generar visualizaciones y manifest
+        run: python -m src.visualization
+      - name: Commit dashboard visualizations
+        env:
+          PUSH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add results/viz/*.csv 2>/dev/null || true
+          git add docs/viz/manifest.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No dashboard changes to commit"
+          else
+            git commit -m "Update dashboard visualizations"
+            token=${PUSH_TOKEN:-$GITHUB_TOKEN}
+            git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
+          fi
