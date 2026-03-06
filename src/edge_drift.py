@@ -8,7 +8,7 @@ from typing import Dict
 
 import pandas as pd
 
-from .evaluation import evaluate_predictions
+from .evaluation import REGIME_COLUMNS, evaluate_predictions, enrich_regime_labels
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ def _load_recent_metrics(directory: Path, days: int = 15) -> pd.DataFrame:
     dfs = []
     for file in recent:
         try:
-            df = pd.read_csv(file, usecols=["ticker", "model", "pred", "real"])
+            df = pd.read_csv(file)
             dfs.append(df)
         except Exception:
             logger.exception("Failed to load %s", file)
@@ -68,36 +68,54 @@ def evaluate_drift(data: pd.DataFrame) -> pd.DataFrame:
     if data.empty:
         return pd.DataFrame()
 
+    work = enrich_regime_labels(data)
     records = []
-    for (ticker, model), grp in data.groupby(["ticker", "model"]):
-        y_true = grp["real"].tolist()
-        y_pred = grp["pred"].tolist()
-        metrics = evaluate_predictions(y_true, y_pred)
-        regime = _regime_for_group(grp)
-        tolerance = _tolerance_for_regime(regime)
-        drift_hits = 0
-        for k, v in metrics.items():
-            thr = tolerance.get(k)
-            if thr is None:
-                continue
-            if k in {"R2", "EVS"}:
-                if v < thr:
-                    drift_hits += 1
-            else:
-                if v > thr:
-                    drift_hits += 1
-        drift_score = drift_hits / len(tolerance)
-        records.append(
-            {
-                "ticker": ticker,
-                "model": model,
-                "regime": regime,
-                **metrics,
-                "drift_score": round(drift_score, 4),
-            }
-        )
+    for regime_col in REGIME_COLUMNS:
+        if regime_col not in work.columns:
+            continue
+        for (ticker, model, regime_value), grp in work.groupby(["ticker", "model", regime_col], dropna=False):
+            y_true = grp["real"].tolist()
+            y_pred = grp["pred"].tolist()
+            metrics = evaluate_predictions(y_true, y_pred)
+            regime = str(regime_value)
+            tolerance = _tolerance_for_regime(regime)
+            drift_hits = 0
+            for k, v in metrics.items():
+                thr = tolerance.get(k)
+                if thr is None:
+                    continue
+                if k in {"R2", "EVS"}:
+                    if v < thr:
+                        drift_hits += 1
+                else:
+                    if v > thr:
+                        drift_hits += 1
+            drift_score = drift_hits / len(tolerance)
+            records.append(
+                {
+                    "ticker": ticker,
+                    "model": model,
+                    "regime_type": regime_col,
+                    "regime": regime,
+                    **metrics,
+                    "drift_score": round(drift_score, 4),
+                }
+            )
 
-    return pd.DataFrame(records)
+    result = pd.DataFrame(records)
+    if result.empty:
+        return result
+
+    summary_keys = ["ticker", "model"]
+    failing = result[result["drift_score"] > 0]
+    total_by_pair = result.groupby(summary_keys, as_index=False)["regime"].count().rename(columns={"regime": "total_regimes"})
+    fail_by_pair = failing.groupby(summary_keys, as_index=False)["regime"].count().rename(columns={"regime": "failed_regimes"})
+    result = result.merge(total_by_pair, on=summary_keys, how="left")
+    result = result.merge(fail_by_pair, on=summary_keys, how="left")
+    result["failed_regimes"] = result["failed_regimes"].fillna(0).astype(int)
+    result["regime_only_failure"] = (result["failed_regimes"] > 0) & (result["failed_regimes"] < result["total_regimes"])
+
+    return result
 
 
 def main(days: int = 15) -> Path:
