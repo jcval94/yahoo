@@ -88,3 +88,11 @@ actions:
   spread_bps: 8.0
   slippage_bps: 10.0
   max_tickers_per_day: 3
+exogenous:
+  enabled: true
+  use_vix: true
+  use_credit_spread_proxy: true
+  credit_proxy_symbol: "HYG"
+  use_fomc_calendar: true
+  fomc_calendar_path: "data/fomc_calendar.csv"
+  max_ffill_steps: 3

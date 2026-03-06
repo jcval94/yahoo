@@ -211,26 +211,6 @@ La funcion de evaluacion calcula los siguientes indicadores:
    `strategy_backtest_15d_summary.csv`, `strategy_backtest_15d_daily.csv`
    y `strategy_backtest_15d_trades.csv`.
 
-### Resumen del último experimento (15 días)
-
-Con `initial_budget: 10000` y costos configurados en `actions`, el ranking reciente fue:
-
-| Estrategia | Return % | Equity final | Win rate | Max DD % |
-|---|---:|---:|---:|---:|
-| stability_filter | **+0.4526** | **10045.2623** | **80.00%** | **0.7610** |
-| consensus_vote | -0.2243 | 9977.5721 | 44.44% | 1.0340 |
-| top3_ensemble | -0.3814 | 9961.8645 | 50.00% | 1.2276 |
-| risk_adjusted_edge | -0.3814 | 9961.8645 | 50.00% | 1.2276 |
-| winner_take_all | -0.7903 | 9920.9744 | 50.00% | 1.9822 |
-
-Recomendaciones por estrategia:
-
-- `stability_filter`: mantener como baseline; opcional subir exposición gradualmente si mantiene DD bajo.
-- `consensus_vote`: endurecer entrada para evitar operaciones marginales afectadas por costos.
-- `top3_ensemble`: exigir edge mínimo (pred-actual) antes de abrir posición.
-- `risk_adjusted_edge`: subir umbral de edge y añadir filtro de volatilidad.
-- `winner_take_all`: usar confirmación extra (híbrido con consenso) o menor tamaño por trade.
-
 
 ## Flujo de entrenamiento y prediccion
 

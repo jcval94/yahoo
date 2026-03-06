@@ -212,6 +212,7 @@ def train_models(
     paths = {}
     metrics_rows = []
     var_rows = []
+    exogenous_rows = []
     pred_rows = []
 
     if isinstance(data, pd.DataFrame):
@@ -252,6 +253,22 @@ def train_models(
 
         X = df_recent.drop(columns=[target_col, "target"], errors="ignore")
         y = df_recent["target"]
+        exog_cols = [
+            col for col in X.columns
+            if col.startswith("vix_") or col.startswith("credit_") or col.startswith("is_fomc_")
+        ]
+        for exog_col in exog_cols:
+            exogenous_rows.append(
+                {
+                    "model": f"{ticker}_exogenous",
+                    "feature": exog_col,
+                    "importance_mean": 0.0,
+                    "importance_std": 0.0,
+                    "importance_mean_minus_std": 0.0,
+                    "used_in_retrain": int(exog_col in X.columns),
+                    "run_date": RUN_TIMESTAMP,
+                }
+            )
         log_df_details(f"features {ticker}", X)
 
         df_train, df_test = split_train_test(df_recent, frequency=frequency, val_bars=val_bars, val_weeks=val_weeks)
@@ -869,8 +886,8 @@ def train_models(
             logger.exception("Failed to save metrics to %s", metrics_file)
         logger.info("Metrics summary:\n%s", metrics_df)
 
-    if var_rows:
-        var_df = pd.DataFrame(var_rows)
+    if var_rows or exogenous_rows:
+        var_df = pd.DataFrame(var_rows + exogenous_rows)
         var_file = FEATURE_DIR / f"features_{frequency}_{RUN_TIMESTAMP[:10]}.csv"
         try:
             var_df.to_csv(var_file, index=False)
