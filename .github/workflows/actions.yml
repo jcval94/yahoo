@@ -1,0 +1,54 @@
+name: Actions Paper Trading
+permissions:
+  contents: write
+on:
+  schedule:
+    - cron: '30 20 * * 1-5'
+  workflow_dispatch: {}
+jobs:
+  actions_paper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          lfs: true
+      - name: Setup Git LFS
+        run: git lfs install
+      - name: Fetch LFS models
+        run: git lfs pull
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install yfinance==0.2.61 ta==0.11.0 requests-cache==1.2.0 pandas>=2.2
+          pip install -r requirements.txt
+      - name: Build ABT
+        run: python -m src.abt.build_abt
+      - name: Predict daily
+        run: python -m src.predict
+      - name: Run Actions module
+        run: python -m src.actions.paper_trader --backtest-days 15
+      - name: Commit Actions outputs
+        env:
+          PUSH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add results/actions/*.csv 2>/dev/null || true
+          git add results/predicts/*_daily_predictions.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No actions updates to commit"
+          else
+            git commit -m "Update paper trading actions outputs"
+            token=${PUSH_TOKEN:-$GITHUB_TOKEN}
+            git push https://x-access-token:${token}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
+          fi
