@@ -199,6 +199,38 @@ La funcion de evaluacion calcula los siguientes indicadores:
    ```
    Elimina los modelos guardados para empezar de cero.
 
+10. **Actions (paper trading diario)**
+
+   ```bash
+   python -m src.actions.paper_trader --backtest-days 15
+   ```
+   Simula decisiones de compra/venta usando cinco estrategias en competencia,
+   comisiones y deslizamiento. Guarda trazabilidad detallada en `results/actions/`:
+   `paper_trades.csv`, `daily_activity.csv`, `open_positions.csv` y el
+   backtesting de estrategias en los últimos 15 días:
+   `strategy_backtest_15d_summary.csv`, `strategy_backtest_15d_daily.csv`
+   y `strategy_backtest_15d_trades.csv`.
+
+### Resumen del último experimento (15 días)
+
+Con `initial_budget: 10000` y costos configurados en `actions`, el ranking reciente fue:
+
+| Estrategia | Return % | Equity final | Win rate | Max DD % |
+|---|---:|---:|---:|---:|
+| stability_filter | **+0.4526** | **10045.2623** | **80.00%** | **0.7610** |
+| consensus_vote | -0.2243 | 9977.5721 | 44.44% | 1.0340 |
+| top3_ensemble | -0.3814 | 9961.8645 | 50.00% | 1.2276 |
+| risk_adjusted_edge | -0.3814 | 9961.8645 | 50.00% | 1.2276 |
+| winner_take_all | -0.7903 | 9920.9744 | 50.00% | 1.9822 |
+
+Recomendaciones por estrategia:
+
+- `stability_filter`: mantener como baseline; opcional subir exposición gradualmente si mantiene DD bajo.
+- `consensus_vote`: endurecer entrada para evitar operaciones marginales afectadas por costos.
+- `top3_ensemble`: exigir edge mínimo (pred-actual) antes de abrir posición.
+- `risk_adjusted_edge`: subir umbral de edge y añadir filtro de volatilidad.
+- `winner_take_all`: usar confirmación extra (híbrido con consenso) o menor tamaño por trade.
+
 
 ## Flujo de entrenamiento y prediccion
 
@@ -227,6 +259,11 @@ En `.github/workflows` encontraras los flujos que ejecutan el pipeline de forma 
 * `Monthly_training_weekly_prediction.yml` reentrena los modelos cada mes usando datos semanales y realiza un pronóstico del promedio de la siguiente semana.
 * `weekly_process.yml` utiliza los modelos almacenados para predecir la próxima semana. Guarda `results/predicts/<fecha>_weekly_predictions.csv` y realiza un commit automático si hay cambios.
 * `daily.yml` procesa los datos nuevos y aplica **unicamente** los modelos almacenados en `models/daily/`; no ejecuta ninguna fase de entrenamiento. Las predicciones se escriben en `results/predicts/<fecha>_daily_predictions.csv`. Luego ejecuta `src.edge_drift` para evaluar la deriva y guarda un CSV en `results/drift/edge_drift_evaluation_<fecha>.csv` que también se sube mediante un commit automático cuando existen cambios.
+
+* `actions.yml` ejecuta el módulo de **paper trading** una vez al día entre semana.
+  El flujo genera predicciones diarias y después corre `src.actions.paper_trader`,
+  guardando operaciones simuladas con PnL, comisiones y estado de posiciones en
+  `results/actions/*.csv`.
 
 
 Para que estos flujos suban cambios por usted, asegúrese de que `GITHUB_TOKEN` cuente con permisos de escritura. Si trabaja en un fork, cree un *Personal Access Token* y guárdelo como `GH_PAT`. Listo.
