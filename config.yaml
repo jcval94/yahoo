@@ -74,3 +74,12 @@ target_cols:
   NEE: Close
   CAT: Close
   LMT: Close
+
+exogenous:
+  enabled: true
+  use_vix: true
+  use_credit_spread_proxy: true
+  credit_proxy_symbol: "HYG"
+  use_fomc_calendar: true
+  fomc_calendar_path: "data/fomc_calendar.csv"
+  max_ffill_steps: 3
