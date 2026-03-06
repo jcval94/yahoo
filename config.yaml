@@ -75,6 +75,19 @@ target_cols:
   CAT: Close
   LMT: Close
 
+actions:
+  initial_budget: 10000
+  max_position_pct: 0.12
+  min_trade_usd: 300
+  buy_threshold: 2.8
+  sell_threshold: -1.8
+  holding_days: 2
+  commission_fixed: 0.35
+  commission_bps: 4.0
+  sec_fee_bps: 0.25
+  spread_bps: 8.0
+  slippage_bps: 10.0
+  max_tickers_per_day: 3
 exogenous:
   enabled: true
   use_vix: true
