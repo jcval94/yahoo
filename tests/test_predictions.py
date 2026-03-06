@@ -64,3 +64,21 @@ def test_edge_evaluation_no_file(tmp_path):
     assert not metrics_files
     metrics_main_files = list((tmp_path / 'metrics').glob('edge_metrics_*'))
     assert not metrics_main_files
+
+
+def test_load_models_filters_stale_tickers(tmp_path, monkeypatch):
+    class _DummyModel:
+        def predict(self, X):
+            return [0]
+
+    keep = tmp_path / "NVDA_daily_rf_aaaaaaaaaa.joblib"
+    drop = tmp_path / "BIMBO_daily_rf_bbbbbbbbbb.joblib"
+    keep.write_text("ok")
+    drop.write_text("ok")
+
+    monkeypatch.setattr(predict, "CONFIG", {"etfs": ["NVDA"]})
+    monkeypatch.setattr(predict, "load_with_schema", lambda path: (_DummyModel(), ["Close"], "hash"))
+
+    models = predict.load_models(tmp_path)
+
+    assert set(models) == {"NVDA_daily_rf_aaaaaaaaaa"}

@@ -59,8 +59,14 @@ def _is_valid_model(obj: Any) -> bool:
     return hasattr(obj, "predict")
 
 
+def _model_ticker(model_name: str) -> str:
+    """Extract ticker from model filename stem."""
+    return model_name.split("_")[0]
+
+
 def load_models(model_dir: Path) -> Dict[str, Any]:
     models = {}
+    allowed_tickers = set(CONFIG.get("etfs", []))
     if not model_dir.exists():
         logger.warning("Model directory %s does not exist, using naive defaults", model_dir)
         return {f"{t}_naive": _NaiveModel() for t in CONFIG.get("etfs", [])}
@@ -81,6 +87,14 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
             latest[base] = file
 
     for file in latest.values():
+        ticker = _model_ticker(file.stem)
+        if allowed_tickers and ticker not in allowed_tickers:
+            logger.info(
+                "Skipping model %s because ticker %s is not present in config etfs",
+                file.name,
+                ticker,
+            )
+            continue
         if _is_lfs_pointer(file):
             logger.error(
                 "%s appears to be a Git LFS pointer. Run 'git lfs pull' to fetch the model",
@@ -159,7 +173,7 @@ def run_predictions(
             feature_list = None
             schema_hash = None
         parts = name.split("_")
-        ticker = parts[0]
+        ticker = _model_ticker(name)
         algo = parts[2] if len(parts) > 2 else getattr(model, "__class__", type(model)).__name__
         target_col = TARGET_COLS.get(ticker, "Close")
         df = data.get(ticker)
