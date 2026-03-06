@@ -82,13 +82,13 @@ def test_diff_sign_features():
     result = add_technical_indicators(df)
     assert "Close_up" in result.columns
     expected_close = (df["Close"].diff() > 0).astype(int)
-    pd.testing.assert_series_equal(result["Close_up"], expected_close, check_name=False)
+    pd.testing.assert_series_equal(result["Close_up"], expected_close, check_names=False)
 
     for w in [5, 10, 20, 50]:
         col = f"median_{w}_up"
         assert col in result.columns
         expected = (result[f"median_{w}"].diff() > 0).astype(int)
-        pd.testing.assert_series_equal(result[col], expected, check_name=False)
+        pd.testing.assert_series_equal(result[col], expected, check_names=False)
 
 
 def test_ema_and_norm_band_and_simple_return():
@@ -108,7 +108,7 @@ def test_ema_and_norm_band_and_simple_return():
 
     assert "simple_return" in result.columns
     expected_simple = df["Close"].pct_change()
-    pd.testing.assert_series_equal(result["simple_return"], expected_simple, check_name=False)
+    pd.testing.assert_series_equal(result["simple_return"], expected_simple, check_names=False)
 
 
 def test_std_ratio_and_moments_and_entropy():
@@ -126,7 +126,7 @@ def test_std_ratio_and_moments_and_entropy():
     # std ratio
     assert "std_ratio_5_20" in result.columns
     expected_ratio = result["std_5"] / result["std_20"]
-    pd.testing.assert_series_equal(result["std_ratio_5_20"], expected_ratio, check_name=False)
+    pd.testing.assert_series_equal(result["std_ratio_5_20"], expected_ratio, check_names=False)
 
     # skew and kurtosis
     for w in [5, 10, 20]:
@@ -134,8 +134,8 @@ def test_std_ratio_and_moments_and_entropy():
         assert f"kurt_{w}" in result.columns
         expected_skew = df["Close"].rolling(window=w, min_periods=1).skew()
         expected_kurt = df["Close"].rolling(window=w, min_periods=1).kurt()
-        pd.testing.assert_series_equal(result[f"skew_{w}"], expected_skew, check_name=False)
-        pd.testing.assert_series_equal(result[f"kurt_{w}"], expected_kurt, check_name=False)
+        pd.testing.assert_series_equal(result[f"skew_{w}"], expected_skew, check_names=False)
+        pd.testing.assert_series_equal(result[f"kurt_{w}"], expected_kurt, check_names=False)
 
     # entropy complexity
     assert "entropy_20" in result.columns
@@ -148,7 +148,7 @@ def test_std_ratio_and_moments_and_entropy():
         return -(probs * np.log(probs)).sum()
 
     expected_entropy = sign.rolling(window=20, min_periods=1).apply(entropy, raw=True)
-    pd.testing.assert_series_equal(result["entropy_20"], expected_entropy, check_name=False)
+    pd.testing.assert_series_equal(result["entropy_20"], expected_entropy, check_names=False)
 
 
 def test_next_is_holiday():
@@ -282,15 +282,15 @@ def test_gap_and_intraday_return_columns():
     expected_open_to_close = (df["Close"] - df["Open"]) / df["Open"]
     expected_drawdown = (df["Low"] - prev_close) / prev_close
 
-    pd.testing.assert_series_equal(result["gap_pct"], expected_gap, check_name=False)
+    pd.testing.assert_series_equal(result["gap_pct"], expected_gap, check_names=False)
     pd.testing.assert_series_equal(
-        result["overnight_return"], expected_gap, check_name=False
+        result["overnight_return"], expected_gap, check_names=False
     )
     pd.testing.assert_series_equal(
-        result["open_to_close_return"], expected_open_to_close, check_name=False
+        result["open_to_close_return"], expected_open_to_close, check_names=False
     )
     pd.testing.assert_series_equal(
-        result["drawdown_from_prev_close"], expected_drawdown, check_name=False
+        result["drawdown_from_prev_close"], expected_drawdown, check_names=False
     )
 
 
@@ -321,3 +321,94 @@ def test_recovery_bars_thresholds_without_lookahead():
     # No >10% or >20% drawdown event in this sample.
     assert result["recovery_bars_10pct"].isna().all()
     assert result["recovery_bars_20pct"].isna().all()
+
+
+def test_new_return_features_and_gap_normalization_by_atr():
+    idx = pd.date_range(start="2021-01-01", periods=40, freq="D")
+    df = pd.DataFrame(
+        {
+            "Open": np.linspace(100, 140, num=40),
+            "High": np.linspace(101, 141, num=40),
+            "Low": np.linspace(99, 139, num=40),
+            "Close": np.linspace(100, 140, num=40),
+            "Adj Close": np.linspace(100, 140, num=40),
+            "Volume": np.ones(40),
+        },
+        index=idx,
+    )
+    result = add_technical_indicators(df)
+
+    prev_close = df["Close"].shift(1)
+    expected_intraday = (df["Close"] - df["Open"]) / df["Open"]
+    expected_gap_abs = df["Open"] - prev_close
+
+    pd.testing.assert_series_equal(result["intraday_return"], expected_intraday, check_names=False)
+    pd.testing.assert_series_equal(result["gap_abs"], expected_gap_abs, check_names=False)
+    pd.testing.assert_series_equal(
+        result["gap_atr_norm"],
+        result["gap_abs"] / result["atr"].replace(0, np.nan),
+        check_names=False,
+    )
+
+
+def test_calendar_flags_added():
+    idx = pd.date_range("2024-09-02", periods=25, freq="B")
+    df = pd.DataFrame(
+        {
+            "Open": np.linspace(100, 124, num=len(idx)),
+            "High": np.linspace(101, 125, num=len(idx)),
+            "Low": np.linspace(99, 123, num=len(idx)),
+            "Close": np.linspace(100, 124, num=len(idx)),
+            "Adj Close": np.linspace(100, 124, num=len(idx)),
+            "Volume": np.ones(len(idx)),
+        },
+        index=idx,
+    )
+    result = add_technical_indicators(df)
+
+    assert result.loc[pd.Timestamp("2024-09-16"), "is_monday"]
+    assert result.loc[pd.Timestamp("2024-09-20"), "is_friday"]
+    assert result.loc[pd.Timestamp("2024-09-16"), "is_september"]
+    assert result.loc[pd.Timestamp("2024-10-01"), "is_month_start"]
+    assert result.loc[pd.Timestamp("2024-09-30"), "is_turn_of_month"]
+    assert result.loc[pd.Timestamp("2024-10-01"), "is_turn_of_month"]
+    assert result.loc[pd.Timestamp("2024-09-16"), "is_quadruple_witching_week"]
+    assert result.loc[pd.Timestamp("2024-09-20"), "is_quadruple_witching_week"]
+
+
+def test_intraday_session_bucket_and_rolling_stats_no_leakage():
+    idx = pd.to_datetime([
+        "2024-01-02 09:30", "2024-01-02 12:00", "2024-01-02 15:30",
+        "2024-01-03 09:30", "2024-01-03 12:00", "2024-01-03 15:30",
+        "2024-01-04 09:30", "2024-01-04 12:00", "2024-01-04 15:30",
+        "2024-01-05 09:30", "2024-01-05 12:00", "2024-01-05 15:30",
+        "2024-01-08 09:30", "2024-01-08 12:00", "2024-01-08 15:30",
+    ])
+    opens = [100, 100, 100, 103, 101, 99, 98, 102, 101, 102, 104, 103, 105, 106, 107]
+    closes = [101, 99, 100, 102, 102, 100, 99, 101, 102, 103, 103, 104, 106, 105, 108]
+    df = pd.DataFrame(
+        {
+            "Open": opens,
+            "High": [max(o, c) + 1 for o, c in zip(opens, closes)],
+            "Low": [min(o, c) - 1 for o, c in zip(opens, closes)],
+            "Close": closes,
+            "Adj Close": closes,
+            "Volume": [1000, 1100, 1200, 1300, 1400, 1500, 900, 950, 980, 990, 995, 1005, 1010, 1020, 1030],
+        },
+        index=idx,
+    )
+    result = add_technical_indicators(df)
+
+    assert result.loc[pd.Timestamp("2024-01-02 09:30"), "session_bucket"] == "open"
+    assert result.loc[pd.Timestamp("2024-01-02 12:00"), "session_bucket"] == "midday"
+    assert result.loc[pd.Timestamp("2024-01-02 15:30"), "session_bucket"] == "close"
+
+    # First observation per bucket has no historical values.
+    assert np.isnan(result.loc[pd.Timestamp("2024-01-02 09:30"), "bucket_return_mean_hist"])
+    # Second open bar uses only previous open bar value (no look-ahead).
+    first_open_intraday = result.loc[pd.Timestamp("2024-01-02 09:30"), "intraday_return"]
+    assert result.loc[pd.Timestamp("2024-01-03 09:30"), "bucket_return_mean_hist"] == first_open_intraday
+
+    # Daily rolling by bucket must also be predictive: day-2 open uses only day-1 open block return.
+    day1_open_mean = result.loc[pd.Timestamp("2024-01-02 09:30"), "intraday_return"]
+    assert result.loc[pd.Timestamp("2024-01-03 09:30"), "bucket_return_mean_5d"] == day1_open_mean
