@@ -8,6 +8,25 @@ from .utils import log_df_details
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_EVENT_PREDICTORS = [
+    "gap_pct",
+    "overnight_return",
+    "open_to_close_return",
+    "drawdown_from_prev_close",
+    "recovery_bars_5pct",
+    "recovery_bars_10pct",
+    "recovery_bars_20pct",
+]
+
+
+def _append_event_predictors(selected: list[str], available: pd.Index) -> list[str]:
+    """Ensure key event predictors are present when available in input columns."""
+    keep = list(selected)
+    for col in DEFAULT_EVENT_PREDICTORS:
+        if col in available and col not in keep:
+            keep.append(col)
+    return keep
+
 
 def remove_multicollinearity(df: pd.DataFrame, threshold: float = 0.9) -> pd.DataFrame:
     """Return DataFrame with highly correlated columns removed.
@@ -43,7 +62,7 @@ def select_features(
     features = remove_multicollinearity(features, threshold=corr_threshold)
     target_corr = df[features.columns].corrwith(df[target_col]).abs()
     selected = list(target_corr[target_corr >= relevance_threshold].index)
-    return selected
+    return _append_event_predictors(selected, features.columns)
 
 
 def select_features_rf_cv(
@@ -104,6 +123,7 @@ def select_features_rf_cv(
     order = np.argsort(importances)[::-1]
     top_cols = features.columns[order[:max_features]]
     filtered = remove_multicollinearity(features[top_cols], threshold=corr_threshold)
-    logger.info("Selected features: %s", list(filtered.columns))
-    log_df_details("selected features df", filtered)
-    return list(filtered.columns)
+    selected = _append_event_predictors(list(filtered.columns), features.columns)
+    logger.info("Selected features: %s", selected)
+    log_df_details("selected features df", features[selected])
+    return selected

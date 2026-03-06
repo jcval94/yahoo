@@ -44,3 +44,21 @@ def test_compute_permutation_importance_basic():
     assert set(['feature', 'importance_mean', 'importance_std', 'importance_mean_minus_std']) <= set(getattr(imp_df, 'columns', []))
     assert len(imp_df) == 2
 
+
+
+def test_permutation_importance_prioritizes_event_predictors():
+    pd = pytest.importorskip('pandas')
+    from sklearn.linear_model import LinearRegression
+
+    X = pd.DataFrame(
+        {
+            'other': [0, 1, 2, 3, 4],
+            'gap_pct': [0, 0, 0, 0, 0],
+            'open_to_close_return': [1, 1, 1, 1, 1],
+        }
+    )
+    y = pd.Series([0, 1, 2, 3, 4])
+    model = LinearRegression().fit(X, y)
+
+    imp_df = compute_permutation_importance(model, X, y, n_repeats=2, random_state=0)
+    assert list(imp_df['feature'][:2]) == ['gap_pct', 'open_to_close_return']

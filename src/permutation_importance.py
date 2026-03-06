@@ -8,6 +8,16 @@ try:
 except Exception:  # pragma: no cover - scikit-learn may not be available
     _perm_importance = None
 
+DEFAULT_EVENT_PREDICTORS = [
+    "gap_pct",
+    "overnight_return",
+    "open_to_close_return",
+    "drawdown_from_prev_close",
+    "recovery_bars_5pct",
+    "recovery_bars_10pct",
+    "recovery_bars_20pct",
+]
+
 
 def compute_permutation_importance(
     model,
@@ -46,7 +56,7 @@ def compute_permutation_importance(
         random_state=random_state,
         scoring=scoring,
     )
-    return pd.DataFrame(
+    df = pd.DataFrame(
         {
             "feature": X.columns,
             "importance_mean": result.importances_mean,
@@ -55,3 +65,8 @@ def compute_permutation_importance(
             - result.importances_std,
         }
     )
+    priority = {f: i for i, f in enumerate(DEFAULT_EVENT_PREDICTORS)}
+    available_priority = df["feature"].map(priority).fillna(len(DEFAULT_EVENT_PREDICTORS))
+    return df.assign(_priority=available_priority).sort_values(
+        ["_priority", "importance_mean"], ascending=[True, False]
+    ).drop(columns=["_priority"]).reset_index(drop=True)
