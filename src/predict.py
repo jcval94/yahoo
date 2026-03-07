@@ -330,7 +330,7 @@ def run_predictions(
 
 
 def save_edge_predictions(result_df: pd.DataFrame) -> Path:
-    """Persist edge predictions for top models and ensemble."""
+    """Persist edge predictions for all models and a top-model ensemble."""
     edge_dir = RESULTS_DIR / "predicts"
     edge_dir.mkdir(exist_ok=True, parents=True)
 
@@ -350,17 +350,15 @@ def save_edge_predictions(result_df: pd.DataFrame) -> Path:
             metrics_df["ticker"] = metrics_df["model"].str.split("_").str[0]
             metrics_df["algo"] = metrics_df["model"].str.split("_").str[1]
             for t, grp in metrics_df.groupby("ticker"):
-                best = grp.sort_values("RMSE").head(3)["algo"].tolist()
+                best = grp.sort_values("RMSE")["algo"].drop_duplicates().head(3).tolist()
                 top_models[t] = best
         except Exception:
             logger.exception("Failed to load metrics from %s", latest)
 
     rows = []
     for ticker, group in result_df.groupby("ticker"):
-        subset = group
-        if top_models.get(ticker):
-            subset = subset[subset["model"].isin(top_models[ticker])]
-        for _, r in subset.iterrows():
+        # Keep every model prediction so analytics/heatmaps preserve full coverage.
+        for _, r in group.iterrows():
             rows.append(
                 {
                     "ticker": r["ticker"],
@@ -369,14 +367,17 @@ def save_edge_predictions(result_df: pd.DataFrame) -> Path:
                     "Predicted": r["Predicted"],
                 }
             )
-        if not subset.empty:
-            ensemble_pred = float(subset["pred"].astype(float).mean())
+        ensemble_group = group
+        if top_models.get(ticker):
+            ensemble_group = group[group["model"].isin(top_models[ticker])]
+        if not ensemble_group.empty:
+            ensemble_pred = float(ensemble_group["pred"].astype(float).mean())
             rows.append(
                 {
                     "ticker": ticker,
                     "model": "Top3Ensamble",
                     "pred": ensemble_pred,
-                    "Predicted": subset["Predicted"].iloc[0],
+                    "Predicted": ensemble_group["Predicted"].iloc[0],
                 }
             )
 

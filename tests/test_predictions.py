@@ -7,7 +7,7 @@ from src import predict
 
 def test_predictions_file_and_order(tmp_path):
     df = pd.DataFrame({'Close': [1, 2, 3]}, index=pd.date_range('2020-01-01', periods=3))
-    models = {'TEST_dummy': predict._NaiveModel()}
+    models = {'TEST_daily_dummy': predict._NaiveModel()}
     predict.RESULTS_DIR = tmp_path
     predict.RUN_TIMESTAMP = '2025-07-07T00:00:00+00:00'
     result = predict.run_predictions(models, {'TEST': df}, frequency='daily')
@@ -21,7 +21,7 @@ def test_edge_prediction_and_metrics(tmp_path):
         {'Close': [1, 2, 3, 4, 5, 6]},
         index=pd.date_range('2020-01-01', periods=6)
     )
-    models = {'TEST_dummy': predict._NaiveModel()}
+    models = {'TEST_daily_dummy': predict._NaiveModel()}
     predict.RESULTS_DIR = tmp_path
     predict.RUN_TIMESTAMP = '2025-07-08T00:00:00+00:00'
 
@@ -56,6 +56,41 @@ def test_edge_prediction_and_metrics(tmp_path):
     assert not event_df.empty
 
 
+
+def test_save_edge_predictions_keeps_all_models(tmp_path):
+    predict.RESULTS_DIR = tmp_path
+    predict.RUN_TIMESTAMP = '2025-07-10T00:00:00+00:00'
+
+    result = pd.DataFrame(
+        [
+            {'ticker': 'AAA', 'model': 'arima', 'pred': 10.0, 'Predicted': '2025-07-11'},
+            {'ticker': 'AAA', 'model': 'rf', 'pred': 11.0, 'Predicted': '2025-07-11'},
+            {'ticker': 'AAA', 'model': 'xgb', 'pred': 12.0, 'Predicted': '2025-07-11'},
+            {'ticker': 'AAA', 'model': 'lgbm', 'pred': 13.0, 'Predicted': '2025-07-11'},
+        ]
+    )
+
+    metrics_dir = tmp_path / 'metrics'
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    metrics = pd.DataFrame(
+        [
+            {'model': 'AAA_rf', 'dataset': 'test', 'RMSE': 1.0},
+            {'model': 'AAA_xgb', 'dataset': 'test', 'RMSE': 1.1},
+            {'model': 'AAA_rf', 'dataset': 'test', 'RMSE': 1.2},
+            {'model': 'AAA_arima', 'dataset': 'test', 'RMSE': 1.3},
+        ]
+    )
+    metrics.to_csv(metrics_dir / 'metrics_daily_2025-07-10.csv', index=False)
+
+    edge_file = predict.save_edge_predictions(result)
+    edge_df = pd.read_csv(edge_file)
+
+    per_model = edge_df[(edge_df['ticker'] == 'AAA') & (edge_df['model'] != 'Top3Ensamble')]
+    assert set(per_model['model']) == {'arima', 'rf', 'xgb', 'lgbm'}
+
+    ens = edge_df[(edge_df['ticker'] == 'AAA') & (edge_df['model'] == 'Top3Ensamble')]
+    assert len(ens) == 1
+    assert ens['pred'].iloc[0] == pytest.approx((10.0 + 11.0 + 12.0) / 3)
 
 def test_edge_evaluation_no_file(tmp_path):
     df = pd.DataFrame({'Close': [1, 2, 3]}, index=pd.date_range('2020-01-01', periods=3))
