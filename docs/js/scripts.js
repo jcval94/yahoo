@@ -15,6 +15,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   revealItems.forEach((item) => observer.observe(item));
 
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = button.getAttribute('data-tab-target');
+      tabButtons.forEach((b) => b.classList.toggle('is-active', b === button));
+      tabPanels.forEach((panel) => {
+        const panelName = panel.getAttribute('data-tab-panel');
+        panel.classList.toggle('is-hidden', panelName !== target);
+      });
+    });
+  });
+
   const images = document.querySelectorAll('img');
   images.forEach((image) => {
     image.addEventListener('error', () => {
@@ -59,11 +72,35 @@ document.addEventListener('DOMContentLoaded', () => {
       .join('');
   };
 
+  const renderPipelineHealth = (rows) => {
+    const row = rows[0] || null;
+    const runDate = document.getElementById('health-run-date');
+    const duration = document.getElementById('health-duration');
+    const success = document.getElementById('health-success');
+    const fallback = document.getElementById('health-fallback');
+
+    if (!runDate || !duration || !success || !fallback) return;
+    if (!row) {
+      runDate.textContent = 'Sin datos';
+      duration.textContent = 'N/D';
+      success.textContent = '0%';
+      fallback.textContent = 'Sin datos';
+      return;
+    }
+
+    runDate.textContent = row.run_date || 'N/D';
+    duration.textContent = row.duration_minutes && row.duration_minutes !== 'n/a'
+      ? `${Number(row.duration_minutes).toFixed(2)} min`
+      : 'N/D';
+    success.textContent = `${Number(row.success_pct || 0).toFixed(2)}% (${row.successful_steps || 0}/${row.total_steps || 0})`;
+    fallback.textContent = row.fallback_offline || 'No detectado';
+  };
+
   const renderActionRecommendations = (rows) => {
     const table = document.querySelector('#action-recommendations-table tbody');
     if (!table) return;
     if (!rows.length) {
-      table.innerHTML = '<tr><td colspan="6">No hay datos disponibles.</td></tr>';
+      table.innerHTML = '<tr><td colspan="10">No hay datos disponibles.</td></tr>';
       return;
     }
 
@@ -85,11 +122,96 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${row.best_model || '-'}</td>
             <td>${Number(row.strategy_score || 0).toFixed(4)}</td>
             <td><span class="action-badge ${cls}">${action}</span></td>
+            <td>${row.ret_1d || 'N/D'}</td>
+            <td>${row.ret_5d || 'N/D'}</td>
+            <td>${row.ret_20d || 'N/D'}</td>
+            <td>${row.result_5d || 'Pendiente'}</td>
             <td class="model-predictions">${modelSignals || '-'}</td>
           </tr>
         `;
       })
       .join('');
+  };
+
+  const renderLastRunReport = (report) => {
+    const runDate = document.getElementById('report-run-date');
+    const status = document.getElementById('report-status');
+    const success = document.getElementById('report-success');
+    const fallback = document.getElementById('report-fallback');
+    const artifactsList = document.getElementById('report-artifacts-list');
+    const actionSummaryBody = document.getElementById('report-action-summary-body');
+    const topRecBody = document.querySelector('#report-top-recommendations tbody');
+    const modelMetricsBody = document.querySelector('#report-model-metrics tbody');
+
+    if (!runDate || !status || !success || !fallback || !artifactsList || !actionSummaryBody || !topRecBody || !modelMetricsBody) {
+      return;
+    }
+
+    if (!report || !report.pipeline_health) {
+      runDate.textContent = 'Sin datos';
+      status.textContent = 'Sin datos';
+      success.textContent = 'N/D';
+      fallback.textContent = 'Sin datos';
+      artifactsList.innerHTML = '<li>No hay artefactos de reporte disponibles.</li>';
+      actionSummaryBody.innerHTML = '<tr><td>Sin datos disponibles.</td></tr>';
+      topRecBody.innerHTML = '<tr><td colspan="7">Sin datos disponibles.</td></tr>';
+      modelMetricsBody.innerHTML = '<tr><td colspan="5">Sin datos disponibles.</td></tr>';
+      return;
+    }
+
+    const health = report.pipeline_health || {};
+    runDate.textContent = report.run_date || health.run_date || 'N/D';
+    status.textContent = health.status || 'N/D';
+    success.textContent = `${Number(health.success_pct || 0).toFixed(2)}% (${health.successful_steps || 0}/${health.total_steps || 0})`;
+    fallback.textContent = health.fallback_offline || 'No detectado';
+
+    const edgeCoverage = report.summary?.edge_coverage || {};
+    artifactsList.innerHTML = `
+      <li><strong>Predicciones:</strong> ${report.artifacts?.predictions_file || 'n/a'}</li>
+      <li><strong>Métricas:</strong> ${report.artifacts?.metrics_file || 'n/a'}</li>
+      <li><strong>Edge metrics:</strong> ${report.artifacts?.edge_metrics_file || 'n/a'}</li>
+      <li><strong>Cobertura edge:</strong> ${edgeCoverage.rows || 0} filas, ${edgeCoverage.tickers || 0} tickers, ${edgeCoverage.models || 0} modelos.</li>
+      <li><strong>Generado:</strong> ${report.generated_at || 'n/a'}</li>
+    `;
+
+    const actions = report.summary?.actions || {};
+    const quality = report.summary?.quality_5d || {};
+    actionSummaryBody.innerHTML = `
+      <tr><td>BUY</td><td>${actions.BUY || 0}</td></tr>
+      <tr><td>SELL</td><td>${actions.SELL || 0}</td></tr>
+      <tr><td>HOLD</td><td>${actions.HOLD || 0}</td></tr>
+      <tr><td>Aciertos 5d</td><td>${quality.Acierto || 0}</td></tr>
+      <tr><td>Fallos 5d</td><td>${quality.Fallo || 0}</td></tr>
+      <tr><td>Pendientes 5d</td><td>${quality.Pendiente || 0}</td></tr>
+    `;
+
+    const recommendations = report.top_recommendations || [];
+    topRecBody.innerHTML = recommendations.length
+      ? recommendations.map((row) => `
+          <tr>
+            <td>${row.ticker || '-'}</td>
+            <td>${row.action || '-'}</td>
+            <td>${Number(row.strategy_score || 0).toFixed(4)}</td>
+            <td>${row.ret_1d || 'N/D'}</td>
+            <td>${row.ret_5d || 'N/D'}</td>
+            <td>${row.ret_20d || 'N/D'}</td>
+            <td>${row.result_5d || 'Pendiente'}</td>
+          </tr>
+        `).join('')
+      : '<tr><td colspan="7">Sin datos disponibles.</td></tr>';
+
+    const metrics = report.model_metrics || [];
+    modelMetricsBody.innerHTML = metrics.length
+      ? metrics.map((row) => `
+          <tr>
+            <td>${row.model || '-'}</td>
+            <td>${row.MAE !== undefined ? Number(row.MAE).toFixed(4) : '-'}</td>
+            <td>${row.RMSE !== undefined ? Number(row.RMSE).toFixed(4) : '-'}</td>
+            <td>${row.MAPE !== undefined ? Number(row.MAPE).toFixed(2) : '-'}</td>
+            <td>${row.R2 !== undefined ? Number(row.R2).toFixed(4) : '-'}</td>
+          </tr>
+        `).join('')
+      : '<tr><td colspan="5">Sin datos disponibles.</td></tr>';
   };
 
   fetch('viz/manifest.json', { cache: 'no-store' })
@@ -117,6 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       return Promise.all([
+        fetch(`viz/pipeline_health.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
+          .then((r) => r.ok ? r.text() : '')
+          .then((text) => renderPipelineHealth(parseCsv(text)))
+          .catch(() => renderPipelineHealth([])),
         fetch(`viz/strategy_performance.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
           .then((r) => r.ok ? r.text() : '')
           .then((text) => renderStrategyPerformance(parseCsv(text)))
@@ -125,11 +251,17 @@ document.addEventListener('DOMContentLoaded', () => {
           .then((r) => r.ok ? r.text() : '')
           .then((text) => renderActionRecommendations(parseCsv(text)))
           .catch(() => renderActionRecommendations([])),
+        fetch(`viz/last_run_report.json?v=${manifest.generated_at}`, { cache: 'no-store' })
+          .then((r) => r.ok ? r.json() : null)
+          .then((report) => renderLastRunReport(report))
+          .catch(() => renderLastRunReport(null)),
       ]);
     })
     .catch(() => {
+      renderPipelineHealth([]);
       renderStrategyPerformance([]);
       renderActionRecommendations([]);
+      renderLastRunReport(null);
       // Keep page functional even if manifest isn't available.
     });
 });
