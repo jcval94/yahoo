@@ -231,6 +231,13 @@ def train_models(
     val_bars = VAL_BARS
 
     for ticker, df in grouped.items():
+        lin = None
+        rf = None
+        xgb = None
+        lgbm = None
+        lstm = None
+        arima = None
+
         log_df_details(f"training data {ticker}", df)
         target_col = TARGET_COLS.get(ticker, "Close")
         if target_col not in df.columns:
@@ -385,7 +392,7 @@ def train_models(
                     logger.exception("Failed Linear evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed Linear training for %s", ticker)
-        if 'lin' in locals():
+        if lin is not None:
             _retrain_with_perm_importance(
                 lin,
                 model_label='linreg',
@@ -473,7 +480,7 @@ def train_models(
                     logger.exception("Failed RF evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed RF training for %s", ticker)
-        if 'rf' in locals():
+        if rf is not None:
             _retrain_with_perm_importance(
                 rf,
                 model_label='rf',
@@ -563,7 +570,7 @@ def train_models(
                     logger.exception("Failed XGB evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed XGB training for %s", ticker)
-        if 'xgb' in locals():
+        if xgb is not None:
             _retrain_with_perm_importance(
                 xgb,
                 model_label='xgb',
@@ -652,7 +659,7 @@ def train_models(
                     logger.exception("Failed LGBM evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed LGBM training for %s", ticker)
-        if 'lgbm' in locals():
+        if lgbm is not None:
             _retrain_with_perm_importance(
                 lgbm,
                 model_label='lgbm',
@@ -744,7 +751,7 @@ def train_models(
                     logger.exception("Failed LSTM evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed LSTM training for %s", ticker)
-        if 'lstm' in locals():
+        if lstm is not None:
             def _save_lstm(model, path, feats, _hash):
                 model.save(path)
                 with open(path.with_name(path.stem + '_features.json'), 'w') as fh:
@@ -831,7 +838,7 @@ def train_models(
                     logger.exception("Failed ARIMA evaluation for %s", ticker)
             except Exception:
                 logger.exception("Failed ARIMA training for %s", ticker)
-        if 'arima' in locals():
+        if arima is not None:
             _retrain_with_perm_importance(
                 arima,
                 model_label='arima',
