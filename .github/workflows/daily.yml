@@ -87,7 +87,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add results/viz/*.csv docs/viz/manifest.json 2>/dev/null || true
+          git add results/viz/*.csv docs/viz/*.svg docs/viz/manifest.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No visualization changes to commit"
           else
