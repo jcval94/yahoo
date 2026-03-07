@@ -32,7 +32,7 @@ STRATEGY_NAMES = [
     "top3_ensemble",
     "consensus_vote",
     "risk_adjusted_edge",
-    "stability_filter",
+    "downtrend_rebound",
 ]
 
 
@@ -181,6 +181,8 @@ def _evaluate_strategies(
     model_scores: dict[tuple[str, str], float],
     ranked_models: dict[str, list[str]],
     stability_scores: dict[tuple[str, str], float],
+    price_history: dict[str, pd.Series] | None = None,
+    trade_day: pd.Timestamp | None = None,
 ) -> dict:
     ticker = str(ticker_df["ticker"].iloc[0])
     actual = float(ticker_df["actual"].iloc[0])
@@ -216,21 +218,28 @@ def _evaluate_strategies(
             best_edge_signal = _sign(edge)
     s4 = best_edge_signal if abs(best_edge) >= 0.25 else 0
 
-    # Strategy 5: stability leader (lowest recent edge MAE)
-    stability_rank = sorted(
-        by_model.keys(),
-        key=lambda m: stability_scores.get((ticker, m), model_scores.get((ticker, m), 9999.0)),
-    )
-    stable_model = stability_rank[0]
-    stable_move = (by_model[stable_model] - actual) / max(abs(actual), 1e-6)
-    s5 = _sign(stable_move) if abs(stable_move) >= 0.002 else 0
+    # Strategy 5: very basic contrarian setup.
+    # Buy only when trend is down in the last week and in the last month.
+    s5 = 0
+    trend_1w = np.nan
+    trend_1m = np.nan
+    if price_history and trade_day is not None:
+        series = price_history.get(ticker)
+        if series is not None and not series.empty:
+            hist = series[series.index <= pd.Timestamp(trade_day).normalize()]
+            if len(hist) >= 6:
+                trend_1w = float(hist.iloc[-1] / hist.iloc[-6] - 1)
+            if len(hist) >= 22:
+                trend_1m = float(hist.iloc[-1] / hist.iloc[-22] - 1)
+            if np.isfinite(trend_1w) and np.isfinite(trend_1m) and trend_1w < 0 and trend_1m < 0:
+                s5 = 1
 
     signals = {
         "winner_take_all": s1,
         "top3_ensemble": s2,
         "consensus_vote": s3,
         "risk_adjusted_edge": s4,
-        "stability_filter": s5,
+        "downtrend_rebound": s5,
     }
 
     weights = {
@@ -238,7 +247,7 @@ def _evaluate_strategies(
         "top3_ensemble": 1.1,
         "consensus_vote": 0.8,
         "risk_adjusted_edge": 1.0,
-        "stability_filter": 0.9,
+        "downtrend_rebound": 0.9,
     }
     score = float(sum(signals[k] * w for k, w in weights.items()))
 
@@ -251,7 +260,29 @@ def _evaluate_strategies(
         "top3_models": top3,
         "models_considered": sorted(by_model.keys()),
         "pred_avg": float(np.mean(list(by_model.values()))),
+        "trend_1w": trend_1w,
+        "trend_1m": trend_1m,
     }
+
+
+def _build_price_history(preds: pd.DataFrame) -> dict[str, pd.Series]:
+    if preds.empty:
+        return {}
+    close_history = (
+        preds[["ticker", "predicted_date", "actual"]]
+        .dropna(subset=["ticker", "predicted_date", "actual"])
+        .drop_duplicates(subset=["ticker", "predicted_date"], keep="last")
+        .sort_values(["ticker", "predicted_date"])
+    )
+    if close_history.empty:
+        return {}
+
+    history: dict[str, pd.Series] = {}
+    for ticker, grp in close_history.groupby("ticker"):
+        idx = pd.to_datetime(grp["predicted_date"]).dt.normalize()
+        values = pd.to_numeric(grp["actual"], errors="coerce")
+        history[str(ticker)] = pd.Series(values.values, index=idx)
+    return history
 
 
 def _commission(notional: float, cfg: TradingConfig, side: str) -> float:
@@ -292,6 +323,7 @@ def backtest_strategies(*, lookback_days: int = 15, dry_run: bool = False) -> di
 
     model_scores, ranked_models = _load_latest_model_scores()
     stability_scores = _load_stability_scores()
+    price_history = _build_price_history(preds)
 
     all_days = sorted(pd.Timestamp(d).normalize() for d in preds["predicted_date"].dropna().unique())
     trading_days = all_days[-lookback_days:]
@@ -368,7 +400,16 @@ def backtest_strategies(*, lookback_days: int = 15, dry_run: bool = False) -> di
 
             decisions: list[dict] = []
             for _, grp in day_preds.groupby("ticker"):
-                decisions.append(_evaluate_strategies(grp, model_scores, ranked_models, stability_scores))
+                decisions.append(
+                    _evaluate_strategies(
+                        grp,
+                        model_scores,
+                        ranked_models,
+                        stability_scores,
+                        price_history=price_history,
+                        trade_day=day,
+                    )
+                )
             decisions.sort(key=lambda d: abs(d["score"]), reverse=True)
             decisions = decisions[: cfg.max_tickers_per_day]
 
@@ -377,44 +418,44 @@ def backtest_strategies(*, lookback_days: int = 15, dry_run: bool = False) -> di
                 signal = int(decision["signals"].get(strategy_name, 0))
                 signal_px = float(decision["actual"])
 
-                if ticker in open_positions and signal < 0:
-                    pos = open_positions[ticker]
-                    exec_sell = _execution_price(signal_px, cfg, "SELL")
-                    notional = exec_sell * pos["shares"]
-                    fee = _commission(notional, cfg, "SELL")
-                    gross_pnl = (exec_sell - pos["entry_price_exec"]) * pos["shares"]
-                    net_pnl = gross_pnl - fee
-                    cash += notional - fee
-
-                    day_sells += 1
-                    day_realized += net_pnl
-                    day_fees += fee
-                    if net_pnl > 0:
-                        strat_wins += 1
-
-                    trade_rows.append(
-                        {
-                            "strategy": strategy_name,
-                            "event": "SELL",
-                            "date": day.date().isoformat(),
-                            "ticker": ticker,
-                            "shares": pos["shares"],
-                            "signal": signal,
-                            "signal_price": round(signal_px, 6),
-                            "execution_price": round(exec_sell, 6),
-                            "notional": round(notional, 4),
-                            "commission": fee,
-                            "gross_pnl": round(gross_pnl, 4),
-                            "net_pnl": round(net_pnl, 4),
-                            "cash_after": round(cash, 4),
-                            "close_reason": "bearish_signal",
-                        }
-                    )
-                    del open_positions[ticker]
-                    continue
-
                 if ticker in open_positions:
+                    pos = open_positions[ticker]
+                    pnl_pct = (signal_px / max(pos["entry_price_exec"], 1e-6)) - 1
+                    if pnl_pct >= 0.03 or signal < 0:
+                        exec_sell = _execution_price(signal_px, cfg, "SELL")
+                        notional = exec_sell * pos["shares"]
+                        fee = _commission(notional, cfg, "SELL")
+                        gross_pnl = (exec_sell - pos["entry_price_exec"]) * pos["shares"]
+                        net_pnl = gross_pnl - fee
+                        cash += notional - fee
+
+                        day_sells += 1
+                        day_realized += net_pnl
+                        day_fees += fee
+                        if net_pnl > 0:
+                            strat_wins += 1
+
+                        trade_rows.append(
+                            {
+                                "strategy": strategy_name,
+                                "event": "SELL",
+                                "date": day.date().isoformat(),
+                                "ticker": ticker,
+                                "shares": pos["shares"],
+                                "signal": signal,
+                                "signal_price": round(signal_px, 6),
+                                "execution_price": round(exec_sell, 6),
+                                "notional": round(notional, 4),
+                                "commission": fee,
+                                "gross_pnl": round(gross_pnl, 4),
+                                "net_pnl": round(net_pnl, 4),
+                                "cash_after": round(cash, 4),
+                                "close_reason": "bearish_signal",
+                            }
+                        )
+                        del open_positions[ticker]
                     continue
+
                 if signal <= 0:
                     continue
 
@@ -542,6 +583,7 @@ def run_actions(*, dry_run: bool = False) -> dict[str, Path | None]:
 
     model_scores, ranked_models = _load_latest_model_scores()
     stability_scores = _load_stability_scores()
+    price_history = _build_price_history(preds)
 
     trading_days = sorted(preds["predicted_date"].dropna().unique())
 
@@ -608,7 +650,16 @@ def run_actions(*, dry_run: bool = False) -> dict[str, Path | None]:
 
         decisions: list[dict] = []
         for ticker, grp in day_preds.groupby("ticker"):
-            decisions.append(_evaluate_strategies(grp, model_scores, ranked_models, stability_scores))
+            decisions.append(
+                _evaluate_strategies(
+                    grp,
+                    model_scores,
+                    ranked_models,
+                    stability_scores,
+                    price_history=price_history,
+                    trade_day=day,
+                )
+            )
 
         decisions.sort(key=lambda d: abs(d["score"]), reverse=True)
         decisions = decisions[: cfg.max_tickers_per_day]
@@ -621,47 +672,48 @@ def run_actions(*, dry_run: bool = False) -> dict[str, Path | None]:
             score = float(decision["score"])
             signal_px = float(decision["actual"])
 
-            if ticker in open_positions and score <= cfg.sell_threshold:
-                # Early sell can be triggered by a strong bearish composite score.
-                exec_sell = _execution_price(signal_px, cfg, "SELL")
-                pos = open_positions[ticker]
-                notional = exec_sell * pos["shares"]
-                fee = _commission(notional, cfg, "SELL")
-                gross_pnl = (exec_sell - pos["entry_price_exec"]) * pos["shares"]
-                net_pnl = gross_pnl - fee
-                cash += notional - fee
-
-                sells_today += 1
-                realized_pnl += net_pnl
-                total_fees += fee
-
-                trade_rows.append(
-                    {
-                        "event": "SELL",
-                        "date": day.date().isoformat(),
-                        "ticker": ticker,
-                        "strategy_score": score,
-                        "strategy_signals": json.dumps(decision["signals"], sort_keys=True),
-                        "best_model": decision["best_model"],
-                        "entry_date": pos["entry_date"],
-                        "exit_date": day.date().isoformat(),
-                        "holding_days": int((day - pd.Timestamp(pos["entry_date"])).days),
-                        "shares": pos["shares"],
-                        "signal_price": round(signal_px, 6),
-                        "execution_price": round(exec_sell, 6),
-                        "notional": round(notional, 4),
-                        "commission": fee,
-                        "gross_pnl": round(gross_pnl, 4),
-                        "net_pnl": round(net_pnl, 4),
-                        "cash_after": round(cash, 4),
-                        "position_after": 0,
-                        "close_reason": "bearish_signal",
-                    }
-                )
-                del open_positions[ticker]
-                continue
-
             if ticker in open_positions:
+                pos = open_positions[ticker]
+                pnl_pct = (signal_px / max(pos["entry_price_exec"], 1e-6)) - 1
+                if pnl_pct >= 0.03 or score <= cfg.sell_threshold:
+                    # Early sell can be triggered by +3% profit or bearish composite score.
+                    exec_sell = _execution_price(signal_px, cfg, "SELL")
+                    notional = exec_sell * pos["shares"]
+                    fee = _commission(notional, cfg, "SELL")
+                    gross_pnl = (exec_sell - pos["entry_price_exec"]) * pos["shares"]
+                    net_pnl = gross_pnl - fee
+                    cash += notional - fee
+
+                    sells_today += 1
+                    realized_pnl += net_pnl
+                    total_fees += fee
+
+                    trade_rows.append(
+                        {
+                            "event": "SELL",
+                            "date": day.date().isoformat(),
+                            "ticker": ticker,
+                            "strategy_score": score,
+                            "strategy_signals": json.dumps(decision["signals"], sort_keys=True),
+                            "best_model": decision["best_model"],
+                            "entry_date": pos["entry_date"],
+                            "exit_date": day.date().isoformat(),
+                            "holding_days": int((day - pd.Timestamp(pos["entry_date"])).days),
+                            "shares": pos["shares"],
+                            "signal_price": round(signal_px, 6),
+                            "execution_price": round(exec_sell, 6),
+                            "notional": round(notional, 4),
+                            "commission": fee,
+                            "gross_pnl": round(gross_pnl, 4),
+                            "net_pnl": round(net_pnl, 4),
+                            "cash_after": round(cash, 4),
+                            "position_after": 0,
+                            "close_reason": "bearish_signal",
+                        }
+                    )
+                    del open_positions[ticker]
+                    continue
+
                 continue
 
             if score < cfg.buy_threshold:

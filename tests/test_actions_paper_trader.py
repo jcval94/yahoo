@@ -35,7 +35,7 @@ def test_evaluate_strategies_returns_five_signals():
         "top3_ensemble",
         "consensus_vote",
         "risk_adjusted_edge",
-        "stability_filter",
+        "downtrend_rebound",
     }
     assert isinstance(out["score"], float)
 
@@ -58,3 +58,30 @@ def test_max_drawdown_works_for_simple_curve():
     dd = _max_drawdown(curve)
 
     assert round(dd, 4) == 0.1818
+
+
+def test_downtrend_rebound_signal_requires_week_and_month_downtrend():
+    df = pd.DataFrame(
+        {
+            "ticker": ["AAA", "AAA"],
+            "model": ["linreg", "rf"],
+            "actual": [100.0, 100.0],
+            "pred": [101.0, 102.0],
+        }
+    )
+    model_scores = {("AAA", "linreg"): 1.0, ("AAA", "rf"): 1.2}
+    ranked = {"AAA": ["linreg", "rf"]}
+
+    idx = pd.bdate_range("2024-01-01", periods=25)
+    prices = pd.Series([130 - i for i in range(25)], index=idx, dtype=float)
+
+    out = _evaluate_strategies(
+        df,
+        model_scores,
+        ranked,
+        {},
+        price_history={"AAA": prices},
+        trade_day=idx[-1],
+    )
+
+    assert out["signals"]["downtrend_rebound"] == 1
