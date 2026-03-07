@@ -161,6 +161,43 @@ def make_prediction(
 
 
 
+
+
+def _abt_path_for_ticker(ticker: str, frequency: str) -> Path:
+    """Return expected ABT CSV path for a ticker and frequency."""
+    data_dir = Path(__file__).resolve().parents[1] / CONFIG.get("data_dir", "data")
+    suffix = "" if frequency == "daily" else f"_{frequency}"
+    return data_dir / f"{ticker}{suffix}.csv"
+
+
+def load_prediction_data(frequency: str, force_rebuild: bool = False) -> Dict[str, pd.DataFrame]:
+    """Load ABT data from disk when available, building only if required."""
+    from .abt.build_abt import build_abt
+
+    tickers = list(CONFIG.get("etfs", []))
+    existing_paths: Dict[str, Path] = {}
+
+    if not force_rebuild:
+        for ticker in tickers:
+            path = _abt_path_for_ticker(ticker, frequency)
+            if path.exists():
+                existing_paths[ticker] = path
+
+    missing = [t for t in tickers if t not in existing_paths]
+    if force_rebuild or missing:
+        reason = "forced rebuild" if force_rebuild else f"missing ABT for {', '.join(missing)}"
+        logger.info("Building ABT before predictions (%s)", reason)
+        built_paths = build_abt(frequency)
+        for ticker in tickers:
+            candidate = built_paths.get(ticker)
+            if candidate:
+                existing_paths[ticker] = Path(candidate)
+
+    return {
+        ticker: pd.read_csv(path, index_col=0, parse_dates=True)
+        for ticker, path in existing_paths.items()
+        if path.exists()
+    }
 def _next_prediction_timestamp(index: pd.Index, frequency: str):
     last_ts = index.max()
     if frequency == "intraday":
@@ -174,6 +211,20 @@ def _next_prediction_timestamp(index: pd.Index, frequency: str):
     return last_ts + pd.offsets.BDay()
 
 
+def _prepare_prediction_inputs(df: pd.DataFrame, target_col: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return a cleaned ABT copy and numeric feature matrix ready for prediction."""
+    prepared = df.copy()
+    if "delta" not in prepared.columns:
+        prepared["delta"] = prepared[target_col].diff()
+
+    X = prepared.drop(columns=[target_col], errors="ignore")
+    if "Ticker" in X:
+        X = X.drop(columns=["Ticker"])
+    X = X.select_dtypes(exclude="object")
+    X = X.replace([np.inf, -np.inf], np.nan).dropna()
+    return prepared, X
+
+
 def run_predictions(
     models: Dict[str, Any],
     data: Dict[str, pd.DataFrame],
@@ -183,6 +234,7 @@ def run_predictions(
     rows = []
     diagnostics = Counter()
     diagnostics["models_received"] = len(models)
+    prepared_by_ticker: Dict[str, tuple[pd.DataFrame, pd.DataFrame, str]] = {}
     for name, model_info in models.items():
         if isinstance(model_info, tuple):
             model, feature_list, schema_hash = model_info
@@ -201,37 +253,38 @@ def run_predictions(
         ticker = _model_ticker(name)
         algo = parts[2] if len(parts) > 2 else getattr(model, "__class__", type(model)).__name__
         target_col = TARGET_COLS.get(ticker, "Close")
-        df = data.get(ticker)
+        prepared_pack = prepared_by_ticker.get(ticker)
 
-        if df is None:
-            diagnostics["skipped_missing_data"] += 1
-            logger.warning("No ABT data found for %s (model %s)", ticker, name)
-            continue
-        if len(df) < 2:
-            diagnostics["skipped_insufficient_rows"] += 1
-            logger.warning("Not enough rows to predict %s (rows=%s)", ticker, len(df))
-            continue
+        if prepared_pack is None:
+            df = data.get(ticker)
 
-        if target_col not in df.columns:
-            logger.warning(
-                "%s missing column %s, falling back to 'Close'", ticker, target_col
-            )
-            target_col = "Close"
-        df = df.copy()
-        if "delta" not in df.columns:
-            df["delta"] = df[target_col].diff()
+            if df is None:
+                diagnostics["skipped_missing_data"] += 1
+                logger.warning("No ABT data found for %s (model %s)", ticker, name)
+                continue
+            if len(df) < 2:
+                diagnostics["skipped_insufficient_rows"] += 1
+                logger.warning("Not enough rows to predict %s (rows=%s)", ticker, len(df))
+                continue
+
+            if target_col not in df.columns:
+                logger.warning(
+                    "%s missing column %s, falling back to 'Close'", ticker, target_col
+                )
+                target_col = "Close"
+
+            prepared_df, prepared_X = _prepare_prediction_inputs(df, target_col)
+            if prepared_X.empty:
+                diagnostics["skipped_empty_features"] += 1
+                logger.warning("All rows have NaN/inf features for %s", ticker)
+                continue
+            prepared_by_ticker[ticker] = (prepared_df, prepared_X, target_col)
+            prepared_pack = prepared_by_ticker[ticker]
+
+        df, base_X, target_col = prepared_pack
+        X = base_X
         logger.info("Using target column %s for %s", target_col, ticker)
         log_df_details(f"predict data {ticker}", df)
-
-        X = df.drop(columns=[target_col], errors="ignore")
-        if "Ticker" in X:
-            X = X.drop(columns=["Ticker"])
-        X = X.select_dtypes(exclude="object")
-        X = X.replace([np.inf, -np.inf], np.nan).dropna()
-        if X.empty:
-            diagnostics["skipped_empty_features"] += 1
-            logger.warning("All rows have NaN/inf features for %s (model %s)", ticker, name)
-            continue
 
         if feature_list is not None:
             try:
@@ -490,7 +543,6 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     logging.getLogger("yfinance").setLevel(logging.CRITICAL)
-    from .abt.build_abt import build_abt
 
     import argparse
 
@@ -501,10 +553,14 @@ if __name__ == "__main__":
         default="daily",
         help="data frequency to use",
     )
+    parser.add_argument(
+        "--rebuild-abt",
+        action="store_true",
+        help="force rebuilding ABT instead of reusing local CSV files",
+    )
     args = parser.parse_args()
 
-    data_paths = build_abt(args.frequency)
-    data = {t: pd.read_csv(p, index_col=0, parse_dates=True) for t, p in data_paths.items()}
+    data = load_prediction_data(args.frequency, force_rebuild=args.rebuild_abt)
     models = load_models(MODEL_DIR)
     result = run_predictions(models, data, frequency=args.frequency)
     edge_file = save_edge_predictions(result)
