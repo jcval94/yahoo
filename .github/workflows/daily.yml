@@ -39,6 +39,9 @@ jobs:
         with:
           name: abt-data
           path: data/*.csv
+      - name: Monitor intraday latency
+        run: |
+          python -m src.monitoring.data_latency
       - name: Schema smoke test
         run: |
           python -m src.models.train_model --ticker NVDA --rows 10 --smoke
@@ -62,6 +65,7 @@ jobs:
           git add results/metrics/edge_metrics_*.csv 2>/dev/null || true
           git add results/edge_metrics/*.csv 2>/dev/null || true
           git add results/drift/*.csv 2>/dev/null || true
+          git add results/latency/*.csv 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
@@ -79,7 +83,9 @@ jobs:
             predict.log
       - run: python -m src.notify.notifier --message "Proceso diario completado"
       - name: Generate viz tables
-        run: python -m src.visualization
+        run: |
+          python -m src.visualization
+          python -m src.monitoring.latency_viz
       - name: Commit visualizations
         env:
           PUSH_TOKEN: ${{ secrets.GH_PAT }}
