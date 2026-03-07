@@ -211,6 +211,23 @@ La funcion de evaluacion calcula los siguientes indicadores:
    ```
    Genera un reporte con las metricas de los ultimos 15 dias de `results/edge_metrics` y calcula un puntaje de deriva.
 
+6.1 **Monitoreo de latencia intradía**
+
+   ```bash
+   python -m src.monitoring.data_latency
+   python -m src.monitoring.latency_viz
+   ```
+   El primer comando genera `results/latency/latency_<fecha>.csv` con una fila por ticker y las columnas:
+   `download_time_utc`, `last_bar_timestamp`, `latency_minutes`, `interval_used` y `source`.
+   El segundo comando consolida histórico en `results/viz/latency_monitor.csv` y produce la gráfica
+   `docs/viz/latency_monitor.svg` con la latencia media y p95 por día.
+
+   **Cómo interpretarlo**:
+   - `latency_minutes` cercano a 0 indica datos prácticamente en tiempo real.
+   - Un aumento sostenido del promedio sugiere retraso general del proveedor o del workflow.
+   - Si el p95 crece mucho más que la media, hay degradación puntual en algunos tickers.
+   - `status = no_data` indica que no hubo barras intradía disponibles para ese ticker en la corrida.
+
 7. **Optimizacion de portafolio**
 
    ```bash
