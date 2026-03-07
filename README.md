@@ -29,6 +29,30 @@ Es posible ejecutarlo de forma manual o dejar que GitHub Actions lo realice de m
 pip install -r requirements.txt
 ```
 
+Si desea trabajar con los artefactos de modelos versionados en Git LFS, ejecute tambien:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+## Inicio rapido
+
+Para validar que todo funciona en local, puede correr el flujo minimo diario:
+
+```bash
+python -m src.abt.build_abt
+python -m src.training
+python -m src.predict
+python -m src.evaluation
+```
+
+Al finalizar, revise:
+
+- `results/predicts/` para las predicciones generadas.
+- `results/metrics/` para las metricas de evaluacion.
+- `models/daily/` para los modelos entrenados.
+
 ## Configuracion rapida
 
 El archivo `config.yaml` define los ETFs que se procesaran y otras opciones basicas:
