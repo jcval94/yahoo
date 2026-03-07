@@ -65,7 +65,7 @@ def _model_ticker(model_name: str) -> str:
     return model_name.split("_")[0]
 
 
-def load_models(model_dir: Path) -> Dict[str, Any]:
+def load_models(model_dir: Path, frequency: str | None = None) -> Dict[str, Any]:
     models = {}
     allowed_tickers = set(CONFIG.get("etfs", []))
     if not model_dir.exists():
@@ -88,6 +88,17 @@ def load_models(model_dir: Path) -> Dict[str, Any]:
             latest[base] = file
 
     for file in latest.values():
+        if frequency:
+            parts = file.stem.split("_")
+            model_frequency = parts[1] if len(parts) > 1 else None
+            if model_frequency and model_frequency != frequency:
+                logger.info(
+                    "Skipping model %s because it targets %s (requested %s)",
+                    file.name,
+                    model_frequency,
+                    frequency,
+                )
+                continue
         ticker = _model_ticker(file.stem)
         if allowed_tickers and ticker not in allowed_tickers:
             logger.info(
@@ -562,7 +573,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     data = load_prediction_data(args.frequency, force_rebuild=args.rebuild_abt)
-    models = load_models(MODEL_DIR)
+    models = load_models(MODEL_DIR, frequency=args.frequency)
     result = run_predictions(models, data, frequency=args.frequency)
     edge_file = save_edge_predictions(result)
     prev_date = (pd.to_datetime(RUN_TIMESTAMP).date() - pd.Timedelta(days=1))
