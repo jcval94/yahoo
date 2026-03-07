@@ -356,6 +356,14 @@ section p {
   margin: 0 0 0.75rem;
 }
 
+.table-card-wide {
+  grid-column: 1 / -1;
+}
+
+.table-card-wide .table-wrap table {
+  min-width: 1280px;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -402,7 +410,7 @@ section p {
 }
 
 .model-predictions {
-  min-width: 320px;
+  min-width: 120px;
   white-space: nowrap;
   font-size: 0.82rem;
 }

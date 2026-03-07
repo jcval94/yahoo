@@ -97,36 +97,65 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const renderActionRecommendations = (rows) => {
-    const table = document.querySelector('#action-recommendations-table tbody');
-    if (!table) return;
+    const actionTable = document.getElementById('action-recommendations-table');
+    const tableHeadRow = actionTable?.querySelector('thead tr');
+    const tableBody = actionTable?.querySelector('tbody');
+    if (!actionTable || !tableHeadRow || !tableBody) return;
+
+    const staticColumns = [
+      { key: 'date', label: 'Fecha' },
+      { key: 'ticker', label: 'Ticker' },
+      { key: 'best_model', label: 'Modelo líder' },
+      { key: 'strategy_score', label: 'Score', formatter: (value) => Number(value || 0).toFixed(4) },
+      { key: 'action', label: 'Acción' },
+      { key: 'ret_1d', label: 'Resultado 1d' },
+      { key: 'ret_5d', label: 'Resultado 5d' },
+      { key: 'ret_20d', label: 'Resultado 20d' },
+      { key: 'result_5d', label: 'Calidad 5d' },
+    ];
+
+    const modelColumns = Array.from(
+      rows.reduce((allColumns, row) => {
+        Object.keys(row || {}).forEach((key) => {
+          if (key.startsWith('pred_')) {
+            allColumns.add(key);
+          }
+        });
+        return allColumns;
+      }, new Set())
+    ).sort((a, b) => a.localeCompare(b));
+
+    tableHeadRow.innerHTML = [
+      ...staticColumns.map((column) => `<th>${column.label}</th>`),
+      ...modelColumns.map((col) => `<th class="model-prediction-col">${col.replace('pred_', '').toUpperCase()}</th>`),
+    ].join('');
+
     if (!rows.length) {
-      table.innerHTML = '<tr><td colspan="10">No hay datos disponibles.</td></tr>';
+      const totalColumns = staticColumns.length + (modelColumns.length || 1);
+      tableBody.innerHTML = `<tr><td colspan="${totalColumns}">No hay datos disponibles.</td></tr>`;
       return;
     }
 
-    const modelColumns = Object.keys(rows[0] || {})
-      .filter((key) => key.startsWith('pred_'))
-      .sort((a, b) => a.localeCompare(b));
-
-    table.innerHTML = rows
+    tableBody.innerHTML = rows
       .map((row) => {
         const action = (row.action || 'HOLD').toUpperCase();
         const cls = action === 'BUY' ? 'action-buy' : action === 'SELL' ? 'action-sell' : 'action-hold';
-        const modelSignals = modelColumns
-          .map((col) => `${col.replace('pred_', '').toUpperCase()}: ${row[col] || '-'}`)
-          .join(' · ');
+
+        const staticCells = staticColumns.map((column) => {
+          if (column.key === 'action') {
+            return `<td><span class="action-badge ${cls}">${action}</span></td>`;
+          }
+          const rawValue = row[column.key];
+          const value = rawValue === undefined || rawValue === '' ? '-' : rawValue;
+          return `<td>${column.formatter ? column.formatter(value) : value}</td>`;
+        });
+
+        const modelCells = modelColumns.map((col) => `<td class="model-predictions">${row[col] || '-'}</td>`);
+
         return `
           <tr>
-            <td>${row.date || '-'}</td>
-            <td>${row.ticker || '-'}</td>
-            <td>${row.best_model || '-'}</td>
-            <td>${Number(row.strategy_score || 0).toFixed(4)}</td>
-            <td><span class="action-badge ${cls}">${action}</span></td>
-            <td>${row.ret_1d || 'N/D'}</td>
-            <td>${row.ret_5d || 'N/D'}</td>
-            <td>${row.ret_20d || 'N/D'}</td>
-            <td>${row.result_5d || 'Pendiente'}</td>
-            <td class="model-predictions">${modelSignals || '-'}</td>
+            ${staticCells.join('')}
+            ${modelCells.join('')}
           </tr>
         `;
       })
