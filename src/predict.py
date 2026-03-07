@@ -1,6 +1,7 @@
 """Apply trained models to new data and store predictions."""
 import logging
 import re
+from collections import Counter
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any
@@ -180,6 +181,8 @@ def run_predictions(
 ) -> pd.DataFrame:
     """Run predictions for the given data."""
     rows = []
+    diagnostics = Counter()
+    diagnostics["models_received"] = len(models)
     for name, model_info in models.items():
         if isinstance(model_info, tuple):
             model, feature_list, schema_hash = model_info
@@ -187,17 +190,28 @@ def run_predictions(
             model = model_info
             feature_list = None
             schema_hash = None
+
         parts = name.split("_")
         model_frequency = parts[1] if len(parts) > 1 else "daily"
         if model_frequency != frequency and not name.endswith("_naive"):
+            diagnostics["skipped_frequency_mismatch"] += 1
             continue
+
+        diagnostics["eligible_models"] += 1
         ticker = _model_ticker(name)
         algo = parts[2] if len(parts) > 2 else getattr(model, "__class__", type(model)).__name__
         target_col = TARGET_COLS.get(ticker, "Close")
         df = data.get(ticker)
-        if df is None or len(df) < 2:
-            logger.warning("Not enough data to predict %s", ticker)
+
+        if df is None:
+            diagnostics["skipped_missing_data"] += 1
+            logger.warning("No ABT data found for %s (model %s)", ticker, name)
             continue
+        if len(df) < 2:
+            diagnostics["skipped_insufficient_rows"] += 1
+            logger.warning("Not enough rows to predict %s (rows=%s)", ticker, len(df))
+            continue
+
         if target_col not in df.columns:
             logger.warning(
                 "%s missing column %s, falling back to 'Close'", ticker, target_col
@@ -208,18 +222,22 @@ def run_predictions(
             df["delta"] = df[target_col].diff()
         logger.info("Using target column %s for %s", target_col, ticker)
         log_df_details(f"predict data {ticker}", df)
+
         X = df.drop(columns=[target_col], errors="ignore")
         if "Ticker" in X:
             X = X.drop(columns=["Ticker"])
         X = X.select_dtypes(exclude="object")
         X = X.replace([np.inf, -np.inf], np.nan).dropna()
         if X.empty:
-            logger.warning("All rows have NaN values for %s", ticker)
+            diagnostics["skipped_empty_features"] += 1
+            logger.warning("All rows have NaN/inf features for %s (model %s)", ticker, name)
             continue
+
         if feature_list is not None:
             try:
                 validate_schema(feature_list, X, schema_hash)
             except SystemExit:
+                diagnostics["skipped_schema_mismatch"] += 1
                 logger.exception("Schema mismatch for %s", name)
                 continue
             X = X.reindex(columns=feature_list, fill_value=0)
@@ -231,8 +249,9 @@ def run_predictions(
                         selected = json.load(fh)
                     X = X.reindex(columns=selected, fill_value=0)
                 except Exception:
+                    diagnostics["feature_alignment_errors"] += 1
                     logger.exception("Failed to align features for %s", name)
-        y = df.loc[X.index, target_col]
+
         train_start = df.index.min().date()
         train_end = df.index.max().date()
         predict_dt = df.index.max().date()
@@ -256,7 +275,7 @@ def run_predictions(
                     X_last,
                     {"target_type": "diff"},
                 )
-            
+
             model_name = algo
             params = {}
             if hasattr(model, "get_params"):
@@ -277,8 +296,17 @@ def run_predictions(
                 "Predict moment": str(predict_dt),
                 "Predicted": str(predict_date),
             })
+            diagnostics["predictions_generated"] += 1
         except Exception:
+            diagnostics["prediction_errors"] += 1
             logger.exception("Prediction failed for %s", name)
+
+    logger.info("Prediction diagnostics: %s", dict(sorted(diagnostics.items())))
+    if not rows:
+        logger.warning(
+            "No valid predictions were generated. Check diagnostics counters above for root causes."
+        )
+
     result_df = pd.DataFrame(rows)
     if not result_df.empty and "parameters" in result_df.columns:
         ordered_cols = [c for c in result_df.columns if c != "parameters"] + ["parameters"]

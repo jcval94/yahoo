@@ -94,6 +94,17 @@ def _latest_csv(directory: Path, pattern: str) -> Path | None:
     return files[-1] if files else None
 
 
+def _safe_read_csv(path: Path, **kwargs):
+    """Read CSV returning empty DataFrame when file has no parsable columns."""
+    if pd is None:
+        return None
+    try:
+        return pd.read_csv(path, **kwargs)
+    except pd.errors.EmptyDataError:
+        logger.warning("Skipping empty CSV file: %s", path)
+        return pd.DataFrame()
+
+
 def _parse_pred_value(value: object) -> float | None:
     """Convert prediction values to float handling legacy formats."""
     if pd is None:
@@ -128,7 +139,9 @@ def prepare_candlestick_data(n_days: int = 15) -> "pd.DataFrame | None":
         if not path.exists():
             logger.info("Data file %s not found", path)
             continue
-        df = pd.read_csv(path, parse_dates=["Date"])
+        df = _safe_read_csv(path, parse_dates=["Date"])
+        if df is None or df.empty:
+            continue
         subset = df[["Date", "Open", "High", "Low", "Close"]].tail(n_days).copy()
         subset["ticker"] = ticker
         frames.append(subset)
@@ -137,7 +150,9 @@ def prepare_candlestick_data(n_days: int = 15) -> "pd.DataFrame | None":
         # Fallback: use latest daily prediction files to keep the chart dynamic.
         fallback_rows: List[dict] = []
         for pred_file in sorted(PRED_DIR.glob("*_daily_predictions.csv"), reverse=True)[: n_days * 3]:
-            preds = pd.read_csv(pred_file)
+            preds = _safe_read_csv(pred_file)
+            if preds is None or preds.empty:
+                continue
             required = {"ticker", "actual", "Predicted"}
             if preds.empty or not required.issubset(preds.columns):
                 continue
@@ -186,7 +201,9 @@ def prepare_pred_vs_real(max_files: int = 120) -> "pd.DataFrame | None":
     daily_files = sorted(PRED_DIR.glob("*_daily_predictions.csv"), reverse=True)
 
     for pred_file in daily_files[:max_files]:
-        preds = pd.read_csv(pred_file)
+        preds = _safe_read_csv(pred_file)
+        if preds is None or preds.empty:
+            continue
         required = {"ticker", "model", "pred", "actual", "Predicted"}
         if preds.empty or not required.issubset(preds.columns):
             continue
@@ -231,7 +248,9 @@ def prepare_best_variables(top_n: int = 10) -> "pd.DataFrame | None":
 
     frames: List[pd.DataFrame] = []
     for file in files[:120]:
-        df = pd.read_csv(file)
+        df = _safe_read_csv(file)
+        if df is None or df.empty:
+            continue
         if df.empty or not {"feature", "importance_mean", "run_date"}.issubset(df.columns):
             continue
         frames.append(df)
@@ -269,7 +288,9 @@ def prepare_edge_metrics(max_files: int = 120) -> "pd.DataFrame | None":
 
     frames: List[pd.DataFrame] = []
     for file in files[:max_files]:
-        df = pd.read_csv(file)
+        df = _safe_read_csv(file)
+        if df is None or df.empty:
+            continue
         required = {
             "ticker",
             "model",
@@ -316,7 +337,9 @@ def prepare_feature_stability(max_files: int = 120) -> "pd.DataFrame | None":
     files = sorted(FEATURE_DIR.glob("features_*_*.csv"), reverse=True)
     frames: List[pd.DataFrame] = []
     for file in files[:max_files]:
-        df = pd.read_csv(file)
+        df = _safe_read_csv(file)
+        if df is None or df.empty:
+            continue
         required = {"model", "feature", "importance_mean", "run_date"}
         if df.empty or not required.issubset(df.columns):
             continue
@@ -347,7 +370,9 @@ def prepare_operational_coverage(max_files: int = 120) -> "pd.DataFrame | None":
     files = sorted(PRED_DIR.glob("*_daily_predictions.csv"), reverse=True)
     frames: List[pd.DataFrame] = []
     for file in files[:max_files]:
-        df = pd.read_csv(file)
+        df = _safe_read_csv(file)
+        if df is None or df.empty:
+            continue
         required = {"ticker", "model", "Predicted", "pred"}
         if df.empty or not required.issubset(df.columns):
             continue
@@ -392,7 +417,10 @@ def prepare_strategy_performance() -> "pd.DataFrame | None":
         return pd.DataFrame(columns=required_cols)
 
     latest = files[0]
-    summary = pd.read_csv(latest)
+    summary = _safe_read_csv(latest)
+    if summary is None:
+        pd.DataFrame(columns=required_cols).to_csv(out_file, index=False)
+        return pd.DataFrame(columns=required_cols)
     required = set(required_cols)
     if summary.empty or not required.issubset(summary.columns):
         pd.DataFrame(columns=required_cols).to_csv(out_file, index=False)
