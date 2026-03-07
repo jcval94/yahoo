@@ -121,3 +121,21 @@ def test_load_models_filters_stale_tickers(tmp_path, monkeypatch):
     models = predict.load_models(tmp_path)
 
     assert set(models) == {"NVDA_daily_rf_aaaaaaaaaa"}
+
+
+def test_load_models_filters_by_frequency(tmp_path, monkeypatch):
+    class _DummyModel:
+        def predict(self, X):
+            return [0]
+
+    daily = tmp_path / "NVDA_daily_rf_aaaaaaaaaa.joblib"
+    weekly = tmp_path / "NVDA_weekly_rf_bbbbbbbbbb.joblib"
+    daily.write_text("ok")
+    weekly.write_text("ok")
+
+    monkeypatch.setattr(predict, "CONFIG", {"etfs": ["NVDA"]})
+    monkeypatch.setattr(predict, "load_with_schema", lambda path: (_DummyModel(), ["Close"], "hash"))
+
+    models = predict.load_models(tmp_path, frequency="daily")
+
+    assert set(models) == {"NVDA_daily_rf_aaaaaaaaaa"}
