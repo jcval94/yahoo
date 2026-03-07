@@ -5,6 +5,16 @@ Bienvenido a este proyecto experimental. Aquí encontrará un pipeline educativo
 
 El recorrido va desde elegir los tickers hasta entrenar modelos y armar un portafolio. Para rematar, incluye un ejemplo de notificación final. Puede consultar las gráficas y resultados en línea en <https://jcval94.github.io/yahoo/>.
 
+## Publicar dashboard en GitHub Pages
+
+El dashboard estático vive en `docs/` y las visualizaciones se copian a `docs/viz/` durante los workflows automáticos.
+
+1. En **Settings → Pages**, configure **Build and deployment** en **GitHub Actions**.
+2. El workflow `.github/workflows/pages.yml` despliega el contenido de `docs/` cada vez que hay cambios en esa carpeta.
+3. Los workflows `daily.yml` y `dashboard.yml` ahora también hacen commit de `docs/viz/*.svg` y `docs/viz/manifest.json`, por lo que la página se actualiza con cada nueva corrida.
+
+La URL final será: `https://<usuario>.github.io/<repositorio>/`.
+
 ## Diagrama general
 
 ```mermaid
