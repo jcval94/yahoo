@@ -323,3 +323,14 @@ section p {
   background: rgba(148, 163, 184, 0.2);
   color: #cbd5e1;
 }
+
+
+.model-prediction-col {
+  min-width: 320px;
+}
+
+.model-predictions {
+  min-width: 320px;
+  white-space: nowrap;
+  font-size: 0.82rem;
+}

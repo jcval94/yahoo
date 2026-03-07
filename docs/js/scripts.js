@@ -63,14 +63,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const table = document.querySelector('#action-recommendations-table tbody');
     if (!table) return;
     if (!rows.length) {
-      table.innerHTML = '<tr><td colspan="5">No hay datos disponibles.</td></tr>';
+      table.innerHTML = '<tr><td colspan="6">No hay datos disponibles.</td></tr>';
       return;
     }
+
+    const modelColumns = Object.keys(rows[0] || {})
+      .filter((key) => key.startsWith('pred_'))
+      .sort((a, b) => a.localeCompare(b));
 
     table.innerHTML = rows
       .map((row) => {
         const action = (row.action || 'HOLD').toUpperCase();
         const cls = action === 'BUY' ? 'action-buy' : action === 'SELL' ? 'action-sell' : 'action-hold';
+        const modelSignals = modelColumns
+          .map((col) => `${col.replace('pred_', '').toUpperCase()}: ${row[col] || '-'}`)
+          .join(' · ');
         return `
           <tr>
             <td>${row.date || '-'}</td>
@@ -78,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${row.best_model || '-'}</td>
             <td>${Number(row.strategy_score || 0).toFixed(4)}</td>
             <td><span class="action-badge ${cls}">${action}</span></td>
+            <td class="model-predictions">${modelSignals || '-'}</td>
           </tr>
         `;
       })

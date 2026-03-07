@@ -435,6 +435,15 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     stability_scores = _load_stability_scores()
     latest_date = preds["predicted_date"].max()
     latest = preds[preds["predicted_date"] == latest_date]
+    model_names = sorted(latest["model"].dropna().astype(str).unique())
+
+    def _direction(pred: float, actual: float) -> str:
+        delta = pred - actual
+        if delta > 1e-6:
+            return "SUBE"
+        if delta < -1e-6:
+            return "BAJA"
+        return "NEUTRO"
 
     rows: list[dict] = []
     for _, grp in latest.groupby("ticker"):
@@ -447,6 +456,16 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
         else:
             action = "HOLD"
 
+        grp_by_model = grp.set_index("model")
+        model_predictions = {
+            f"pred_{model}": (
+                _direction(float(grp_by_model.loc[model, "pred"]), float(decision["actual"]))
+                if model in grp_by_model.index
+                else "-"
+            )
+            for model in model_names
+        }
+
         rows.append(
             {
                 "date": pd.Timestamp(latest_date).date().isoformat(),
@@ -454,6 +473,7 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
                 "best_model": decision["best_model"],
                 "strategy_score": round(score, 4),
                 "action": action,
+                **model_predictions,
             }
         )
 
@@ -461,6 +481,9 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     if out.empty:
         return out
     out = out.sort_values(["action", "strategy_score"], ascending=[True, False])
+    base_columns = ["date", "ticker", "best_model", "strategy_score", "action"]
+    model_columns = [f"pred_{model}" for model in model_names]
+    out = out.reindex(columns=base_columns + model_columns)
     out_file = VIZ_DIR / "action_recommendations.csv"
     out.to_csv(out_file, index=False)
     logger.info("Saved action recommendations data to %s", out_file)
