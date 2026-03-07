@@ -142,8 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const actionSummaryBody = document.getElementById('report-action-summary-body');
     const topRecBody = document.querySelector('#report-top-recommendations tbody');
     const modelMetricsBody = document.querySelector('#report-model-metrics tbody');
+    const modelCoverageBody = document.querySelector('#report-model-coverage tbody');
 
-    if (!runDate || !status || !success || !fallback || !artifactsList || !actionSummaryBody || !topRecBody || !modelMetricsBody) {
+    if (!runDate || !status || !success || !fallback || !artifactsList || !actionSummaryBody || !topRecBody || !modelMetricsBody || !modelCoverageBody) {
       return;
     }
 
@@ -156,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
       actionSummaryBody.innerHTML = '<tr><td>Sin datos disponibles.</td></tr>';
       topRecBody.innerHTML = '<tr><td colspan="7">Sin datos disponibles.</td></tr>';
       modelMetricsBody.innerHTML = '<tr><td colspan="5">Sin datos disponibles.</td></tr>';
+      modelCoverageBody.innerHTML = '<tr><td colspan="3">Sin datos disponibles.</td></tr>';
       return;
     }
 
@@ -184,6 +186,17 @@ document.addEventListener('DOMContentLoaded', () => {
       <tr><td>Fallos 5d</td><td>${quality.Fallo || 0}</td></tr>
       <tr><td>Pendientes 5d</td><td>${quality.Pendiente || 0}</td></tr>
     `;
+
+    const perModelCoverage = edgeCoverage.by_model || [];
+    modelCoverageBody.innerHTML = perModelCoverage.length
+      ? perModelCoverage.map((row) => `
+          <tr>
+            <td>${row.model || '-'}</td>
+            <td>${row.tickers ?? 0}</td>
+            <td>${row.rows ?? 0}</td>
+          </tr>
+        `).join('')
+      : '<tr><td colspan="3">Sin datos disponibles.</td></tr>';
 
     const recommendations = report.top_recommendations || [];
     topRecBody.innerHTML = recommendations.length

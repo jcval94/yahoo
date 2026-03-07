@@ -95,6 +95,39 @@ def _latest_csv(directory: Path, pattern: str) -> Path | None:
     return files[-1] if files else None
 
 
+def _latest_csv_for_run_date(directory: Path, prefix: str, run_date: str) -> Path | None:
+    """Return latest dated CSV for a step, preferring run_date or the nearest earlier date."""
+    if pd is None:
+        return _latest_csv(directory, f"{prefix}*.csv")
+
+    target_date = pd.to_datetime(run_date, errors="coerce")
+    if pd.isna(target_date):
+        return _latest_csv(directory, f"{prefix}*.csv")
+
+    exact = directory / f"{prefix}{run_date}.csv"
+    if exact.exists():
+        return exact
+
+    candidates: list[tuple[object, Path]] = []
+    for candidate in directory.glob(f"{prefix}*.csv"):
+        date_part = candidate.stem.removeprefix(prefix)
+        parsed = pd.to_datetime(date_part, errors="coerce")
+        if pd.isna(parsed):
+            continue
+        candidates.append((parsed, candidate))
+
+    if not candidates:
+        return None
+
+    previous = [row for row in candidates if row[0] <= target_date]
+    if previous:
+        previous.sort(key=lambda row: row[0])
+        return previous[-1][1]
+
+    candidates.sort(key=lambda row: row[0])
+    return candidates[0][1]
+
+
 def _safe_read_csv(path: Path, **kwargs):
     """Read CSV returning empty DataFrame when file has no parsable columns."""
     if pd is None:
@@ -283,7 +316,7 @@ def prepare_edge_metrics(max_files: int = 120) -> "pd.DataFrame | None":
     if pd is None:
         return None
 
-    files = sorted(METRICS_DIR.glob("edge_metrics_*.csv"), reverse=True)
+    files = sorted(EDGE_METRICS_DIR.glob("edge_metrics_*.csv"), reverse=True)
     if not files:
         return pd.DataFrame()
 
@@ -468,10 +501,10 @@ def prepare_pipeline_health() -> "pd.DataFrame | None":
 
     run_date = latest_pred_file.stem.split("_")[0]
     step_paths: dict[str, Path | None] = {
-        "features": _latest_csv(FEATURE_DIR, f"features_daily_{run_date}.csv"),
-        "training": _latest_csv(METRICS_DIR, f"metrics_daily_{run_date}.csv"),
+        "features": _latest_csv_for_run_date(FEATURE_DIR, "features_daily_", run_date),
+        "training": _latest_csv_for_run_date(METRICS_DIR, "metrics_daily_", run_date),
         "prediction": _latest_csv(PRED_DIR, f"{run_date}_daily_predictions.csv"),
-        "evaluation": _latest_csv(evaluation_dir, f"edge_metrics_{run_date}.csv"),
+        "evaluation": _latest_csv_for_run_date(evaluation_dir, "edge_metrics_", run_date),
         "dashboard": VIZ_DIR / "manifest.json" if (VIZ_DIR / "manifest.json").exists() else None,
     }
 
@@ -690,7 +723,14 @@ def prepare_last_run_report(
 
     action_slice = pd.DataFrame()
     if action_df is not None and not getattr(action_df, "empty", True):
-        action_slice = action_df[action_df["date"] == run_date].copy() if run_date != "n/a" else action_df.copy()
+        if run_date != "n/a":
+            action_slice = action_df[action_df["date"] == run_date].copy()
+        if action_slice.empty:
+            max_date = pd.to_datetime(action_df["date"], errors="coerce").max()
+            if not pd.isna(max_date):
+                action_slice = action_df[pd.to_datetime(action_df["date"], errors="coerce") == max_date].copy()
+        if run_date == "n/a":
+            action_slice = action_df.copy()
 
     strategy_rows: list[dict] = []
     if strategy_df is not None and not getattr(strategy_df, "empty", True):
@@ -721,14 +761,31 @@ def prepare_last_run_report(
             work = work.dropna(subset=["MAE"]).sort_values("MAE")
             metrics_summary = work.head(10)[[c for c in ["model", "MAE", "RMSE", "MAPE", "R2"] if c in work.columns]].to_dict(orient="records")
 
-    edge_summary = {"rows": 0, "tickers": 0, "models": 0}
+    edge_summary = {"rows": 0, "tickers": 0, "models": 0, "by_model": []}
     if latest_edge_file is not None:
         edf = _safe_read_csv(latest_edge_file)
         if edf is not None and not edf.empty:
+            by_model: list[dict] = []
+            if {"model", "ticker"}.issubset(edf.columns):
+                grouped = (
+                    edf.groupby("model", as_index=False)
+                    .agg(rows=("ticker", "size"), tickers=("ticker", "nunique"))
+                    .sort_values(["tickers", "rows", "model"], ascending=[False, False, True])
+                )
+                by_model = [
+                    {
+                        "model": str(row["model"]),
+                        "rows": int(row["rows"]),
+                        "tickers": int(row["tickers"]),
+                    }
+                    for _, row in grouped.iterrows()
+                ]
+
             edge_summary = {
                 "rows": int(len(edf)),
                 "tickers": int(edf["ticker"].nunique()) if "ticker" in edf.columns else 0,
                 "models": int(edf["model"].nunique()) if "model" in edf.columns else 0,
+                "by_model": by_model,
             }
 
     report = {
@@ -877,17 +934,45 @@ def _plot_direction_accuracy(df: "pd.DataFrame | None", out_file: Path) -> None:
         _write_placeholder(out_file, "Direction Accuracy")
         return
 
+    preferred_model_order = ["Top3Ensamble", "arima", "lgbm", "linreg", "rf", "xgb"]
+    ordered_columns = [m for m in preferred_model_order if m in pivot.columns] + [
+        m for m in pivot.columns if m not in preferred_model_order
+    ]
+    pivot = pivot.reindex(columns=ordered_columns)
+
     (pivot * 100).to_csv(VIZ_DIR / "direction_accuracy.csv")
+
+    model_coverage = (
+        acc.groupby("model")["ticker"]
+        .nunique()
+        .reindex(ordered_columns)
+        .fillna(0)
+        .astype(int)
+    )
+    total_tickers = int(acc["ticker"].nunique())
+    coverage_note = " | ".join(
+        f"{model}: {count}/{total_tickers}" for model, count in model_coverage.items()
+    )
 
     plt.style.use("seaborn-v0_8-whitegrid")
     fig, ax = plt.subplots(figsize=(10, 6))
-    im = ax.imshow(pivot.values * 100, aspect="auto", cmap="RdYlGn", vmin=0, vmax=100)
+    cmap = plt.get_cmap("RdYlGn").copy()
+    cmap.set_bad(color="#d9d9d9")
+    im = ax.imshow((pivot * 100).to_numpy(dtype=float), aspect="auto", cmap=cmap, vmin=0, vmax=100)
     ax.set_xticks(range(len(pivot.columns)), pivot.columns, rotation=45, ha="right")
     ax.set_yticks(range(len(pivot.index)), pivot.index)
     ax.set_title("Accuracy direccional (%) por ticker y modelo", fontweight="bold")
+    ax.text(
+        0.0,
+        -0.2,
+        f"Gris = sin datos | Cobertura ticker-modelo: {coverage_note}",
+        transform=ax.transAxes,
+        fontsize=8,
+        ha="left",
+    )
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label("Accuracy (%)")
-    fig.tight_layout(pad=2)
+    fig.tight_layout(pad=2.2)
     fig.savefig(out_file)
     fig.savefig(out_file.with_suffix(".svg"))
     plt.close(fig)
