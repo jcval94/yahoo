@@ -4,6 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import logging
+
 from .utils import log_df_details
 
 logger = logging.getLogger(__name__)

@@ -1,5 +1,4 @@
-import importlib.util
-import pathlib
+import importlib
 import pytest
 
 pd = pytest.importorskip("pandas")
@@ -8,10 +7,7 @@ np = pytest.importorskip("numpy")
 if not hasattr(pd.DataFrame, 'corr'):
     pytest.skip("pandas not installed", allow_module_level=True)
 
-VS_PATH = pathlib.Path(__file__).resolve().parents[1] / 'src' / 'variable_selection.py'
-spec = importlib.util.spec_from_file_location('variable_selection', VS_PATH)
-vs = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(vs)
+vs = importlib.import_module('src.variable_selection')
 select_features = vs.select_features
 select_features_rf_cv = getattr(vs, 'select_features_rf_cv')
 
