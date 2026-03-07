@@ -98,6 +98,78 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
+
+
+.pipeline-health {
+  padding-top: 1.2rem;
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.health-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 0.85rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.health-card h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.health-value {
+  margin: 0.4rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+
+
+.tab-nav {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.35);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-button.is-active {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(56, 189, 248, 0.15);
+}
+
+.tab-panel.is-hidden {
+  display: none;
+}
+
+.report-grid {
+  margin-bottom: 1rem;
+}
+
+.report-list {
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--muted);
+}
+
+.report-list li {
+  margin-bottom: 0.4rem;
+}
+
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

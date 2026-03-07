@@ -63,6 +63,7 @@ DATA_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("data_dir", "data")
 PRED_DIR = Path(__file__).resolve().parents[1] / "results" / "predicts"
 FEATURE_DIR = Path(__file__).resolve().parents[1] / "results" / "features"
 METRICS_DIR = Path(__file__).resolve().parents[1] / "results" / "metrics"
+EDGE_METRICS_DIR = Path(__file__).resolve().parents[1] / "results" / "edge_metrics"
 ACTIONS_DIR = Path(__file__).resolve().parents[1] / "results" / "actions"
 VIZ_DIR = Path(__file__).resolve().parents[1] / "results" / "viz"
 VIZ_DIR.mkdir(exist_ok=True, parents=True)
@@ -438,8 +439,87 @@ def prepare_strategy_performance() -> "pd.DataFrame | None":
     return out
 
 
+def prepare_pipeline_health() -> "pd.DataFrame | None":
+    """Prepare a compact health summary for the latest pipeline run."""
+    if pd is None:
+        return None
+
+    evaluation_dir = EDGE_METRICS_DIR
+    required_steps = 5
+    latest_pred_file = _latest_csv(PRED_DIR, "*_daily_predictions.csv")
+    out_file = VIZ_DIR / "pipeline_health.csv"
+
+    if latest_pred_file is None:
+        empty = pd.DataFrame(
+            [
+                {
+                    "run_date": "n/a",
+                    "duration_minutes": "n/a",
+                    "success_pct": 0.0,
+                    "successful_steps": 0,
+                    "total_steps": required_steps,
+                    "fallback_offline": "Sin datos",
+                    "status": "SIN EJECUCIONES",
+                }
+            ]
+        )
+        empty.to_csv(out_file, index=False)
+        return empty
+
+    run_date = latest_pred_file.stem.split("_")[0]
+    step_paths: dict[str, Path | None] = {
+        "features": _latest_csv(FEATURE_DIR, f"features_daily_{run_date}.csv"),
+        "training": _latest_csv(METRICS_DIR, f"metrics_daily_{run_date}.csv"),
+        "prediction": _latest_csv(PRED_DIR, f"{run_date}_daily_predictions.csv"),
+        "evaluation": _latest_csv(evaluation_dir, f"edge_metrics_{run_date}.csv"),
+        "dashboard": VIZ_DIR / "manifest.json" if (VIZ_DIR / "manifest.json").exists() else None,
+    }
+
+    successful_steps = sum(1 for p in step_paths.values() if p is not None and p.exists())
+    success_pct = round((successful_steps / required_steps) * 100.0, 2)
+
+    mtimes = [p.stat().st_mtime for p in step_paths.values() if p is not None and p.exists()]
+    if len(mtimes) >= 2:
+        duration_minutes: float | str = round((max(mtimes) - min(mtimes)) / 60.0, 2)
+    else:
+        duration_minutes = "n/a"
+
+    pred_df = _safe_read_csv(latest_pred_file)
+    fallback_offline = "No detectado"
+    if pred_df is None or pred_df.empty:
+        fallback_offline = "Posible fallback (predicción vacía)"
+    elif "actual" in pred_df.columns:
+        actual = pd.to_numeric(pred_df["actual"], errors="coerce").dropna()
+        if not actual.empty and actual.max() <= 200 and actual.min() >= 0:
+            fallback_offline = "Posible modo offline"
+
+    if success_pct >= 90:
+        status = "SALUDABLE"
+    elif success_pct >= 60:
+        status = "DEGRADADO"
+    else:
+        status = "CRÍTICO"
+
+    out = pd.DataFrame(
+        [
+            {
+                "run_date": run_date,
+                "duration_minutes": duration_minutes,
+                "success_pct": success_pct,
+                "successful_steps": successful_steps,
+                "total_steps": required_steps,
+                "fallback_offline": fallback_offline,
+                "status": status,
+            }
+        ]
+    )
+    out.to_csv(out_file, index=False)
+    logger.info("Saved pipeline health data to %s", out_file)
+    return out
+
+
 def prepare_action_recommendations() -> "pd.DataFrame | None":
-    """Prepare per-ticker action recommendations including HOLD option."""
+    """Prepare historical per-ticker recommendations and post-action outcomes."""
     if pd is None:
         return None
 
@@ -461,9 +541,57 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     cfg = load_trading_config()
     model_scores, ranked_models = _load_latest_model_scores()
     stability_scores = _load_stability_scores()
-    latest_date = preds["predicted_date"].max()
-    latest = preds[preds["predicted_date"] == latest_date]
-    model_names = sorted(latest["model"].dropna().astype(str).unique())
+
+    preds = preds.sort_values(["predicted_date", "ticker", "model"]).copy()
+    model_names = sorted(preds["model"].dropna().astype(str).unique())
+
+    closes = (
+        preds[["ticker", "predicted_date", "actual"]]
+        .dropna(subset=["ticker", "predicted_date", "actual"])
+        .drop_duplicates(subset=["ticker", "predicted_date"], keep="last")
+        .sort_values(["ticker", "predicted_date"])
+    )
+
+    close_map: dict[tuple[str, str], float] = {}
+    ticker_dates: dict[str, list[pd.Timestamp]] = {}
+    for ticker, grp in closes.groupby("ticker"):
+        dates = list(pd.to_datetime(grp["predicted_date"]).dt.normalize())
+        ticker_dates[str(ticker)] = dates
+        for _, row in grp.iterrows():
+            close_map[(str(row["ticker"]), pd.Timestamp(row["predicted_date"]).date().isoformat())] = float(row["actual"])
+
+    def _future_return(ticker: str, date_value: pd.Timestamp, horizon: int) -> float | None:
+        dates = ticker_dates.get(ticker, [])
+        if not dates:
+            return None
+        date_value = pd.Timestamp(date_value).normalize()
+        if date_value not in dates:
+            return None
+        pos = dates.index(date_value)
+        future_pos = pos + horizon
+        if future_pos >= len(dates):
+            return None
+        start_key = (ticker, date_value.date().isoformat())
+        future_key = (ticker, dates[future_pos].date().isoformat())
+        start_px = close_map.get(start_key)
+        future_px = close_map.get(future_key)
+        if start_px is None or future_px is None or start_px == 0:
+            return None
+        return (future_px / start_px) - 1
+
+    def _format_pct(value: float | None) -> str:
+        if value is None:
+            return "N/D"
+        return f"{value * 100:.2f}%"
+
+    def _outcome_label(action: str, ret: float | None) -> str:
+        if ret is None:
+            return "Pendiente"
+        if action == "BUY":
+            return "Acierto" if ret > 0 else "Fallo"
+        if action == "SELL":
+            return "Acierto" if ret < 0 else "Fallo"
+        return "Acierto" if abs(ret) <= 0.01 else "Fallo"
 
     def _direction(pred: float, actual: float) -> str:
         delta = pred - actual
@@ -473,8 +601,11 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
             return "BAJA"
         return "NEUTRO"
 
+    date_cutoff = preds["predicted_date"].max() - pd.Timedelta(days=60)
+    relevant_preds = preds[preds["predicted_date"] >= date_cutoff]
+
     rows: list[dict] = []
-    for _, grp in latest.groupby("ticker"):
+    for (date_value, _ticker), grp in relevant_preds.groupby(["predicted_date", "ticker"]):
         decision = _evaluate_strategies(grp, model_scores, ranked_models, stability_scores)
         score = float(decision["score"])
         if score >= cfg.buy_threshold:
@@ -484,23 +615,31 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
         else:
             action = "HOLD"
 
-        grp_by_model = grp.set_index("model")
+        grp_by_model = grp.groupby("model", as_index=True)["pred"].mean()
         model_predictions = {
             f"pred_{model}": (
-                _direction(float(grp_by_model.loc[model, "pred"]), float(decision["actual"]))
+                _direction(float(grp_by_model.loc[model]), float(decision["actual"]))
                 if model in grp_by_model.index
                 else "-"
             )
             for model in model_names
         }
 
+        ret_1d = _future_return(decision["ticker"], pd.Timestamp(date_value), 1)
+        ret_5d = _future_return(decision["ticker"], pd.Timestamp(date_value), 5)
+        ret_20d = _future_return(decision["ticker"], pd.Timestamp(date_value), 20)
+
         rows.append(
             {
-                "date": pd.Timestamp(latest_date).date().isoformat(),
+                "date": pd.Timestamp(date_value).date().isoformat(),
                 "ticker": decision["ticker"],
                 "best_model": decision["best_model"],
                 "strategy_score": round(score, 4),
                 "action": action,
+                "ret_1d": _format_pct(ret_1d),
+                "ret_5d": _format_pct(ret_5d),
+                "ret_20d": _format_pct(ret_20d),
+                "result_5d": _outcome_label(action, ret_5d),
                 **model_predictions,
             }
         )
@@ -508,8 +647,18 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     out = pd.DataFrame(rows)
     if out.empty:
         return out
-    out = out.sort_values(["action", "strategy_score"], ascending=[True, False])
-    base_columns = ["date", "ticker", "best_model", "strategy_score", "action"]
+    out = out.sort_values(["date", "strategy_score"], ascending=[False, False])
+    base_columns = [
+        "date",
+        "ticker",
+        "best_model",
+        "strategy_score",
+        "action",
+        "ret_1d",
+        "ret_5d",
+        "ret_20d",
+        "result_5d",
+    ]
     model_columns = [f"pred_{model}" for model in model_names]
     out = out.reindex(columns=base_columns + model_columns)
     out_file = VIZ_DIR / "action_recommendations.csv"
@@ -517,6 +666,95 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     logger.info("Saved action recommendations data to %s", out_file)
     return out
 
+
+
+def prepare_last_run_report(
+    health_df: "pd.DataFrame | None",
+    action_df: "pd.DataFrame | None",
+    strategy_df: "pd.DataFrame | None",
+) -> dict | None:
+    """Build a comprehensive report payload for the latest run."""
+    if pd is None:
+        return None
+
+    report_file = VIZ_DIR / "last_run_report.json"
+    latest_pred_file = _latest_csv(PRED_DIR, "*_daily_predictions.csv")
+    latest_metrics_file = _latest_csv(METRICS_DIR, "metrics_daily_*.csv")
+    latest_edge_file = _latest_csv(EDGE_METRICS_DIR, "edge_metrics_*.csv")
+
+    run_date = latest_pred_file.stem.split("_")[0] if latest_pred_file else "n/a"
+
+    health_row = {}
+    if health_df is not None and not getattr(health_df, "empty", True):
+        health_row = health_df.iloc[0].to_dict()
+
+    action_slice = pd.DataFrame()
+    if action_df is not None and not getattr(action_df, "empty", True):
+        action_slice = action_df[action_df["date"] == run_date].copy() if run_date != "n/a" else action_df.copy()
+
+    strategy_rows: list[dict] = []
+    if strategy_df is not None and not getattr(strategy_df, "empty", True):
+        strategy_rows = strategy_df.head(5).to_dict(orient="records")
+
+    action_counts = {"BUY": 0, "SELL": 0, "HOLD": 0}
+    quality_counts = {"Acierto": 0, "Fallo": 0, "Pendiente": 0}
+    top_recommendations: list[dict] = []
+    if not action_slice.empty:
+        action_counts.update(action_slice["action"].value_counts().to_dict())
+        if "result_5d" in action_slice.columns:
+            quality_counts.update(action_slice["result_5d"].value_counts().to_dict())
+        top_recommendations = (
+            action_slice.sort_values("strategy_score", ascending=False)
+            .head(10)
+            [["ticker", "action", "strategy_score", "ret_1d", "ret_5d", "ret_20d", "result_5d"]]
+            .to_dict(orient="records")
+        )
+
+    metrics_summary: list[dict] = []
+    if latest_metrics_file is not None:
+        mdf = _safe_read_csv(latest_metrics_file)
+        if mdf is not None and not mdf.empty and {"model", "MAE"}.issubset(mdf.columns):
+            work = mdf.copy()
+            if "dataset" in work.columns:
+                work = work[work["dataset"].astype(str).str.lower() == "test"]
+            work["MAE"] = pd.to_numeric(work["MAE"], errors="coerce")
+            work = work.dropna(subset=["MAE"]).sort_values("MAE")
+            metrics_summary = work.head(10)[[c for c in ["model", "MAE", "RMSE", "MAPE", "R2"] if c in work.columns]].to_dict(orient="records")
+
+    edge_summary = {"rows": 0, "tickers": 0, "models": 0}
+    if latest_edge_file is not None:
+        edf = _safe_read_csv(latest_edge_file)
+        if edf is not None and not edf.empty:
+            edge_summary = {
+                "rows": int(len(edf)),
+                "tickers": int(edf["ticker"].nunique()) if "ticker" in edf.columns else 0,
+                "models": int(edf["model"].nunique()) if "model" in edf.columns else 0,
+            }
+
+    report = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "run_date": run_date,
+        "artifacts": {
+            "predictions_file": latest_pred_file.name if latest_pred_file else "n/a",
+            "metrics_file": latest_metrics_file.name if latest_metrics_file else "n/a",
+            "edge_metrics_file": latest_edge_file.name if latest_edge_file else "n/a",
+        },
+        "pipeline_health": health_row,
+        "summary": {
+            "actions": action_counts,
+            "quality_5d": quality_counts,
+            "recommended_tickers": int(len(action_slice)),
+            "strategies_ranked": int(len(strategy_rows)),
+            "edge_coverage": edge_summary,
+        },
+        "top_recommendations": top_recommendations,
+        "strategy_leaderboard": strategy_rows,
+        "model_metrics": metrics_summary,
+    }
+
+    report_file.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info("Saved last run report to %s", report_file)
+    return report
 
 def _plot_candlestick(df: "pd.DataFrame | None", out_file: Path) -> None:
     """Create line plot of closing prices."""
@@ -864,6 +1102,8 @@ def _copy_viz_files() -> None:
             for p in [
                 VIZ_DIR / "strategy_performance.csv",
                 VIZ_DIR / "action_recommendations.csv",
+                VIZ_DIR / "pipeline_health.csv",
+                VIZ_DIR / "last_run_report.json",
             ]
             if p.exists()
         ]
@@ -893,6 +1133,7 @@ def create_viz_tables() -> None:
     feature_stability_df = prepare_feature_stability()
     coverage_df = prepare_operational_coverage()
     strategy_df = prepare_strategy_performance()
+    health_df = prepare_pipeline_health()
     action_df = prepare_action_recommendations()
 
     _plot_candlestick(candle_df, VIZ_DIR / "candlestick.png")
@@ -905,6 +1146,7 @@ def create_viz_tables() -> None:
     _plot_risk_return_scatter(edge_metrics_df, VIZ_DIR / "risk_return_signals.png")
     _plot_driver_stability(feature_stability_df, VIZ_DIR / "driver_stability.png")
     _plot_operational_coverage(coverage_df, VIZ_DIR / "operational_coverage.png")
+    prepare_last_run_report(health_df, action_df, strategy_df)
     _write_viz_manifest(
         [
             pred_df,
@@ -913,6 +1155,7 @@ def create_viz_tables() -> None:
             coverage_df,
             candle_df,
             strategy_df,
+            health_df,
             action_df,
         ]
     )
