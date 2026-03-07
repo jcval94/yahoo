@@ -69,6 +69,53 @@
       </figure>
 
       <div class="section-heading prediction-heading">
+        <p class="eyebrow">Trading actions</p>
+        <h3>Desempeño de estrategias y acciones sugeridas</h3>
+      </div>
+      <p>Se muestra el desempeño de las 5 estrategias de trading y la recomendación por activo con tres estados posibles: <strong>BUY</strong>, <strong>SELL</strong> y <strong>HOLD</strong> (no hacer nada).</p>
+      <div class="table-grid">
+        <article class="table-card">
+          <h4>Desempeño por estrategia</h4>
+          <div class="table-wrap">
+            <table id="strategy-performance-table">
+              <thead>
+                <tr>
+                  <th>Estrategia</th>
+                  <th>Equity final</th>
+                  <th>Retorno %</th>
+                  <th>Win rate %</th>
+                  <th>Max drawdown</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5">Cargando datos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="table-card">
+          <h4>Acción por ticker</h4>
+          <div class="table-wrap">
+            <table id="action-recommendations-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Ticker</th>
+                  <th>Modelo líder</th>
+                  <th>Score</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5">Cargando datos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+
+      <div class="section-heading prediction-heading">
         <p class="eyebrow">Advanced analytics</p>
         <h3>Diagnóstico integral de modelos</h3>
         <p class="window-note">Todas las gráficas usan una ventana temporal fija de <span id="window-days">120</span> días (<span id="window-range">cargando rango...</span>) para mantener comparabilidad ejecutiva y reflejar la última ejecución disponible.</p>

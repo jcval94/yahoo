@@ -63,6 +63,7 @@ DATA_DIR = Path(__file__).resolve().parents[1] / CONFIG.get("data_dir", "data")
 PRED_DIR = Path(__file__).resolve().parents[1] / "results" / "predicts"
 FEATURE_DIR = Path(__file__).resolve().parents[1] / "results" / "features"
 METRICS_DIR = Path(__file__).resolve().parents[1] / "results" / "metrics"
+ACTIONS_DIR = Path(__file__).resolve().parents[1] / "results" / "actions"
 VIZ_DIR = Path(__file__).resolve().parents[1] / "results" / "viz"
 VIZ_DIR.mkdir(exist_ok=True, parents=True)
 DOCS_VIZ_DIR = Path(__file__).resolve().parents[1] / "docs" / "viz"
@@ -375,6 +376,95 @@ def prepare_operational_coverage(max_files: int = 120) -> "pd.DataFrame | None":
     coverage.to_csv(out_file, index=False)
     logger.info("Saved operational coverage data to %s", out_file)
     return coverage
+
+
+def prepare_strategy_performance() -> "pd.DataFrame | None":
+    """Prepare latest backtest performance for the five trading strategies."""
+    if pd is None:
+        return None
+
+    files = sorted(ACTIONS_DIR.glob("strategy_backtest_*d_summary.csv"), reverse=True)
+    required_cols = ["strategy", "ending_equity", "return_pct", "win_rate", "max_drawdown"]
+    out_file = VIZ_DIR / "strategy_performance.csv"
+
+    if not files:
+        pd.DataFrame(columns=required_cols).to_csv(out_file, index=False)
+        return pd.DataFrame(columns=required_cols)
+
+    latest = files[0]
+    summary = pd.read_csv(latest)
+    required = set(required_cols)
+    if summary.empty or not required.issubset(summary.columns):
+        pd.DataFrame(columns=required_cols).to_csv(out_file, index=False)
+        return pd.DataFrame(columns=required_cols)
+
+    out = summary[required_cols].copy()
+    out["ending_equity"] = pd.to_numeric(out["ending_equity"], errors="coerce").round(2)
+    out["return_pct"] = pd.to_numeric(out["return_pct"], errors="coerce").round(2)
+    out["win_rate"] = pd.to_numeric(out["win_rate"], errors="coerce").round(2)
+    out["max_drawdown"] = pd.to_numeric(out["max_drawdown"], errors="coerce").round(4)
+    out = out.sort_values("return_pct", ascending=False)
+
+    out.to_csv(out_file, index=False)
+    logger.info("Saved strategy performance data to %s", out_file)
+    return out
+
+
+def prepare_action_recommendations() -> "pd.DataFrame | None":
+    """Prepare per-ticker action recommendations including HOLD option."""
+    if pd is None:
+        return None
+
+    try:
+        from .actions.paper_trader import (
+            _evaluate_strategies,
+            _load_latest_model_scores,
+            _load_prediction_files,
+            _load_stability_scores,
+            load_trading_config,
+        )
+    except Exception:
+        return pd.DataFrame()
+
+    preds = _load_prediction_files()
+    if preds.empty:
+        return pd.DataFrame()
+
+    cfg = load_trading_config()
+    model_scores, ranked_models = _load_latest_model_scores()
+    stability_scores = _load_stability_scores()
+    latest_date = preds["predicted_date"].max()
+    latest = preds[preds["predicted_date"] == latest_date]
+
+    rows: list[dict] = []
+    for _, grp in latest.groupby("ticker"):
+        decision = _evaluate_strategies(grp, model_scores, ranked_models, stability_scores)
+        score = float(decision["score"])
+        if score >= cfg.buy_threshold:
+            action = "BUY"
+        elif score <= cfg.sell_threshold:
+            action = "SELL"
+        else:
+            action = "HOLD"
+
+        rows.append(
+            {
+                "date": pd.Timestamp(latest_date).date().isoformat(),
+                "ticker": decision["ticker"],
+                "best_model": decision["best_model"],
+                "strategy_score": round(score, 4),
+                "action": action,
+            }
+        )
+
+    out = pd.DataFrame(rows)
+    if out.empty:
+        return out
+    out = out.sort_values(["action", "strategy_score"], ascending=[True, False])
+    out_file = VIZ_DIR / "action_recommendations.csv"
+    out.to_csv(out_file, index=False)
+    logger.info("Saved action recommendations data to %s", out_file)
+    return out
 
 
 def _plot_candlestick(df: "pd.DataFrame | None", out_file: Path) -> None:
@@ -717,6 +807,16 @@ def _write_viz_manifest(datasets: List["pd.DataFrame | None"]) -> None:
 def _copy_viz_files() -> None:
     """Copy generated assets to the docs directory."""
     asset_paths = list(VIZ_DIR.glob("*.svg"))
+    asset_paths.extend(
+        [
+            p
+            for p in [
+                VIZ_DIR / "strategy_performance.csv",
+                VIZ_DIR / "action_recommendations.csv",
+            ]
+            if p.exists()
+        ]
+    )
     manifest_file = VIZ_DIR / "manifest.json"
     if manifest_file.exists():
         asset_paths.append(manifest_file)
@@ -741,6 +841,8 @@ def create_viz_tables() -> None:
     edge_metrics_df = prepare_edge_metrics()
     feature_stability_df = prepare_feature_stability()
     coverage_df = prepare_operational_coverage()
+    strategy_df = prepare_strategy_performance()
+    action_df = prepare_action_recommendations()
 
     _plot_candlestick(candle_df, VIZ_DIR / "candlestick.png")
     _plot_pred_vs_real(pred_df, VIZ_DIR / "pred_vs_real.png")
@@ -752,7 +854,17 @@ def create_viz_tables() -> None:
     _plot_risk_return_scatter(edge_metrics_df, VIZ_DIR / "risk_return_signals.png")
     _plot_driver_stability(feature_stability_df, VIZ_DIR / "driver_stability.png")
     _plot_operational_coverage(coverage_df, VIZ_DIR / "operational_coverage.png")
-    _write_viz_manifest([pred_df, edge_metrics_df, feature_stability_df, coverage_df, candle_df])
+    _write_viz_manifest(
+        [
+            pred_df,
+            edge_metrics_df,
+            feature_stability_df,
+            coverage_df,
+            candle_df,
+            strategy_df,
+            action_df,
+        ]
+    )
     _copy_viz_files()
 
 

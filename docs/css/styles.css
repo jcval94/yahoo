@@ -265,3 +265,61 @@ section p {
     border-radius: 16px;
   }
 }
+
+.table-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-top: 0.9rem;
+}
+
+.table-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.table-card h4 {
+  margin: 0 0 0.75rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table-wrap th,
+.table-wrap td {
+  text-align: left;
+  padding: 0.55rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.action-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.action-buy {
+  background: rgba(74, 222, 128, 0.22);
+  color: #86efac;
+}
+
+.action-sell {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+.action-hold {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
