@@ -52,24 +52,26 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const renderStrategyPerformance = (rows) => {
-    const table = document.querySelector('#strategy-performance-table tbody');
-    if (!table) return;
-    if (!rows.length) {
-      table.innerHTML = '<tr><td colspan="5">No hay datos disponibles.</td></tr>';
-      return;
-    }
+    const strategyTables = document.querySelectorAll('[data-strategy-performance-table] tbody');
+    if (!strategyTables.length) return;
 
-    table.innerHTML = rows
-      .map((row) => `
-        <tr>
-          <td>${row.strategy}</td>
-          <td>$${Number(row.ending_equity || 0).toFixed(2)}</td>
-          <td>${Number(row.return_pct || 0).toFixed(2)}%</td>
-          <td>${Number(row.win_rate || 0).toFixed(2)}%</td>
-          <td>${Number(row.max_drawdown || 0).toFixed(4)}</td>
-        </tr>
-      `)
-      .join('');
+    const tableMarkup = rows.length
+      ? rows
+        .map((row) => `
+          <tr>
+            <td>${row.strategy}</td>
+            <td>$${Number(row.ending_equity || 0).toFixed(2)}</td>
+            <td>${Number(row.return_pct || 0).toFixed(2)}%</td>
+            <td>${Number(row.win_rate || 0).toFixed(2)}%</td>
+            <td>${Number(row.max_drawdown || 0).toFixed(4)}</td>
+          </tr>
+        `)
+        .join('')
+      : '<tr><td colspan="5">No hay datos disponibles.</td></tr>';
+
+    strategyTables.forEach((tableBody) => {
+      tableBody.innerHTML = tableMarkup;
+    });
   };
 
   const renderPipelineHealth = (rows) => {
@@ -103,15 +105,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!actionTable || !tableHeadRow || !tableBody) return;
 
     const staticColumns = [
-      { key: 'date', label: 'Fecha' },
-      { key: 'ticker', label: 'Ticker' },
-      { key: 'best_model', label: 'Modelo líder' },
-      { key: 'strategy_score', label: 'Score', formatter: (value) => Number(value || 0).toFixed(4) },
-      { key: 'action', label: 'Acción' },
-      { key: 'ret_1d', label: 'Resultado 1d' },
-      { key: 'ret_5d', label: 'Resultado 5d' },
-      { key: 'ret_20d', label: 'Resultado 20d' },
-      { key: 'result_5d', label: 'Calidad 5d' },
+      { key: 'date', label: 'Fecha', type: 'text' },
+      { key: 'ticker', label: 'Ticker', type: 'text' },
+      { key: 'strategy_score', label: 'Score', type: 'number', formatter: (value) => Number(value || 0).toFixed(4) },
+      { key: 'action', label: 'Acción', type: 'text' },
+      { key: 'ret_1d', label: 'Resultado 1d', type: 'number' },
+      { key: 'ret_5d', label: 'Resultado 5d', type: 'number' },
+      { key: 'ret_20d', label: 'Resultado 20d', type: 'number' },
+      { key: 'result_5d', label: 'Calidad 5d', type: 'text' },
     ];
 
     const modelColumns = Array.from(
@@ -125,6 +126,124 @@ document.addEventListener('DOMContentLoaded', () => {
       }, new Set())
     ).sort((a, b) => a.localeCompare(b));
 
+    const allColumns = [
+      ...staticColumns,
+      ...modelColumns.map((col) => ({ key: col, label: col.replace('pred_', '').toUpperCase(), type: 'number' })),
+    ];
+
+    const controls = document.getElementById('action-table-controls');
+    const state = {
+      sortKey: '',
+      sortDirection: 'asc',
+      filters: {},
+    };
+
+    const parseComparable = (value, type) => {
+      if (value === null || value === undefined || value === '') return null;
+      if (type === 'number') {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return String(value).toLowerCase();
+    };
+
+    const renderRows = () => {
+      const filtered = rows.filter((row) => allColumns.every((column) => {
+        const filterValue = (state.filters[column.key] || '').toString().trim().toLowerCase();
+        if (!filterValue) return true;
+        return String(row[column.key] || '').toLowerCase().includes(filterValue);
+      }));
+
+      const sorted = [...filtered].sort((left, right) => {
+        if (!state.sortKey) return 0;
+        const column = allColumns.find((col) => col.key === state.sortKey);
+        const leftValue = parseComparable(left[state.sortKey], column?.type || 'text');
+        const rightValue = parseComparable(right[state.sortKey], column?.type || 'text');
+        if (leftValue === rightValue) return 0;
+        if (leftValue === null) return 1;
+        if (rightValue === null) return -1;
+        const factor = state.sortDirection === 'asc' ? 1 : -1;
+        return leftValue > rightValue ? factor : -factor;
+      });
+
+      if (!sorted.length) {
+        const totalColumns = staticColumns.length + (modelColumns.length || 1);
+        tableBody.innerHTML = `<tr><td colspan="${totalColumns}">No hay filas para los filtros seleccionados.</td></tr>`;
+        return;
+      }
+
+      tableBody.innerHTML = sorted
+        .map((row) => {
+          const action = (row.action || 'HOLD').toUpperCase();
+          const cls = action === 'BUY' ? 'action-buy' : action === 'SELL' ? 'action-sell' : 'action-hold';
+
+          const staticCells = staticColumns.map((column) => {
+            if (column.key === 'action') {
+              return `<td><span class="action-badge ${cls}">${action}</span></td>`;
+            }
+            const rawValue = row[column.key];
+            const value = rawValue === undefined || rawValue === '' ? '-' : rawValue;
+            return `<td>${column.formatter ? column.formatter(value) : value}</td>`;
+          });
+
+          const modelCells = modelColumns.map((col) => `<td class="model-predictions">${row[col] || '-'}</td>`);
+
+          return `
+            <tr>
+              ${staticCells.join('')}
+              ${modelCells.join('')}
+            </tr>
+          `;
+        })
+        .join('');
+    };
+
+    if (controls) {
+      controls.innerHTML = `
+        <label>
+          Ordenar por
+          <select id="action-sort-key">
+            <option value="">Sin orden</option>
+            ${allColumns.map((column) => `<option value="${column.key}">${column.label}</option>`).join('')}
+          </select>
+        </label>
+        <label>
+          Dirección
+          <select id="action-sort-direction">
+            <option value="asc">Ascendente</option>
+            <option value="desc">Descendente</option>
+          </select>
+        </label>
+        ${allColumns.map((column) => `
+          <label>
+            Filtrar ${column.label}
+            <input type="text" id="filter-${column.key}" placeholder="Contiene..." />
+          </label>
+        `).join('')}
+      `;
+
+      const sortKeySelect = controls.querySelector('#action-sort-key');
+      const sortDirectionSelect = controls.querySelector('#action-sort-direction');
+
+      sortKeySelect?.addEventListener('change', (event) => {
+        state.sortKey = event.target.value;
+        renderRows();
+      });
+
+      sortDirectionSelect?.addEventListener('change', (event) => {
+        state.sortDirection = event.target.value;
+        renderRows();
+      });
+
+      allColumns.forEach((column) => {
+        const input = controls.querySelector(`#filter-${column.key}`);
+        input?.addEventListener('input', (event) => {
+          state.filters[column.key] = event.target.value;
+          renderRows();
+        });
+      });
+    }
+
     tableHeadRow.innerHTML = [
       ...staticColumns.map((column) => `<th>${column.label}</th>`),
       ...modelColumns.map((col) => `<th class="model-prediction-col">${col.replace('pred_', '').toUpperCase()}</th>`),
@@ -136,30 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    tableBody.innerHTML = rows
-      .map((row) => {
-        const action = (row.action || 'HOLD').toUpperCase();
-        const cls = action === 'BUY' ? 'action-buy' : action === 'SELL' ? 'action-sell' : 'action-hold';
-
-        const staticCells = staticColumns.map((column) => {
-          if (column.key === 'action') {
-            return `<td><span class="action-badge ${cls}">${action}</span></td>`;
-          }
-          const rawValue = row[column.key];
-          const value = rawValue === undefined || rawValue === '' ? '-' : rawValue;
-          return `<td>${column.formatter ? column.formatter(value) : value}</td>`;
-        });
-
-        const modelCells = modelColumns.map((col) => `<td class="model-predictions">${row[col] || '-'}</td>`);
-
-        return `
-          <tr>
-            ${staticCells.join('')}
-            ${modelCells.join('')}
-          </tr>
-        `;
-      })
-      .join('');
+    renderRows();
   };
 
   const renderLastRunReport = (report) => {

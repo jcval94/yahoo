@@ -22,6 +22,7 @@
     <nav class="tab-nav card reveal" aria-label="Pestañas de dashboard">
       <button class="tab-button is-active" data-tab-target="dashboard" type="button">Dashboard ejecutivo</button>
       <button class="tab-button" data-tab-target="last-run" type="button">Reporte de la última ejecución</button>
+      <button class="tab-button" data-tab-target="strategy-performance" type="button">Desempeño de estrategias</button>
     </nav>
 
     <section class="pipeline-health card reveal tab-panel" data-tab-panel="dashboard" aria-label="Salud del pipeline">
@@ -107,7 +108,7 @@
         <article class="table-card">
           <h4>Desempeño por estrategia</h4>
           <div class="table-wrap">
-            <table id="strategy-performance-table">
+            <table id="strategy-performance-table" data-strategy-performance-table>
               <thead>
                 <tr>
                   <th>Estrategia</th>
@@ -126,13 +127,13 @@
 
         <article class="table-card table-card-wide">
           <h4>Acción por ticker</h4>
+          <div id="action-table-controls" class="table-controls" aria-label="Controles de filtros y ordenamiento"></div>
           <div class="table-wrap">
             <table id="action-recommendations-table">
               <thead>
                 <tr>
                   <th>Fecha</th>
                   <th>Ticker</th>
-                  <th>Modelo líder</th>
                   <th>Score</th>
                   <th>Acción</th>
                   <th>Resultado 1d</th>
@@ -143,7 +144,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr><td colspan="10">Cargando datos...</td></tr>
+                <tr><td colspan="9">Cargando datos...</td></tr>
               </tbody>
             </table>
           </div>
@@ -240,6 +241,36 @@
             <h4>Cómo interpretarla</h4>
             <p>Coberturas altas y estables implican pipeline sano en datos, features y scoring. Caídas abruptas suelen asociarse a faltantes de mercado, retrasos de jobs o validaciones bloqueantes.</p>
           </aside>
+        </article>
+      </div>
+    </section>
+
+
+    <section class="card reveal tab-panel is-hidden" data-tab-panel="strategy-performance" id="desempeno-estrategias">
+      <div class="section-heading">
+        <p class="eyebrow">Investment strategies</p>
+        <h2>Desempeño de estrategias de inversión</h2>
+      </div>
+      <p>Esta pestaña concentra el rendimiento histórico de las estrategias para facilitar comparaciones directas por retorno, win rate y drawdown.</p>
+      <div class="table-grid">
+        <article class="table-card table-card-wide">
+          <h4>Comparativo de estrategias</h4>
+          <div class="table-wrap">
+            <table id="strategy-performance-tab-table" data-strategy-performance-table>
+              <thead>
+                <tr>
+                  <th>Estrategia</th>
+                  <th>Equity final</th>
+                  <th>Retorno %</th>
+                  <th>Win rate %</th>
+                  <th>Max drawdown</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5">Cargando datos...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </article>
       </div>
     </section>
