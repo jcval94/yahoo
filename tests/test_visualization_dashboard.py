@@ -253,3 +253,46 @@ def test_prepare_edge_metrics_reads_from_edge_metrics_dir(tmp_path, monkeypatch)
     assert out is not None
     assert not out.empty
     assert set(out["ticker"]) == {"AAA"}
+
+
+def test_prepare_strategy_performance_fills_missing_strategies(tmp_path, monkeypatch):
+    root = tmp_path
+    actions_dir = root / "actions"
+    viz_dir = root / "viz"
+    actions_dir.mkdir(parents=True, exist_ok=True)
+    viz_dir.mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame([
+        {"strategy": "winner_take_all", "ending_equity": 11000, "return_pct": 10.0, "win_rate": 55.0, "max_drawdown": 0.10},
+        {"strategy": "equal_weight", "ending_equity": 10800, "return_pct": 8.0, "win_rate": 53.0, "max_drawdown": 0.12},
+        {"strategy": "risk_parity", "ending_equity": 10700, "return_pct": 7.0, "win_rate": 52.0, "max_drawdown": 0.13},
+        {"strategy": "momentum_tilt", "ending_equity": 10600, "return_pct": 6.0, "win_rate": 51.0, "max_drawdown": 0.14},
+    ]).to_csv(actions_dir / "strategy_backtest_5d_summary.csv", index=False)
+
+    monkeypatch.setattr(viz, "ACTIONS_DIR", actions_dir)
+    monkeypatch.setattr(viz, "VIZ_DIR", viz_dir)
+
+    out = viz.prepare_strategy_performance()
+
+    assert out is not None
+    assert list(out.columns) == ["strategy", "ending_equity", "return_pct", "win_rate", "max_drawdown"]
+    assert len(out) == 5
+    assert "winner_take_all" in set(out["strategy"])
+    assert "top3_ensemble" in set(out["strategy"])
+
+
+def test_prepare_strategy_performance_returns_default_when_missing_file(tmp_path, monkeypatch):
+    root = tmp_path
+    actions_dir = root / "actions"
+    viz_dir = root / "viz"
+    actions_dir.mkdir(parents=True, exist_ok=True)
+    viz_dir.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(viz, "ACTIONS_DIR", actions_dir)
+    monkeypatch.setattr(viz, "VIZ_DIR", viz_dir)
+
+    out = viz.prepare_strategy_performance()
+
+    assert out is not None
+    assert len(out) == 5
+    assert float(out["return_pct"].sum()) == 0.0

@@ -1,1 +1,6 @@
 strategy,ending_equity,return_pct,win_rate,max_drawdown
+winner_take_all,0.0,0.0,0.0,0.0
+top3_ensemble,0.0,0.0,0.0,0.0
+consensus_vote,0.0,0.0,0.0,0.0
+risk_adjusted_edge,0.0,0.0,0.0,0.0
+downtrend_rebound,0.0,0.0,0.0,0.0
