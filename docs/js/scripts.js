@@ -201,8 +201,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const controls = document.getElementById('action-table-controls');
     const state = {
-      sortKey: '',
-      sortDirection: 'asc',
+      sortKey: 'date',
+      sortDirection: 'desc',
       filters: {},
       page: 1,
       pageSize: 20,
@@ -229,7 +229,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const column = allColumns.find((col) => col.key === state.sortKey);
         const leftValue = parseComparable(left[state.sortKey], column?.type || 'text');
         const rightValue = parseComparable(right[state.sortKey], column?.type || 'text');
-        if (leftValue === rightValue) return 0;
+        if (leftValue === rightValue) {
+          if (state.sortKey === 'date') {
+            const leftScore = parseComparable(left.strategy_score, 'number');
+            const rightScore = parseComparable(right.strategy_score, 'number');
+            if (leftScore === rightScore) return 0;
+            if (leftScore === null) return 1;
+            if (rightScore === null) return -1;
+            return rightScore - leftScore;
+          }
+          return 0;
+        }
         if (leftValue === null) return 1;
         if (rightValue === null) return -1;
         const factor = state.sortDirection === 'asc' ? 1 : -1;
@@ -338,6 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pageSizeSelect) {
         pageSizeSelect.value = String(state.pageSize);
       }
+      if (sortKeySelect) sortKeySelect.value = state.sortKey;
+      if (sortDirectionSelect) sortDirectionSelect.value = state.sortDirection;
 
       sortKeySelect?.addEventListener('change', (event) => {
         state.sortKey = event.target.value;

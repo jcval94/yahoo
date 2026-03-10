@@ -431,6 +431,15 @@ section p {
   min-width: 1280px;
 }
 
+#action-recommendations-table {
+  font-size: 0.82rem;
+}
+
+#action-recommendations-table th,
+#action-recommendations-table td {
+  padding: 0.4rem 0.35rem;
+}
+
 
 .table-controls {
   display: grid;
@@ -499,11 +508,13 @@ section p {
 
 
 .model-prediction-col {
-  min-width: 320px;
+  min-width: 96px;
+  white-space: nowrap;
+  font-size: 0.74rem;
 }
 
 .model-predictions {
-  min-width: 120px;
+  min-width: 72px;
   white-space: nowrap;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
 }
