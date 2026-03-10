@@ -1,4 +1,5 @@
 """Build analytic base tables enriched with technical indicators."""
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 from pathlib import Path
 import pandas as pd
@@ -282,6 +283,26 @@ def _new_data_start(last_ts: pd.Timestamp, frequency: str) -> str:
         next_ts = last_ts + pd.Timedelta(days=1)
     return pd.Timestamp(next_ts).strftime("%Y-%m-%d")
 
+
+def _download_ticker_frame(
+    ticker: str,
+    download_start: str,
+    interval: str,
+    include_prepost: bool,
+    frequency: str,
+    session_labels: dict,
+) -> pd.DataFrame:
+    """Download and normalize raw market data for a single ticker."""
+    fresh_df = download_ticker(
+        ticker,
+        download_start,
+        interval=interval,
+        include_prepost=include_prepost,
+    )
+    fresh_df = _apply_frequency(fresh_df, frequency, session_labels)
+    fresh_df["Ticker"] = ticker
+    return fresh_df
+
 def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows: int = 180) -> dict:
     """Build analytic base tables for all tickers defined in the config."""
     results = {}
@@ -302,7 +323,7 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
 
     recalc_rows = get_feature_recalc_rows(safety_rows)
 
-    processed_frames = []
+    jobs = []
     for ticker in CONFIG.get("etfs", []):
         out_file = _output_file_for_ticker(ticker, frequency)
         existing_df = pd.DataFrame() if full_rebuild else _read_existing_abt(out_file)
@@ -312,18 +333,50 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
             last_ts = pd.Timestamp(existing_df.index.max())
             download_start = _new_data_start(last_ts, frequency)
 
-        try:
-            with timed_stage(f"download {ticker}"):
-                fresh_df = download_ticker(
-                    ticker,
-                    download_start,
-                    interval=interval,
-                    include_prepost=include_prepost,
-                )
-                fresh_df = _apply_frequency(fresh_df, frequency, session_labels)
-                fresh_df["Ticker"] = ticker
-        except Exception:
-            logger.exception("Failed to download %s", ticker)
+        jobs.append(
+            {
+                "ticker": ticker,
+                "out_file": out_file,
+                "existing_df": existing_df,
+                "download_start": download_start,
+            }
+        )
+
+    download_total_start = time.perf_counter()
+    downloaded_frames = {}
+    max_workers = int(CONFIG.get("abt_download_workers", 4))
+    max_workers = max(1, min(max_workers, len(jobs) or 1))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_job = {
+            executor.submit(
+                _download_ticker_frame,
+                job["ticker"],
+                job["download_start"],
+                interval,
+                include_prepost,
+                frequency,
+                session_labels,
+            ): job
+            for job in jobs
+        }
+        for future in as_completed(future_to_job):
+            job = future_to_job[future]
+            ticker = job["ticker"]
+            try:
+                downloaded_frames[ticker] = future.result()
+            except Exception:
+                logger.exception("Failed to download %s", ticker)
+    logger.info("download total: %.2fs", time.perf_counter() - download_total_start)
+
+    feature_total_start = time.perf_counter()
+    processed_frames = []
+    for job in jobs:
+        ticker = job["ticker"]
+        out_file = job["out_file"]
+        existing_df = job["existing_df"]
+
+        fresh_df = downloaded_frames.get(ticker)
+        if fresh_df is None:
             continue
 
         if not full_rebuild and not existing_df.empty:
@@ -352,6 +405,7 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
         log_df_details(f"saved {out_file.stem}", final_df)
         results[ticker] = out_file
         processed_frames.append(final_df)
+    logger.info("feature total: %.2fs", time.perf_counter() - feature_total_start)
 
     if not processed_frames:
         log_offline_mode(f"build_{frequency}_abt")
