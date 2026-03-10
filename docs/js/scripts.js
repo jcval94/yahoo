@@ -31,6 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const images = document.querySelectorAll('img');
   images.forEach((image) => {
     image.addEventListener('error', () => {
+      const source = image.getAttribute('src') || '';
+      if (source.includes('?') && !image.dataset.retryWithoutQuery) {
+        image.dataset.retryWithoutQuery = 'true';
+        image.setAttribute('src', source.split('?')[0]);
+        return;
+      }
       image.classList.add('image-error');
       image.setAttribute('aria-label', 'No se pudo cargar la imagen');
       console.warn(`No se pudo cargar la imagen: ${image.getAttribute('src')}`);
@@ -107,13 +113,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const staticColumns = [
       { key: 'date', label: 'Fecha', type: 'text' },
       { key: 'ticker', label: 'Ticker', type: 'text' },
+      { key: 'best_model', label: 'Modelo líder', type: 'text' },
       { key: 'strategy_score', label: 'Score', type: 'number', formatter: (value) => Number(value || 0).toFixed(4) },
       { key: 'action', label: 'Acción', type: 'text' },
-      { key: 'ret_1d', label: 'Resultado 1d', type: 'number' },
       { key: 'ret_5d', label: 'Resultado 5d', type: 'number' },
-      { key: 'ret_20d', label: 'Resultado 20d', type: 'number' },
       { key: 'result_5d', label: 'Calidad 5d', type: 'text' },
     ];
+
+    const canonicalModelName = (columnName) => {
+      const rawModel = columnName.replace('pred_', '');
+      const normalized = rawModel
+        .toLowerCase()
+        .replace(/model|regressor/g, '')
+        .replace(/[^a-z0-9]/g, '');
+      return normalized || rawModel.toLowerCase();
+    };
+
+    const scoreModelColumn = (columnName) => {
+      const rawModel = columnName.replace('pred_', '');
+      let score = 0;
+      if (/^[a-z0-9_]+$/.test(rawModel)) score += 2;
+      if (!/(model|regressor)/i.test(rawModel)) score += 1;
+      score -= rawModel.length / 100;
+      return score;
+    };
 
     const modelColumns = Array.from(
       rows.reduce((allColumns, row) => {
@@ -124,7 +147,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return allColumns;
       }, new Set())
-    ).sort((a, b) => a.localeCompare(b));
+    )
+      .sort((a, b) => a.localeCompare(b))
+      .reduce((dedupedColumns, columnName) => {
+        const canonicalName = canonicalModelName(columnName);
+        const existing = dedupedColumns.find((entry) => entry.canonicalName === canonicalName);
+        if (!existing) {
+          dedupedColumns.push({ canonicalName, columnName });
+          return dedupedColumns;
+        }
+        if (scoreModelColumn(columnName) > scoreModelColumn(existing.columnName)) {
+          existing.columnName = columnName;
+        }
+        return dedupedColumns;
+      }, [])
+      .map((entry) => entry.columnName);
 
     const allColumns = [
       ...staticColumns,
