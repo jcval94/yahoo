@@ -21,6 +21,7 @@
 
     <nav class="tab-nav card reveal" aria-label="Pestañas de dashboard">
       <button class="tab-button is-active" data-tab-target="dashboard" type="button">Dashboard ejecutivo</button>
+      <button class="tab-button" data-tab-target="diagnostics" type="button">Diagnóstico visual</button>
       <button class="tab-button" data-tab-target="last-run" type="button">Reporte de la última ejecución</button>
       <button class="tab-button" data-tab-target="strategy-performance" type="button">Desempeño de estrategias</button>
     </nav>
@@ -101,11 +102,11 @@
 
       <div class="section-heading prediction-heading">
         <p class="eyebrow">Trading actions</p>
-        <h3>Desempeño de estrategias y acciones sugeridas</h3>
+        <h3>Resumen de estrategias</h3>
       </div>
-      <p>Se muestra el desempeño de las 5 estrategias de trading y la recomendación por activo con tres estados posibles: <strong>BUY</strong>, <strong>SELL</strong> y <strong>HOLD</strong> (no hacer nada).</p>
-      <div class="table-grid">
-        <article class="table-card">
+      <p>Para reducir saturación en portada, aquí se muestra solo el resumen de estrategias. Las recomendaciones por ticker y el diagnóstico completo se movieron a la pestaña <strong>Diagnóstico visual</strong>.</p>
+      <div class="table-grid table-grid-single">
+        <article class="table-card table-card-wide">
           <h4>Desempeño por estrategia</h4>
           <div class="table-wrap">
             <table id="strategy-performance-table" data-strategy-performance-table>
@@ -124,31 +125,6 @@
             </table>
           </div>
         </article>
-
-        <article class="table-card table-card-wide">
-          <h4>Acción por ticker</h4>
-          <div id="action-table-controls" class="table-controls" aria-label="Controles de filtros y ordenamiento"></div>
-          <div class="table-wrap">
-            <table id="action-recommendations-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Ticker</th>
-                  <th>Score</th>
-                  <th>Acción</th>
-                  <th>Resultado 1d</th>
-                  <th>Resultado 5d</th>
-                  <th>Resultado 20d</th>
-                  <th>Calidad 5d</th>
-                  <th class="model-prediction-col">Predicciones por modelo</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td colspan="9">Cargando datos...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
       </div>
 
       <div class="section-heading prediction-heading">
@@ -159,14 +135,27 @@
         <img src="viz/latency_monitor.svg" alt="Latencia intradía media y p95" loading="lazy">
         <figcaption>Serie temporal de latencia media y percentil 95 por fecha de ejecución.</figcaption>
       </figure>
+    </section>
 
-      <div class="section-heading prediction-heading">
+    <section class="card reveal tab-panel is-hidden" data-tab-panel="diagnostics" id="diagnostico-visual">
+      <div class="section-heading">
         <p class="eyebrow">Advanced analytics</p>
-        <h3>Diagnóstico integral de modelos</h3>
+        <h2>Diagnóstico integral de modelos</h2>
         <p class="window-note">Todas las gráficas usan una ventana temporal fija de <span id="window-days">120</span> días (<span id="window-range">cargando rango...</span>) para mantener comparabilidad ejecutiva y reflejar la última ejecución disponible.</p>
       </div>
+
+      <p>Esta vista concentra el detalle operativo para no sobrecargar la portada. Usa el selector para revisar una visualización a la vez.</p>
+      <div class="analysis-selector" role="tablist" aria-label="Selector de gráficas avanzadas">
+        <button class="analysis-selector-button is-active" type="button" data-analysis-target="error-heatmap">Error heatmap</button>
+        <button class="analysis-selector-button" type="button" data-analysis-target="direction-accuracy">Acierto direccional</button>
+        <button class="analysis-selector-button" type="button" data-analysis-target="residual-distribution">Residuales</button>
+        <button class="analysis-selector-button" type="button" data-analysis-target="mae-trend">Tendencia MAE</button>
+        <button class="analysis-selector-button" type="button" data-analysis-target="risk-return">Riesgo-retorno</button>
+        <button class="analysis-selector-button" type="button" data-analysis-target="driver-stability">Drivers</button>
+        <button class="analysis-selector-button" type="button" data-analysis-target="coverage">Cobertura</button>
+      </div>
       <div class="viz-analysis-grid">
-        <article class="viz-analysis-card">
+        <article class="viz-analysis-card is-active" data-analysis-panel="error-heatmap">
           <figure class="viz-card">
             <img src="viz/error_heatmap.svg" alt="Heatmap de MAE por ticker y modelo" loading="lazy">
             <figcaption>Error por combinación ticker-modelo.</figcaption>
@@ -177,7 +166,7 @@
           </aside>
         </article>
 
-        <article class="viz-analysis-card">
+        <article class="viz-analysis-card is-hidden" data-analysis-panel="direction-accuracy">
           <figure class="viz-card">
             <img src="viz/direction_accuracy.svg" alt="Accuracy direccional por ticker y modelo" loading="lazy">
             <figcaption>Acierto direccional (sube/baja).</figcaption>
@@ -188,7 +177,7 @@
           </aside>
         </article>
 
-        <article class="viz-analysis-card">
+        <article class="viz-analysis-card is-hidden" data-analysis-panel="residual-distribution">
           <figure class="viz-card">
             <img src="viz/residual_distribution.svg" alt="Distribución de residuales por modelo" loading="lazy">
             <figcaption>Sesgo y dispersión de residuales.</figcaption>
@@ -199,7 +188,7 @@
           </aside>
         </article>
 
-        <article class="viz-analysis-card">
+        <article class="viz-analysis-card is-hidden" data-analysis-panel="mae-trend">
           <figure class="viz-card">
             <img src="viz/mae_trend.svg" alt="Tendencia temporal de MAE por modelo" loading="lazy">
             <figcaption>Estabilidad temporal del error.</figcaption>
@@ -210,7 +199,7 @@
           </aside>
         </article>
 
-        <article class="viz-analysis-card">
+        <article class="viz-analysis-card is-hidden" data-analysis-panel="risk-return">
           <figure class="viz-card">
             <img src="viz/risk_return_signals.svg" alt="Dispersión riesgo-retorno de señales" loading="lazy">
             <figcaption>Retorno esperado vs error de señal.</figcaption>
@@ -221,7 +210,7 @@
           </aside>
         </article>
 
-        <article class="viz-analysis-card">
+        <article class="viz-analysis-card is-hidden" data-analysis-panel="driver-stability">
           <figure class="viz-card">
             <img src="viz/driver_stability.svg" alt="Estabilidad de drivers en el tiempo" loading="lazy">
             <figcaption>Importancia de variables por fecha.</figcaption>
@@ -232,7 +221,7 @@
           </aside>
         </article>
 
-        <article class="viz-analysis-card">
+        <article class="viz-analysis-card is-hidden" data-analysis-panel="coverage">
           <figure class="viz-card">
             <img src="viz/operational_coverage.svg" alt="Curva de cobertura operativa" loading="lazy">
             <figcaption>Cobertura de tickers por modelo.</figcaption>
@@ -243,6 +232,36 @@
           </aside>
         </article>
       </div>
+
+      <div class="section-heading prediction-heading">
+        <p class="eyebrow">Trading actions</p>
+        <h3>Acciones sugeridas por ticker</h3>
+      </div>
+      <p>En esta vista se habilitan filtros y ordenamiento para revisar recomendaciones sin saturar la portada principal.</p>
+      <article class="table-card table-card-wide">
+        <h4>Acción por ticker</h4>
+        <div id="action-table-controls" class="table-controls" aria-label="Controles de filtros y ordenamiento"></div>
+        <div class="table-wrap">
+          <table id="action-recommendations-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Ticker</th>
+                <th>Score</th>
+                <th>Acción</th>
+                <th>Resultado 1d</th>
+                <th>Resultado 5d</th>
+                <th>Resultado 20d</th>
+                <th>Calidad 5d</th>
+                <th class="model-prediction-col">Predicciones por modelo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="9">Cargando datos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
     </section>
 
 

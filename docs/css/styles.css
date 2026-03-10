@@ -33,7 +33,7 @@ body {
 .layout {
   position: relative;
   z-index: 1;
-  width: min(1080px, 92vw);
+  width: min(1240px, 94vw);
   margin: 2rem auto 3rem;
   display: grid;
   gap: 1.25rem;
@@ -252,15 +252,46 @@ figcaption {
 
 .viz-analysis-grid {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-top: 1rem;
 }
 
+.analysis-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.analysis-selector-button {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.35);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.analysis-selector-button.is-active {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(56, 189, 248, 0.15);
+}
+
 .viz-analysis-card {
   display: grid;
-  grid-template-columns: minmax(260px, 1.25fr) minmax(220px, 1fr);
-  gap: 1rem;
-  align-items: stretch;
+  grid-template-columns: minmax(260px, 1.2fr) minmax(220px, 1fr);
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.viz-analysis-card.is-hidden {
+  display: none;
+}
+
+.viz-analysis-card .viz-card {
+  height: 100%;
 }
 
 .viz-explainer {
@@ -343,6 +374,10 @@ section p {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1rem;
   margin-top: 0.9rem;
+}
+
+.table-grid-single {
+  grid-template-columns: 1fr;
 }
 
 .table-card {
