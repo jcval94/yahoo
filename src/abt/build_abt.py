@@ -250,6 +250,24 @@ def _combined_output_file(frequency: str) -> Path:
     return DATA_DIR / f"etfs_combined{suffix}.csv"
 
 
+def _build_combined_from_ticker_files(ticker_files: list[Path], combined_file: Path) -> pd.DataFrame:
+    """Build the combined ABT by reading each ticker CSV from disk."""
+    combined_parts = []
+    for ticker_file in ticker_files:
+        if not ticker_file.exists():
+            continue
+        part = pd.read_csv(ticker_file, parse_dates=["Date"], index_col="Date")
+        combined_parts.append(part)
+
+    if not combined_parts:
+        return pd.DataFrame()
+
+    combined_processed = pd.concat(combined_parts).sort_index()
+    combined_processed.index.name = "Date"
+    combined_processed.to_csv(combined_file, index_label="Date")
+    return combined_processed
+
+
 def _read_existing_abt(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
@@ -302,7 +320,7 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
 
     recalc_rows = get_feature_recalc_rows(safety_rows)
 
-    processed_frames = []
+    ticker_output_files = []
     for ticker in CONFIG.get("etfs", []):
         out_file = _output_file_for_ticker(ticker, frequency)
         existing_df = pd.DataFrame() if full_rebuild else _read_existing_abt(out_file)
@@ -351,16 +369,18 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
         final_df.to_csv(out_file, index_label="Date")
         log_df_details(f"saved {out_file.stem}", final_df)
         results[ticker] = out_file
-        processed_frames.append(final_df)
+        ticker_output_files.append(out_file)
 
-    if not processed_frames:
+    if not ticker_output_files:
         log_offline_mode(f"build_{frequency}_abt")
         return results
 
-    combined_processed = pd.concat(processed_frames).sort_index()
     combined_file = _combined_output_file(frequency)
-    combined_processed.index.name = "Date"
-    combined_processed.to_csv(combined_file, index_label="Date")
+    combined_processed = _build_combined_from_ticker_files(ticker_output_files, combined_file)
+    if combined_processed.empty:
+        log_offline_mode(f"build_{frequency}_abt")
+        return results
+
     log_df_details(f"saved {combined_file.stem}", combined_processed)
     results["combined"] = combined_file
 
