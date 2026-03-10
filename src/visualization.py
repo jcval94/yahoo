@@ -444,28 +444,67 @@ def prepare_strategy_performance() -> "pd.DataFrame | None":
 
     files = sorted(ACTIONS_DIR.glob("strategy_backtest_*d_summary.csv"), reverse=True)
     required_cols = ["strategy", "ending_equity", "return_pct", "win_rate", "max_drawdown"]
+    strategy_names = [
+        "winner_take_all",
+        "top3_ensemble",
+        "consensus_vote",
+        "risk_adjusted_edge",
+        "downtrend_rebound",
+    ]
     out_file = VIZ_DIR / "strategy_performance.csv"
 
+    def _default_output() -> "pd.DataFrame":
+        return pd.DataFrame(
+            [
+                {
+                    "strategy": name,
+                    "ending_equity": 0.0,
+                    "return_pct": 0.0,
+                    "win_rate": 0.0,
+                    "max_drawdown": 0.0,
+                }
+                for name in strategy_names
+            ],
+            columns=required_cols,
+        )
+
     if not files:
-        pd.DataFrame(columns=required_cols).to_csv(out_file, index=False)
-        return pd.DataFrame(columns=required_cols)
+        out = _default_output()
+        out.to_csv(out_file, index=False)
+        return out
 
     latest = files[0]
     summary = _safe_read_csv(latest)
-    if summary is None:
-        pd.DataFrame(columns=required_cols).to_csv(out_file, index=False)
-        return pd.DataFrame(columns=required_cols)
     required = set(required_cols)
-    if summary.empty or not required.issubset(summary.columns):
-        pd.DataFrame(columns=required_cols).to_csv(out_file, index=False)
-        return pd.DataFrame(columns=required_cols)
+    if summary is None or summary.empty or not required.issubset(summary.columns):
+        out = _default_output()
+        out.to_csv(out_file, index=False)
+        return out
 
     out = summary[required_cols].copy()
-    out["ending_equity"] = pd.to_numeric(out["ending_equity"], errors="coerce").round(2)
-    out["return_pct"] = pd.to_numeric(out["return_pct"], errors="coerce").round(2)
-    out["win_rate"] = pd.to_numeric(out["win_rate"], errors="coerce").round(2)
-    out["max_drawdown"] = pd.to_numeric(out["max_drawdown"], errors="coerce").round(4)
-    out = out.sort_values("return_pct", ascending=False)
+    out["ending_equity"] = pd.to_numeric(out["ending_equity"], errors="coerce").fillna(0.0).round(2)
+    out["return_pct"] = pd.to_numeric(out["return_pct"], errors="coerce").fillna(0.0).round(2)
+    out["win_rate"] = pd.to_numeric(out["win_rate"], errors="coerce").fillna(0.0).round(2)
+    out["max_drawdown"] = pd.to_numeric(out["max_drawdown"], errors="coerce").fillna(0.0).round(4)
+
+    existing_strategies = set(out["strategy"].dropna().astype(str))
+    missing_strategies = [name for name in strategy_names if name not in existing_strategies]
+    if missing_strategies:
+        filler = pd.DataFrame(
+            [
+                {
+                    "strategy": name,
+                    "ending_equity": 0.0,
+                    "return_pct": 0.0,
+                    "win_rate": 0.0,
+                    "max_drawdown": 0.0,
+                }
+                for name in missing_strategies
+            ]
+        )
+        out = pd.concat([out, filler], ignore_index=True)
+
+    out = out.sort_values("return_pct", ascending=False).head(5)
 
     out.to_csv(out_file, index=False)
     logger.info("Saved strategy performance data to %s", out_file)
