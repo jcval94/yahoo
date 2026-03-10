@@ -443,7 +443,17 @@ def prepare_strategy_performance() -> "pd.DataFrame | None":
         return None
 
     files = sorted(ACTIONS_DIR.glob("strategy_backtest_*d_summary.csv"), reverse=True)
-    required_cols = ["strategy", "ending_equity", "return_pct", "win_rate", "max_drawdown"]
+    required_cols = [
+        "strategy",
+        "ending_equity",
+        "return_pct",
+        "win_rate",
+        "max_drawdown",
+        "initial_budget",
+        "max_position_pct",
+        "min_trade_usd",
+        "holding_days",
+    ]
     strategy_names = [
         "winner_take_all",
         "top3_ensemble",
@@ -462,6 +472,10 @@ def prepare_strategy_performance() -> "pd.DataFrame | None":
                     "return_pct": 0.0,
                     "win_rate": 0.0,
                     "max_drawdown": 0.0,
+                    "initial_budget": float(CONFIG.get("actions", {}).get("initial_budget", 0.0) or 0.0),
+                    "max_position_pct": float(CONFIG.get("actions", {}).get("max_position_pct", 0.0) or 0.0) * 100.0,
+                    "min_trade_usd": float(CONFIG.get("actions", {}).get("min_trade_usd", 0.0) or 0.0),
+                    "holding_days": int(CONFIG.get("actions", {}).get("holding_days", 0) or 0),
                 }
                 for name in strategy_names
             ],
@@ -475,17 +489,39 @@ def prepare_strategy_performance() -> "pd.DataFrame | None":
 
     latest = files[0]
     summary = _safe_read_csv(latest)
-    required = set(required_cols)
-    if summary is None or summary.empty or not required.issubset(summary.columns):
+    minimal_required = {"strategy"}
+    if summary is None or summary.empty or not minimal_required.issubset(summary.columns):
         out = _default_output()
         out.to_csv(out_file, index=False)
         return out
+
+    summary = summary.copy()
+    if "ending_equity" not in summary.columns and "final_equity" in summary.columns:
+        summary["ending_equity"] = summary["final_equity"]
+    if "return_pct" not in summary.columns and "total_return_pct" in summary.columns:
+        summary["return_pct"] = summary["total_return_pct"]
+    if "win_rate" not in summary.columns and "win_rate_pct" in summary.columns:
+        summary["win_rate"] = summary["win_rate_pct"]
+    if "max_drawdown" not in summary.columns and "max_drawdown_pct" in summary.columns:
+        summary["max_drawdown"] = summary["max_drawdown_pct"] / 100.0
+    if "initial_budget" not in summary.columns:
+        summary["initial_budget"] = float(CONFIG.get("actions", {}).get("initial_budget", 0.0) or 0.0)
+    if "max_position_pct" not in summary.columns:
+        summary["max_position_pct"] = float(CONFIG.get("actions", {}).get("max_position_pct", 0.0) or 0.0) * 100.0
+    if "min_trade_usd" not in summary.columns:
+        summary["min_trade_usd"] = float(CONFIG.get("actions", {}).get("min_trade_usd", 0.0) or 0.0)
+    if "holding_days" not in summary.columns:
+        summary["holding_days"] = int(CONFIG.get("actions", {}).get("holding_days", 0) or 0)
 
     out = summary[required_cols].copy()
     out["ending_equity"] = pd.to_numeric(out["ending_equity"], errors="coerce").fillna(0.0).round(2)
     out["return_pct"] = pd.to_numeric(out["return_pct"], errors="coerce").fillna(0.0).round(2)
     out["win_rate"] = pd.to_numeric(out["win_rate"], errors="coerce").fillna(0.0).round(2)
     out["max_drawdown"] = pd.to_numeric(out["max_drawdown"], errors="coerce").fillna(0.0).round(4)
+    out["initial_budget"] = pd.to_numeric(out["initial_budget"], errors="coerce").fillna(0.0).round(2)
+    out["max_position_pct"] = pd.to_numeric(out["max_position_pct"], errors="coerce").fillna(0.0).round(2)
+    out["min_trade_usd"] = pd.to_numeric(out["min_trade_usd"], errors="coerce").fillna(0.0).round(2)
+    out["holding_days"] = pd.to_numeric(out["holding_days"], errors="coerce").fillna(0).astype(int)
 
     existing_strategies = set(out["strategy"].dropna().astype(str))
     missing_strategies = [name for name in strategy_names if name not in existing_strategies]
@@ -498,6 +534,10 @@ def prepare_strategy_performance() -> "pd.DataFrame | None":
                     "return_pct": 0.0,
                     "win_rate": 0.0,
                     "max_drawdown": 0.0,
+                    "initial_budget": float(CONFIG.get("actions", {}).get("initial_budget", 0.0) or 0.0),
+                    "max_position_pct": float(CONFIG.get("actions", {}).get("max_position_pct", 0.0) or 0.0) * 100.0,
+                    "min_trade_usd": float(CONFIG.get("actions", {}).get("min_trade_usd", 0.0) or 0.0),
+                    "holding_days": int(CONFIG.get("actions", {}).get("holding_days", 0) or 0),
                 }
                 for name in missing_strategies
             ]
