@@ -538,6 +538,10 @@ def backtest_strategies(*, lookback_days: int = 15, dry_run: bool = False) -> di
         summary_rows.append(
             {
                 "strategy": strategy_name,
+                "initial_budget": round(cfg.initial_budget, 2),
+                "max_position_pct": round(cfg.max_position_pct * 100, 2),
+                "min_trade_usd": round(cfg.min_trade_usd, 2),
+                "holding_days": int(cfg.holding_days),
                 "lookback_days": lookback_days,
                 "start_date": trading_days[0].date().isoformat(),
                 "end_date": trading_days[-1].date().isoformat(),

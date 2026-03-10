@@ -277,10 +277,12 @@ def test_prepare_strategy_performance_fills_missing_strategies(tmp_path, monkeyp
     out = viz.prepare_strategy_performance()
 
     assert out is not None
-    assert list(out.columns) == ["strategy", "ending_equity", "return_pct", "win_rate", "max_drawdown"]
+    assert list(out.columns) == ["strategy", "ending_equity", "return_pct", "win_rate", "max_drawdown", "initial_budget", "max_position_pct", "min_trade_usd", "holding_days"]
     assert len(out) == 5
     assert "winner_take_all" in set(out["strategy"])
     assert "top3_ensemble" in set(out["strategy"])
+    assert float(out["initial_budget"].max()) > 0
+    assert float(out["max_position_pct"].max()) > 0
 
 
 def test_prepare_strategy_performance_returns_default_when_missing_file(tmp_path, monkeypatch):
@@ -298,3 +300,27 @@ def test_prepare_strategy_performance_returns_default_when_missing_file(tmp_path
     assert out is not None
     assert len(out) == 5
     assert float(out["return_pct"].sum()) == 0.0
+
+
+def test_prepare_strategy_performance_accepts_backtest_alias_columns(tmp_path, monkeypatch):
+    root = tmp_path
+    actions_dir = root / "actions"
+    viz_dir = root / "viz"
+    actions_dir.mkdir(parents=True, exist_ok=True)
+    viz_dir.mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame([
+        {"strategy": "winner_take_all", "final_equity": 11100, "total_return_pct": 11.0, "win_rate_pct": 60.0, "max_drawdown_pct": 5.0},
+    ]).to_csv(actions_dir / "strategy_backtest_5d_summary.csv", index=False)
+
+    monkeypatch.setattr(viz, "ACTIONS_DIR", actions_dir)
+    monkeypatch.setattr(viz, "VIZ_DIR", viz_dir)
+
+    out = viz.prepare_strategy_performance()
+
+    assert out is not None
+    row = out[out["strategy"] == "winner_take_all"].iloc[0]
+    assert float(row["ending_equity"]) == 11100.0
+    assert float(row["return_pct"]) == 11.0
+    assert float(row["win_rate"]) == 60.0
+    assert float(row["max_drawdown"]) == 0.05

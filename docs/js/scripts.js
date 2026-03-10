@@ -101,10 +101,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${Number(row.return_pct || 0).toFixed(2)}%</td>
             <td>${Number(row.win_rate || 0).toFixed(2)}%</td>
             <td>${Number(row.max_drawdown || 0).toFixed(4)}</td>
+            <td>$${Number(row.initial_budget || 0).toFixed(2)}</td>
+            <td>${Number(row.max_position_pct || 0).toFixed(2)}%</td>
+            <td>$${Number(row.min_trade_usd || 0).toFixed(2)}</td>
+            <td>${Number(row.holding_days || 0)}</td>
           </tr>
         `)
         .join('')
-      : '<tr><td colspan="5">No hay datos disponibles.</td></tr>';
+      : '<tr><td colspan="9">No hay datos disponibles.</td></tr>';
 
     strategyTables.forEach((tableBody) => {
       tableBody.innerHTML = tableMarkup;
