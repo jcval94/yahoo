@@ -204,6 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
       sortKey: '',
       sortDirection: 'asc',
       filters: {},
+      page: 1,
+      pageSize: 20,
     };
 
     const parseComparable = (value, type) => {
@@ -234,13 +236,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return leftValue > rightValue ? factor : -factor;
       });
 
+      const totalRows = sorted.length;
+      const showingAll = state.pageSize === 'all';
+      const totalPages = showingAll ? 1 : Math.max(1, Math.ceil(totalRows / state.pageSize));
+      state.page = Math.min(state.page, totalPages);
+      const startIndex = showingAll ? 0 : (state.page - 1) * state.pageSize;
+      const paginated = showingAll
+        ? sorted
+        : sorted.slice(startIndex, startIndex + state.pageSize);
+
+      const summaryNode = controls?.querySelector('#action-page-summary');
+      const prevButton = controls?.querySelector('#action-page-prev');
+      const nextButton = controls?.querySelector('#action-page-next');
+      if (summaryNode) {
+        if (!totalRows) {
+          summaryNode.textContent = 'Mostrando 0–0 de 0';
+        } else {
+          const from = startIndex + 1;
+          const to = startIndex + paginated.length;
+          summaryNode.textContent = `Mostrando ${from}–${to} de ${totalRows}`;
+        }
+      }
+      if (prevButton) prevButton.disabled = state.page <= 1;
+      if (nextButton) nextButton.disabled = state.page >= totalPages;
+
       if (!sorted.length) {
         const totalColumns = staticColumns.length + (modelColumns.length || 1);
         tableBody.innerHTML = `<tr><td colspan="${totalColumns}">No hay filas para los filtros seleccionados.</td></tr>`;
         return;
       }
 
-      tableBody.innerHTML = sorted
+      tableBody.innerHTML = paginated
         .map((row) => {
           const action = (row.action || 'HOLD').toUpperCase();
           const cls = action === 'BUY' ? 'action-buy' : action === 'SELL' ? 'action-sell' : 'action-hold';
@@ -288,18 +314,64 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="text" id="filter-${column.key}" placeholder="Contiene..." />
           </label>
         `).join('')}
+        <label>
+          Tamaño de página
+          <select id="action-page-size">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+        <button type="button" id="action-show-all">Ver todo</button>
+        <button type="button" id="action-page-prev">Anterior</button>
+        <button type="button" id="action-page-next">Siguiente</button>
+        <span id="action-page-summary">Mostrando 0–0 de 0</span>
       `;
 
       const sortKeySelect = controls.querySelector('#action-sort-key');
       const sortDirectionSelect = controls.querySelector('#action-sort-direction');
+      const pageSizeSelect = controls.querySelector('#action-page-size');
+      const showAllButton = controls.querySelector('#action-show-all');
+      const prevButton = controls.querySelector('#action-page-prev');
+      const nextButton = controls.querySelector('#action-page-next');
+
+      if (pageSizeSelect) {
+        pageSizeSelect.value = String(state.pageSize);
+      }
 
       sortKeySelect?.addEventListener('change', (event) => {
         state.sortKey = event.target.value;
+        state.page = 1;
         renderRows();
       });
 
       sortDirectionSelect?.addEventListener('change', (event) => {
         state.sortDirection = event.target.value;
+        state.page = 1;
+        renderRows();
+      });
+
+      pageSizeSelect?.addEventListener('change', (event) => {
+        state.pageSize = Number(event.target.value) || 20;
+        state.page = 1;
+        renderRows();
+      });
+
+      showAllButton?.addEventListener('click', () => {
+        state.pageSize = 'all';
+        state.page = 1;
+        if (pageSizeSelect) pageSizeSelect.value = '20';
+        renderRows();
+      });
+
+      prevButton?.addEventListener('click', () => {
+        if (state.page <= 1) return;
+        state.page -= 1;
+        renderRows();
+      });
+
+      nextButton?.addEventListener('click', () => {
+        state.page += 1;
         renderRows();
       });
 
@@ -307,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = controls.querySelector(`#filter-${column.key}`);
         input?.addEventListener('input', (event) => {
           state.filters[column.key] = event.target.value;
+          state.page = 1;
           renderRows();
         });
       });
