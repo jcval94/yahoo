@@ -458,7 +458,11 @@ def evaluate_edge_predictions(data: Dict[str, pd.DataFrame], prev_file: Path) ->
         logger.info("Previous edge prediction %s not found", prev_file)
         return None
 
-    prev_df = pd.read_csv(prev_file)
+    try:
+        prev_df = pd.read_csv(prev_file)
+    except pd.errors.EmptyDataError:
+        logger.warning("Previous edge prediction file %s has no parseable columns", prev_file)
+        return None
     if prev_df.empty:
         logger.warning("Previous edge prediction file %s is empty", prev_file)
         return None
