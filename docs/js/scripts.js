@@ -28,6 +28,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  const analysisButtons = document.querySelectorAll('.analysis-selector-button');
+  const analysisPanels = document.querySelectorAll('[data-analysis-panel]');
+  analysisButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = button.getAttribute('data-analysis-target');
+      analysisButtons.forEach((b) => b.classList.toggle('is-active', b === button));
+      analysisPanels.forEach((panel) => {
+        const panelName = panel.getAttribute('data-analysis-panel');
+        panel.classList.toggle('is-hidden', panelName !== target);
+      });
+    });
+  });
+
   const images = document.querySelectorAll('img');
   images.forEach((image) => {
     image.addEventListener('error', () => {
