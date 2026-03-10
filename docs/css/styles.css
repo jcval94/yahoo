@@ -156,6 +156,38 @@ body {
   display: none;
 }
 
+.subtab-nav {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+
+.subtab-button {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.2);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.38rem 0.72rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.subtab-button.is-active {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--text);
+}
+
+.subtab-panel {
+  margin-top: 0.9rem;
+}
+
+.subtab-panel.is-hidden {
+  display: none;
+}
+
 .report-grid {
   margin-bottom: 1rem;
 }
