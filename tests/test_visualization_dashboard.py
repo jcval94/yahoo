@@ -206,6 +206,39 @@ def test_prepare_last_run_report_falls_back_to_latest_actions(tmp_path, monkeypa
     assert "by_model" in report["summary"]["edge_coverage"]
 
 
+def test_prepare_last_run_report_uses_edge_metrics_when_metrics_are_missing(tmp_path, monkeypatch):
+    root = tmp_path
+    pred_dir = root / "predicts"
+    metrics_dir = root / "metrics"
+    edge_dir = root / "edge_metrics"
+    viz_dir = root / "viz"
+    for directory in [pred_dir, metrics_dir, edge_dir, viz_dir]:
+        directory.mkdir(parents=True, exist_ok=True)
+
+    run_date = "2026-03-07"
+    pd.DataFrame([{"ticker": "AAA", "actual": 100.0, "pred": 101.0, "Predicted": run_date}]).to_csv(
+        pred_dir / f"{run_date}_daily_predictions.csv", index=False
+    )
+    pd.DataFrame([{"foo": 1}]).to_csv(metrics_dir / f"metrics_daily_{run_date}.csv", index=False)
+    pd.DataFrame([
+        {"ticker": "AAA", "model": "rf", "MAE": 1.0, "RMSE": 1.2, "MAPE": 2.0, "R2": 0.8},
+        {"ticker": "BBB", "model": "rf", "MAE": 1.2, "RMSE": 1.4, "MAPE": 2.2, "R2": 0.7},
+        {"ticker": "CCC", "model": "xgb", "MAE": 0.8, "RMSE": 1.0, "MAPE": 1.8, "R2": 0.85},
+    ]).to_csv(edge_dir / f"edge_metrics_{run_date}.csv", index=False)
+
+    monkeypatch.setattr(viz, "PRED_DIR", pred_dir)
+    monkeypatch.setattr(viz, "METRICS_DIR", metrics_dir)
+    monkeypatch.setattr(viz, "EDGE_METRICS_DIR", edge_dir)
+    monkeypatch.setattr(viz, "VIZ_DIR", viz_dir)
+
+    report = viz.prepare_last_run_report(pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
+
+    assert report is not None
+    assert len(report["model_metrics"]) == 2
+    assert report["model_metrics"][0]["model"] == "xgb"
+    assert report["model_metrics"][0]["MAE"] == 0.8
+
+
 def test_prepare_edge_metrics_reads_from_edge_metrics_dir(tmp_path, monkeypatch):
     root = tmp_path
     metrics_dir = root / "metrics"

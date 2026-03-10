@@ -423,6 +423,13 @@ section p {
   margin: 0 0 0.75rem;
 }
 
+.table-note {
+  margin: -0.2rem 0 0.85rem;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
 .table-card-wide {
   grid-column: 1 / -1;
 }

@@ -855,6 +855,23 @@ def prepare_last_run_report(
             work = work.dropna(subset=["MAE"]).sort_values("MAE")
             metrics_summary = work.head(10)[[c for c in ["model", "MAE", "RMSE", "MAPE", "R2"] if c in work.columns]].to_dict(orient="records")
 
+    if not metrics_summary and latest_edge_file is not None:
+        fallback_metrics = _safe_read_csv(latest_edge_file)
+        required_cols = {"model", "MAE", "RMSE", "MAPE"}
+        if fallback_metrics is not None and not fallback_metrics.empty and required_cols.issubset(fallback_metrics.columns):
+            metric_cols = [c for c in ["MAE", "RMSE", "MAPE", "R2"] if c in fallback_metrics.columns]
+            fallback_metrics[metric_cols] = fallback_metrics[metric_cols].apply(pd.to_numeric, errors="coerce")
+            agg_spec = {col: "mean" for col in metric_cols}
+            grouped = (
+                fallback_metrics
+                .dropna(subset=["MAE"])
+                .groupby("model", as_index=False)
+                .agg(agg_spec)
+                .sort_values("MAE")
+                .head(10)
+            )
+            metrics_summary = grouped[["model", *metric_cols]].to_dict(orient="records")
+
     edge_summary = {"rows": 0, "tickers": 0, "models": 0, "by_model": []}
     if latest_edge_file is not None:
         edf = _safe_read_csv(latest_edge_file)
