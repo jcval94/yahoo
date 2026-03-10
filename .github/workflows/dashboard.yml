@@ -40,6 +40,8 @@ jobs:
           git add results/viz/*.csv 2>/dev/null || true
           git add docs/viz/*.svg 2>/dev/null || true
           git add docs/viz/manifest.json 2>/dev/null || true
+          git add results/viz/last_run_report.json 2>/dev/null || true
+          git add docs/viz/last_run_report.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No dashboard changes to commit"
           else

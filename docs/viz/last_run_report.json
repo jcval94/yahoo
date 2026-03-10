@@ -1,111 +1,199 @@
 {
-  "generated_at": "2026-03-07T02:14:55.479595+00:00",
-  "run_date": "2026-03-07",
+  "generated_at": "2026-03-10T19:22:01.168344+00:00",
+  "run_date": "2026-03-10",
   "artifacts": {
-    "predictions_file": "2026-03-07_daily_predictions.csv",
-    "metrics_file": "metrics_daily_2026-03-06.csv",
+    "predictions_file": "2026-03-10_daily_predictions.csv",
+    "metrics_file": "metrics_daily_2026-03-10.csv",
     "edge_metrics_file": "edge_metrics_2026-03-06.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-07",
-    "duration_minutes": 5.58,
-    "success_pct": 40.0,
-    "successful_steps": 2,
+    "run_date": "2026-03-10",
+    "duration_minutes": 6.66,
+    "success_pct": 100.0,
+    "successful_steps": 5,
     "total_steps": 5,
     "fallback_offline": "Posible fallback (predicción vacía)",
-    "status": "CRÍTICO"
+    "status": "SALUDABLE"
   },
   "summary": {
     "actions": {
-      "BUY": 0,
-      "SELL": 0,
-      "HOLD": 0
+      "BUY": 7,
+      "SELL": 12,
+      "HOLD": 11
     },
     "quality_5d": {
       "Acierto": 0,
       "Fallo": 0,
-      "Pendiente": 0
+      "Pendiente": 30
     },
-    "recommended_tickers": 0,
-    "strategies_ranked": 0,
+    "recommended_tickers": 30,
+    "strategies_ranked": 5,
     "edge_coverage": {
       "rows": 106,
       "tickers": 30,
-      "models": 6
+      "models": 6,
+      "by_model": [
+        {
+          "model": "Top3Ensamble",
+          "rows": 30,
+          "tickers": 30
+        },
+        {
+          "model": "lgbm",
+          "rows": 23,
+          "tickers": 23
+        },
+        {
+          "model": "arima",
+          "rows": 21,
+          "tickers": 21
+        },
+        {
+          "model": "rf",
+          "rows": 17,
+          "tickers": 17
+        },
+        {
+          "model": "xgb",
+          "rows": 13,
+          "tickers": 13
+        },
+        {
+          "model": "linreg",
+          "rows": 2,
+          "tickers": 2
+        }
+      ]
     }
   },
-  "top_recommendations": [],
-  "strategy_leaderboard": [],
-  "model_metrics": [
+  "top_recommendations": [
     {
-      "model": "NEE_arima",
-      "MAE": 0.9259,
-      "RMSE": 1.1678,
-      "MAPE": 0.0104,
-      "R2": 0.9321
+      "ticker": "ASML",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "NEE_lgbm",
-      "MAE": 1.0326,
-      "RMSE": 1.2841,
-      "MAPE": 0.0116,
-      "R2": 0.9178
+      "ticker": "GOOGL",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "NEE_rf",
-      "MAE": 1.1204,
-      "RMSE": 1.3679,
-      "MAPE": 0.0125,
-      "R2": 0.9068
+      "ticker": "JNJ",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "NEE_xgb",
-      "MAE": 1.1238,
-      "RMSE": 1.3327,
-      "MAPE": 0.0127,
-      "R2": 0.9115
+      "ticker": "META",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "NEE_lgbm",
-      "MAE": 1.1547,
-      "RMSE": 1.3749,
-      "MAPE": 0.013,
-      "R2": 0.9058
+      "ticker": "MSFT",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "NEE_rf",
-      "MAE": 1.1996,
-      "RMSE": 1.4596,
-      "MAPE": 0.0134,
-      "R2": 0.8939
+      "ticker": "PLTR",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "NEE_xgb",
-      "MAE": 1.3912,
-      "RMSE": 1.6725,
-      "MAPE": 0.0156,
-      "R2": 0.8606
+      "ticker": "V",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "NEE_linreg",
-      "MAE": 1.5217,
-      "RMSE": 1.8032,
-      "MAPE": 0.0171,
-      "R2": 0.838
+      "ticker": "COST",
+      "action": "HOLD",
+      "strategy_score": 2.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "MRK_lgbm",
-      "MAE": 1.5954,
-      "RMSE": 2.0132,
-      "MAPE": 0.0138,
-      "R2": 0.8784
+      "ticker": "ORCL",
+      "action": "HOLD",
+      "strategy_score": 2.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     },
     {
-      "model": "MRK_linreg",
-      "MAE": 1.6174,
-      "RMSE": 1.9085,
-      "MAPE": 0.0139,
-      "R2": 0.8907
+      "ticker": "UNH",
+      "action": "HOLD",
+      "strategy_score": 2.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
     }
-  ]
+  ],
+  "strategy_leaderboard": [
+    {
+      "strategy": "winner_take_all",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    {
+      "strategy": "top3_ensemble",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    {
+      "strategy": "consensus_vote",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    {
+      "strategy": "risk_adjusted_edge",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    {
+      "strategy": "downtrend_rebound",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    }
+  ],
+  "model_metrics": []
 }
