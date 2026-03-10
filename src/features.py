@@ -11,6 +11,29 @@ from .utils import log_df_details
 logger = logging.getLogger(__name__)
 
 
+def get_feature_recalc_rows(safety_rows: int = 180) -> int:
+    """Return a safe recomputation tail for rolling/lag features.
+
+    ``safety_rows`` can be increased from the CLI/config to accommodate future
+    wider windows without changing this module.
+    """
+    feature_windows = [
+        5,
+        7,
+        10,
+        13,
+        14,
+        20,
+        26,
+        30,
+        50,
+        60,
+        90,
+    ]
+    min_required = max(feature_windows) + 1
+    return max(int(safety_rows), min_required)
+
+
 def _us_election_days(start: pd.Timestamp, end: pd.Timestamp) -> pd.DatetimeIndex:
     """Return US election days between ``start`` and ``end`` inclusive."""
     years = range(start.year, end.year + 1)

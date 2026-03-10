@@ -15,6 +15,7 @@ from ..utils import (
     log_offline_mode,
     load_config,
 )
+from ..features import get_feature_recalc_rows
 
 logger = logging.getLogger(__name__)
 
@@ -233,10 +234,57 @@ def _to_monthly(df: pd.DataFrame) -> pd.DataFrame:
     monthly = df.resample("M").agg(agg)
     return monthly
 
-def build_abt(frequency: str = "daily") -> dict:
+
+
+def _output_file_for_ticker(ticker: str, frequency: str) -> Path:
+    if frequency == "intraday":
+        return DATA_DIR / f"{ticker}_intraday.csv"
+    suffix = "" if frequency == "daily" else f"_{frequency}"
+    return DATA_DIR / f"{ticker}{suffix}.csv"
+
+
+def _combined_output_file(frequency: str) -> Path:
+    if frequency == "intraday":
+        return DATA_DIR / "etfs_combined_intraday.csv"
+    suffix = "" if frequency == "daily" else f"_{frequency}"
+    return DATA_DIR / f"etfs_combined{suffix}.csv"
+
+
+def _read_existing_abt(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        df = pd.read_csv(path, parse_dates=["Date"], index_col="Date")
+        return df.sort_index()
+    except Exception:
+        logger.exception("No se pudo leer ABT previo: %s", path)
+        return pd.DataFrame()
+
+
+def _apply_frequency(df: pd.DataFrame, frequency: str, session_labels: dict) -> pd.DataFrame:
+    if frequency == "weekly":
+        return _to_weekly(df)
+    if frequency == "monthly":
+        return _to_monthly(df)
+    if frequency == "intraday":
+        return add_session_column(df, session_labels)
+    return df
+
+
+def _new_data_start(last_ts: pd.Timestamp, frequency: str) -> str:
+    if frequency == "intraday":
+        next_ts = last_ts + pd.Timedelta(minutes=1)
+    elif frequency == "weekly":
+        next_ts = last_ts + pd.Timedelta(days=7)
+    elif frequency == "monthly":
+        next_ts = last_ts + pd.offsets.MonthBegin(1)
+    else:
+        next_ts = last_ts + pd.Timedelta(days=1)
+    return pd.Timestamp(next_ts).strftime("%Y-%m-%d")
+
+def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows: int = 180) -> dict:
     """Build analytic base tables for all tickers defined in the config."""
     results = {}
-    combined_frames = []
 
     configured_interval = CONFIG.get("data_frequency", "1d")
     include_prepost = bool(CONFIG.get("include_prepost", False))
@@ -252,49 +300,65 @@ def build_abt(frequency: str = "daily") -> dict:
     config_start = pd.to_datetime(CONFIG["start_date"])
     start_dt = max(config_start, five_years_ago)
 
+    recalc_rows = get_feature_recalc_rows(safety_rows)
+
+    processed_frames = []
     for ticker in CONFIG.get("etfs", []):
+        out_file = _output_file_for_ticker(ticker, frequency)
+        existing_df = pd.DataFrame() if full_rebuild else _read_existing_abt(out_file)
+
+        download_start = start_dt.strftime("%Y-%m-%d")
+        if not full_rebuild and not existing_df.empty:
+            last_ts = pd.Timestamp(existing_df.index.max())
+            download_start = _new_data_start(last_ts, frequency)
+
         try:
             with timed_stage(f"download {ticker}"):
-                df = download_ticker(
+                fresh_df = download_ticker(
                     ticker,
-                    start_dt.strftime("%Y-%m-%d"),
+                    download_start,
                     interval=interval,
                     include_prepost=include_prepost,
                 )
-                if frequency == "weekly":
-                    df = _to_weekly(df)
-                elif frequency == "monthly":
-                    df = _to_monthly(df)
-                elif frequency == "intraday":
-                    df = add_session_column(df, session_labels)
-                df["Ticker"] = ticker
-                combined_frames.append(df)
+                fresh_df = _apply_frequency(fresh_df, frequency, session_labels)
+                fresh_df["Ticker"] = ticker
         except Exception:
             logger.exception("Failed to download %s", ticker)
+            continue
 
-    if not combined_frames:
+        if not full_rebuild and not existing_df.empty:
+            last_ts = pd.Timestamp(existing_df.index.max())
+            fresh_df = fresh_df[fresh_df.index > last_ts]
+
+        if fresh_df.empty and not full_rebuild and not existing_df.empty:
+            logger.info("Sin filas nuevas para %s. Se conserva ABT existente.", ticker)
+            final_df = existing_df
+        else:
+            history_tail = pd.DataFrame() if full_rebuild else existing_df.tail(recalc_rows)
+            base_df = pd.concat([history_tail, fresh_df]).sort_index()
+            base_df = base_df[~base_df.index.duplicated(keep="last")]
+            with timed_stage(f"processing {ticker}"):
+                recalculated = enrich_indicators(base_df)
+
+            if full_rebuild or existing_df.empty:
+                final_df = recalculated
+            else:
+                historical_keep = existing_df.iloc[:-len(history_tail)] if len(history_tail) else existing_df
+                final_df = pd.concat([historical_keep, recalculated]).sort_index()
+                final_df = final_df[~final_df.index.duplicated(keep="last")]
+
+        final_df.index.name = "Date"
+        final_df.to_csv(out_file, index_label="Date")
+        log_df_details(f"saved {out_file.stem}", final_df)
+        results[ticker] = out_file
+        processed_frames.append(final_df)
+
+    if not processed_frames:
         log_offline_mode(f"build_{frequency}_abt")
         return results
 
-    combined_df = pd.concat(combined_frames)
-
-    processed_frames = []
-    for ticker, group_df in combined_df.groupby("Ticker"):
-        with timed_stage(f"processing {ticker}"):
-            group_df = enrich_indicators(group_df)
-        if frequency == "intraday":
-            out_file = DATA_DIR / f"{ticker}_intraday.csv"
-        else:
-            suffix = "" if frequency == "daily" else f"_{frequency}"
-            out_file = DATA_DIR / f"{ticker}{suffix}.csv"
-        group_df.index.name = "Date"
-        group_df.to_csv(out_file, index_label="Date")
-        log_df_details(f"saved {out_file.stem}", group_df)
-        results[ticker] = out_file
-        processed_frames.append(group_df)
-
-    combined_processed = pd.concat(processed_frames)
-    combined_file = DATA_DIR / ("etfs_combined_intraday.csv" if frequency == "intraday" else f"etfs_combined{'' if frequency == 'daily' else f'_{frequency}'}.csv")
+    combined_processed = pd.concat(processed_frames).sort_index()
+    combined_file = _combined_output_file(frequency)
     combined_processed.index.name = "Date"
     combined_processed.to_csv(combined_file, index_label="Date")
     log_df_details(f"saved {combined_file.stem}", combined_processed)
@@ -304,14 +368,14 @@ def build_abt(frequency: str = "daily") -> dict:
     return results
 
 
-def build_weekly_abt() -> dict:
+def build_weekly_abt(full_rebuild: bool = False, safety_rows: int = 180) -> dict:
     """Build weekly analytic base tables for configured tickers."""
-    return build_abt("weekly")
+    return build_abt("weekly", full_rebuild=full_rebuild, safety_rows=safety_rows)
 
 
-def build_monthly_abt() -> dict:
+def build_monthly_abt(full_rebuild: bool = False, safety_rows: int = 180) -> dict:
     """Build monthly analytic base tables for configured tickers."""
-    return build_abt("monthly")
+    return build_abt("monthly", full_rebuild=full_rebuild, safety_rows=safety_rows)
 
 def main():
     """Entry point for command line execution."""
@@ -331,6 +395,17 @@ def main():
     parser.add_argument(
         "--monthly", action="store_true", help=argparse.SUPPRESS
     )
+    parser.add_argument(
+        "--full-rebuild",
+        action="store_true",
+        help="recalcula el ABT completo desde la fecha de inicio",
+    )
+    parser.add_argument(
+        "--safety-rows",
+        type=int,
+        default=180,
+        help="cola de seguridad de filas para recalcular features rolling/lags",
+    )
     args = parser.parse_args()
 
     if args.weekly:
@@ -338,7 +413,7 @@ def main():
     elif args.monthly:
         args.frequency = "monthly"
 
-    build_abt(args.frequency)
+    build_abt(args.frequency, full_rebuild=args.full_rebuild, safety_rows=args.safety_rows)
 
 
 if __name__ == "__main__":
