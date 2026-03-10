@@ -236,7 +236,7 @@ def _to_monthly(df: pd.DataFrame) -> pd.DataFrame:
 def build_abt(frequency: str = "daily") -> dict:
     """Build analytic base tables for all tickers defined in the config."""
     results = {}
-    combined_frames = []
+    combined_columns = None
 
     configured_interval = CONFIG.get("data_frequency", "1d")
     include_prepost = bool(CONFIG.get("include_prepost", False))
@@ -252,9 +252,17 @@ def build_abt(frequency: str = "daily") -> dict:
     config_start = pd.to_datetime(CONFIG["start_date"])
     start_dt = max(config_start, five_years_ago)
 
+    combined_file = DATA_DIR / (
+        "etfs_combined_intraday.csv"
+        if frequency == "intraday"
+        else f"etfs_combined{'' if frequency == 'daily' else f'_{frequency}'}.csv"
+    )
+    if combined_file.exists():
+        combined_file.unlink()
+
     for ticker in CONFIG.get("etfs", []):
         try:
-            with timed_stage(f"download {ticker}"):
+            with timed_stage(f"processing {ticker}"):
                 df = download_ticker(
                     ticker,
                     start_dt.strftime("%Y-%m-%d"),
@@ -268,36 +276,44 @@ def build_abt(frequency: str = "daily") -> dict:
                 elif frequency == "intraday":
                     df = add_session_column(df, session_labels)
                 df["Ticker"] = ticker
-                combined_frames.append(df)
-        except Exception:
-            logger.exception("Failed to download %s", ticker)
+                df = enrich_indicators(df)
 
-    if not combined_frames:
+                if frequency == "intraday":
+                    out_file = DATA_DIR / f"{ticker}_intraday.csv"
+                else:
+                    suffix = "" if frequency == "daily" else f"_{frequency}"
+                    out_file = DATA_DIR / f"{ticker}{suffix}.csv"
+
+                df.index.name = "Date"
+                df.to_csv(out_file, index_label="Date")
+                log_df_details(f"saved {out_file.stem}", df)
+                results[ticker] = out_file
+
+                if combined_columns is None:
+                    combined_columns = list(df.columns)
+                elif list(df.columns) != combined_columns:
+                    logger.warning(
+                        "Schema mismatch for %s in combined export. Expected %s, got %s",
+                        ticker,
+                        combined_columns,
+                        list(df.columns),
+                    )
+                    df = df.reindex(columns=combined_columns)
+
+                df.to_csv(
+                    combined_file,
+                    mode="a",
+                    header=not combined_file.exists(),
+                    index_label="Date",
+                )
+        except Exception:
+            logger.exception("Failed to process %s", ticker)
+
+    if not results:
         log_offline_mode(f"build_{frequency}_abt")
         return results
 
-    combined_df = pd.concat(combined_frames)
-
-    processed_frames = []
-    for ticker, group_df in combined_df.groupby("Ticker"):
-        with timed_stage(f"processing {ticker}"):
-            group_df = enrich_indicators(group_df)
-        if frequency == "intraday":
-            out_file = DATA_DIR / f"{ticker}_intraday.csv"
-        else:
-            suffix = "" if frequency == "daily" else f"_{frequency}"
-            out_file = DATA_DIR / f"{ticker}{suffix}.csv"
-        group_df.index.name = "Date"
-        group_df.to_csv(out_file, index_label="Date")
-        log_df_details(f"saved {out_file.stem}", group_df)
-        results[ticker] = out_file
-        processed_frames.append(group_df)
-
-    combined_processed = pd.concat(processed_frames)
-    combined_file = DATA_DIR / ("etfs_combined_intraday.csv" if frequency == "intraday" else f"etfs_combined{'' if frequency == 'daily' else f'_{frequency}'}.csv")
-    combined_processed.index.name = "Date"
-    combined_processed.to_csv(combined_file, index_label="Date")
-    log_df_details(f"saved {combined_file.stem}", combined_processed)
+    logger.info("saved %s", combined_file)
     results["combined"] = combined_file
 
     log_offline_mode(f"build_{frequency}_abt")
