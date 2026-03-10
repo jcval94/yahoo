@@ -1218,23 +1218,20 @@ def _write_viz_manifest(datasets: List["pd.DataFrame | None"]) -> None:
     logger.info("Saved visualization manifest to %s", VIZ_DIR / "manifest.json")
 
 def _copy_viz_files() -> None:
-    """Copy generated assets to the docs directory."""
-    asset_paths = list(VIZ_DIR.glob("*.svg"))
-    asset_paths.extend(
-        [
-            p
-            for p in [
-                VIZ_DIR / "strategy_performance.csv",
-                VIZ_DIR / "action_recommendations.csv",
-                VIZ_DIR / "pipeline_health.csv",
-                VIZ_DIR / "last_run_report.json",
-            ]
-            if p.exists()
-        ]
-    )
-    manifest_file = VIZ_DIR / "manifest.json"
-    if manifest_file.exists():
-        asset_paths.append(manifest_file)
+    """Copy generated visualization assets to the docs directory."""
+    key_files = [
+        VIZ_DIR / "pipeline_health.csv",
+        VIZ_DIR / "last_run_report.json",
+        VIZ_DIR / "manifest.json",
+    ]
+
+    # Keep docs/viz in sync with the latest generated tables and charts.
+    asset_paths = list(VIZ_DIR.glob("*.csv"))
+    asset_paths.extend(VIZ_DIR.glob("*.svg"))
+    asset_paths.extend(path for path in key_files if path.exists())
+
+    # Preserve order while removing duplicates.
+    asset_paths = list(dict.fromkeys(asset_paths))
 
     for asset_file in asset_paths:
         target = DOCS_VIZ_DIR / asset_file.name

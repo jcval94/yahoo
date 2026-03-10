@@ -27,6 +27,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
+
+      - name: Verify docs/viz freshness before upload
+        run: |
+          echo "Deploying commit: ${GITHUB_SHA}"
+          test -f docs/viz/pipeline_health.csv
+          python - <<'PYVAL'
+          import pandas as pd
+          from pathlib import Path
+          df = pd.read_csv(Path('docs/viz/pipeline_health.csv'))
+          if df.empty:
+              raise SystemExit('docs/viz/pipeline_health.csv is empty')
+          print('docs/viz run_date:', df.iloc[0].get('run_date'))
+          PYVAL
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

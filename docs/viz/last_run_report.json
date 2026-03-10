@@ -1,41 +1,200 @@
 {
-  "generated_at": "2026-03-07T02:14:55.479595+00:00",
-  "run_date": "2026-03-07",
+  "generated_at": "2026-03-10T21:07:35.290657+00:00",
+  "run_date": "2026-03-10",
   "artifacts": {
-    "predictions_file": "2026-03-07_daily_predictions.csv",
+    "predictions_file": "2026-03-10_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-03-06.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-07",
-    "duration_minutes": 5.58,
-    "success_pct": 40.0,
-    "successful_steps": 2,
+    "run_date": "2026-03-10",
+    "duration_minutes": 0.0,
+    "success_pct": 100.0,
+    "successful_steps": 5,
     "total_steps": 5,
     "fallback_offline": "Posible fallback (predicción vacía)",
-    "status": "CRÍTICO"
+    "status": "SALUDABLE"
   },
   "summary": {
     "actions": {
-      "BUY": 0,
-      "SELL": 0,
-      "HOLD": 0
+      "BUY": 7,
+      "SELL": 12,
+      "HOLD": 11
     },
     "quality_5d": {
       "Acierto": 0,
       "Fallo": 0,
-      "Pendiente": 0
+      "Pendiente": 30
     },
-    "recommended_tickers": 0,
-    "strategies_ranked": 0,
+    "recommended_tickers": 30,
+    "strategies_ranked": 5,
     "edge_coverage": {
       "rows": 106,
       "tickers": 30,
-      "models": 6
+      "models": 6,
+      "by_model": [
+        {
+          "model": "Top3Ensamble",
+          "rows": 30,
+          "tickers": 30
+        },
+        {
+          "model": "lgbm",
+          "rows": 23,
+          "tickers": 23
+        },
+        {
+          "model": "arima",
+          "rows": 21,
+          "tickers": 21
+        },
+        {
+          "model": "rf",
+          "rows": 17,
+          "tickers": 17
+        },
+        {
+          "model": "xgb",
+          "rows": 13,
+          "tickers": 13
+        },
+        {
+          "model": "linreg",
+          "rows": 2,
+          "tickers": 2
+        }
+      ]
     }
   },
-  "top_recommendations": [],
-  "strategy_leaderboard": [],
+  "top_recommendations": [
+    {
+      "ticker": "ASML",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "GOOGL",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "JNJ",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "META",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "MSFT",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "PLTR",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "V",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "COST",
+      "action": "HOLD",
+      "strategy_score": 2.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "ORCL",
+      "action": "HOLD",
+      "strategy_score": 2.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "UNH",
+      "action": "HOLD",
+      "strategy_score": 2.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    }
+  ],
+  "strategy_leaderboard": [
+    {
+      "strategy": "winner_take_all",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    {
+      "strategy": "top3_ensemble",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    {
+      "strategy": "consensus_vote",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    {
+      "strategy": "risk_adjusted_edge",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    {
+      "strategy": "downtrend_rebound",
+      "ending_equity": 0.0,
+      "return_pct": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    }
+  ],
   "model_metrics": [
     {
       "model": "NEE_arima",
