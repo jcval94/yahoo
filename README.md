@@ -152,6 +152,19 @@ Además, existen scripts de selección y predicción en la raíz del paquete que
   python -m src.abt.build_abt
   ```
   Es posible pasar `--frequency weekly` o `--frequency monthly` para obtener la ABT agregada en esas periodicidades.
+
+  **Configuracion de cola de recálculo (`safety_rows`)**
+  - El ABT incremental calcula `recalc_rows` como `max(window_max + margen, min_safety_rows)`.
+  - `window_max` se obtiene de las features activas (actualmente 90), por lo que no se recalcula de más cuando no hace falta.
+  - En `config.yaml` puede definir:
+    - `recalc.min_safety_rows`: mínimo global.
+    - `recalc.safety_rows_by_frequency.daily|weekly|monthly|intraday`: override por frecuencia.
+  - Regla práctica para elegir `safety_rows`:
+    - **daily**: 120-220 con features estándar.
+    - **weekly**: 60-140 (menos ruido y menos puntos).
+    - **monthly**: 40-80 suele bastar.
+    - **intraday**: 250-500 si hay alta densidad de features rolling por sesión.
+  - Si aumenta el número de features de lag/rolling, incremente el mínimo para evitar diferencias entre rebuild incremental y full rebuild.
   Esto descarga datos históricos y agrega indicadores técnicos. Antes de ejecutarlo, puede editar `config.yaml` para cambiar los tickers o el rango de fechas. Durante la ejecución se imprimen las primeras filas de cada DataFrame y sus dimensiones, de modo que se pueda seguir el avance.
    La ABT final incluye ademas las nuevas variables de rezago (1, 7 y 14 dias) y las medias moviles de 13 y 26 dias del cierre.
    Tambien se agregan columnas booleanas que marcan feriados (`is_holiday`, `next_is_holiday`, `prev_is_holiday`), el dia de elecciones en EE.UU. (`is_election_day`, `next_is_election_day`) y el cierre de mes (`is_month_end`).

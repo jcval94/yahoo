@@ -39,6 +39,13 @@ session_labels:
   midday: "midday"
   close: "close"
   after_hours: "after_hours"
+recalc:
+  min_safety_rows: 180
+  safety_rows_by_frequency:
+    daily: 180
+    weekly: 120
+    monthly: 60
+    intraday: 320
 risk_free_rate: 0.015
 data_dir: "data"
 model_dir: "models/daily"

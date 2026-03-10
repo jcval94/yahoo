@@ -11,11 +11,21 @@ from .utils import log_df_details
 logger = logging.getLogger(__name__)
 
 
-def get_feature_recalc_rows(safety_rows: int = 180) -> int:
-    """Return a safe recomputation tail for rolling/lag features.
+def get_feature_recalc_rows(safety_rows: int = 180, safety_margin: int = 1) -> tuple[int, int]:
+    """Return a safe recomputation tail and the max active feature window.
 
-    ``safety_rows`` can be increased from the CLI/config to accommodate future
-    wider windows without changing this module.
+    Parameters
+    ----------
+    safety_rows:
+        Minimum recomputation tail requested from CLI/config.
+    safety_margin:
+        Extra rows on top of the largest active window.
+
+    Returns
+    -------
+    tuple[int, int]
+        ``(recalc_rows, window_max)`` where ``window_max`` is the largest active
+        feature window and ``recalc_rows`` is the effective tail to recompute.
     """
     feature_windows = [
         5,
@@ -30,8 +40,10 @@ def get_feature_recalc_rows(safety_rows: int = 180) -> int:
         60,
         90,
     ]
-    min_required = max(feature_windows) + 1
-    return max(int(safety_rows), min_required)
+    window_max = max(feature_windows)
+    min_required = window_max + 1
+    recalc_rows = max(int(safety_rows), window_max + int(safety_margin), min_required)
+    return recalc_rows, window_max
 
 
 def _us_election_days(start: pd.Timestamp, end: pd.Timestamp) -> pd.DatetimeIndex:

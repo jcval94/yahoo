@@ -282,7 +282,22 @@ def _new_data_start(last_ts: pd.Timestamp, frequency: str) -> str:
         next_ts = last_ts + pd.Timedelta(days=1)
     return pd.Timestamp(next_ts).strftime("%Y-%m-%d")
 
-def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows: int = 180) -> dict:
+def _resolve_safety_rows(frequency: str, cli_safety_rows: int | None = None) -> int:
+    """Resolve safety rows from CLI/config, allowing frequency-specific overrides."""
+    recalc_cfg = CONFIG.get("recalc", {}) if isinstance(CONFIG.get("recalc", {}), dict) else {}
+    per_freq = recalc_cfg.get("safety_rows_by_frequency", {})
+    min_default = recalc_cfg.get("min_safety_rows", 180)
+
+    if cli_safety_rows is not None:
+        return int(cli_safety_rows)
+
+    if isinstance(per_freq, dict) and frequency in per_freq:
+        return int(per_freq[frequency])
+
+    return int(min_default)
+
+
+def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows: int | None = None) -> dict:
     """Build analytic base tables for all tickers defined in the config."""
     results = {}
 
@@ -300,7 +315,15 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
     config_start = pd.to_datetime(CONFIG["start_date"])
     start_dt = max(config_start, five_years_ago)
 
-    recalc_rows = get_feature_recalc_rows(safety_rows)
+    min_recalc_rows = _resolve_safety_rows(frequency, safety_rows)
+    recalc_rows, window_max = get_feature_recalc_rows(min_recalc_rows)
+    logger.info(
+        "Recalc rows resolved for %s: window_max=%s, min_recalc=%s, effective=%s",
+        frequency,
+        window_max,
+        min_recalc_rows,
+        recalc_rows,
+    )
 
     processed_frames = []
     for ticker in CONFIG.get("etfs", []):
@@ -368,12 +391,12 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
     return results
 
 
-def build_weekly_abt(full_rebuild: bool = False, safety_rows: int = 180) -> dict:
+def build_weekly_abt(full_rebuild: bool = False, safety_rows: int | None = None) -> dict:
     """Build weekly analytic base tables for configured tickers."""
     return build_abt("weekly", full_rebuild=full_rebuild, safety_rows=safety_rows)
 
 
-def build_monthly_abt(full_rebuild: bool = False, safety_rows: int = 180) -> dict:
+def build_monthly_abt(full_rebuild: bool = False, safety_rows: int | None = None) -> dict:
     """Build monthly analytic base tables for configured tickers."""
     return build_abt("monthly", full_rebuild=full_rebuild, safety_rows=safety_rows)
 
@@ -403,8 +426,8 @@ def main():
     parser.add_argument(
         "--safety-rows",
         type=int,
-        default=180,
-        help="cola de seguridad de filas para recalcular features rolling/lags",
+        default=None,
+        help="cola de seguridad de filas para recalcular features rolling/lags (override opcional)",
     )
     args = parser.parse_args()
 
