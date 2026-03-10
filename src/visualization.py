@@ -67,6 +67,8 @@ EDGE_METRICS_DIR = Path(__file__).resolve().parents[1] / "results" / "edge_metri
 ACTIONS_DIR = Path(__file__).resolve().parents[1] / "results" / "actions"
 VIZ_DIR = Path(__file__).resolve().parents[1] / "results" / "viz"
 VIZ_DIR.mkdir(exist_ok=True, parents=True)
+STRATEGY_DETAILS_DIR = VIZ_DIR / "strategy_performance"
+STRATEGY_DETAILS_DIR.mkdir(exist_ok=True, parents=True)
 DOCS_VIZ_DIR = Path(__file__).resolve().parents[1] / "docs" / "viz"
 DOCS_VIZ_DIR.mkdir(exist_ok=True, parents=True)
 
@@ -628,6 +630,89 @@ def prepare_pipeline_health() -> "pd.DataFrame | None":
     out.to_csv(out_file, index=False)
     logger.info("Saved pipeline health data to %s", out_file)
     return out
+
+
+def prepare_strategy_performance_details(
+    strategy_df: "pd.DataFrame | None",
+    action_df: "pd.DataFrame | None",
+) -> None:
+    """Write detail tables (budget/action/history) used in strategy performance tab."""
+    if pd is None:
+        return
+
+    STRATEGY_DETAILS_DIR.mkdir(parents=True, exist_ok=True)
+    budget_file = STRATEGY_DETAILS_DIR / "budget_and_action.csv"
+    history_file = STRATEGY_DETAILS_DIR / "action_history.csv"
+
+    budget_rows: list[dict] = []
+    if strategy_df is not None and not getattr(strategy_df, "empty", True):
+        for _, row in strategy_df.iterrows():
+            budget_rows.append(
+                {
+                    "strategy": row.get("strategy", "n/a"),
+                    "initial_budget": float(row.get("initial_budget", 0.0) or 0.0),
+                    "ending_equity": float(row.get("ending_equity", 0.0) or 0.0),
+                    "return_pct": float(row.get("return_pct", 0.0) or 0.0),
+                }
+            )
+
+    latest_action = "SIN DATOS"
+    latest_action_date = "n/a"
+    action_counts = {"BUY": 0, "SELL": 0, "HOLD": 0}
+    if action_df is not None and not getattr(action_df, "empty", True):
+        frame = action_df.copy()
+        frame["date"] = pd.to_datetime(frame.get("date"), errors="coerce")
+        frame = frame.dropna(subset=["date"])
+        if not frame.empty:
+            max_date = frame["date"].max()
+            latest_rows = frame[frame["date"] == max_date].copy()
+            latest_action_date = pd.Timestamp(max_date).date().isoformat()
+            if "action" in latest_rows.columns:
+                latest_rows["action"] = latest_rows["action"].fillna("HOLD").astype(str).str.upper()
+                counts = latest_rows["action"].value_counts().to_dict()
+                for key in action_counts:
+                    action_counts[key] = int(counts.get(key, 0))
+                latest_action = max(action_counts, key=action_counts.get)
+
+    budget_df = pd.DataFrame(budget_rows)
+    if budget_df.empty:
+        budget_df = pd.DataFrame(
+            [{"strategy": "n/a", "initial_budget": 0.0, "ending_equity": 0.0, "return_pct": 0.0}]
+        )
+
+    budget_df["latest_action"] = latest_action
+    budget_df["latest_action_date"] = latest_action_date
+    budget_df["buy_count"] = action_counts["BUY"]
+    budget_df["sell_count"] = action_counts["SELL"]
+    budget_df["hold_count"] = action_counts["HOLD"]
+    budget_df.to_csv(budget_file, index=False)
+
+    if action_df is not None and not getattr(action_df, "empty", True):
+        history = action_df.copy()
+        history["date"] = pd.to_datetime(history.get("date"), errors="coerce")
+        history = history.dropna(subset=["date"])
+        if "action" in history.columns:
+            history["action"] = history["action"].fillna("HOLD").astype(str).str.upper()
+        history = (
+            history.groupby("date", as_index=False)
+            .agg(
+                buy_count=("action", lambda s: int((s == "BUY").sum())),
+                sell_count=("action", lambda s: int((s == "SELL").sum())),
+                hold_count=("action", lambda s: int((s == "HOLD").sum())),
+                tickers=("ticker", "nunique"),
+                avg_strategy_score=("strategy_score", "mean"),
+            )
+            .sort_values("date", ascending=False)
+        )
+        history["date"] = history["date"].dt.strftime("%Y-%m-%d")
+        history["avg_strategy_score"] = pd.to_numeric(history["avg_strategy_score"], errors="coerce").fillna(0.0).round(4)
+    else:
+        history = pd.DataFrame(
+            [{"date": "n/a", "buy_count": 0, "sell_count": 0, "hold_count": 0, "tickers": 0, "avg_strategy_score": 0.0}]
+        )
+
+    history.to_csv(history_file, index=False)
+    logger.info("Saved strategy performance detail tables to %s", STRATEGY_DETAILS_DIR)
 
 
 def prepare_action_recommendations() -> "pd.DataFrame | None":
@@ -1337,6 +1422,16 @@ def _copy_viz_files() -> None:
         except Exception as exc:  # pragma: no cover - safeguard
             logger.warning("Failed to copy %s: %s", asset_file, exc)
 
+    for nested_file in STRATEGY_DETAILS_DIR.glob("*.csv"):
+        target_dir = DOCS_VIZ_DIR / STRATEGY_DETAILS_DIR.name
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / nested_file.name
+        try:
+            shutil.copy2(nested_file, target)
+            logger.info("Copied %s to %s", nested_file.name, target)
+        except Exception as exc:  # pragma: no cover - safeguard
+            logger.warning("Failed to copy %s: %s", nested_file, exc)
+
 
 def create_viz_tables() -> None:
     """Generate all visualization tables."""
@@ -1352,6 +1447,7 @@ def create_viz_tables() -> None:
     strategy_df = prepare_strategy_performance()
     health_df = prepare_pipeline_health()
     action_df = prepare_action_recommendations()
+    prepare_strategy_performance_details(strategy_df, action_df)
 
     _plot_candlestick(candle_df, VIZ_DIR / "candlestick.png")
     _plot_pred_vs_real(pred_df, VIZ_DIR / "pred_vs_real.png")

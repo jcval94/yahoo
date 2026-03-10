@@ -115,6 +115,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  const renderStrategyBudgetAction = (rows) => {
+    const tableBody = document.querySelector('#strategy-budget-action-table tbody');
+    if (!tableBody) return;
+
+    if (!rows.length) {
+      tableBody.innerHTML = '<tr><td colspan="9">No hay datos disponibles.</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = rows.map((row) => `
+      <tr>
+        <td>${row.strategy || '-'}</td>
+        <td>$${Number(row.initial_budget || 0).toFixed(2)}</td>
+        <td>$${Number(row.ending_equity || 0).toFixed(2)}</td>
+        <td>${Number(row.return_pct || 0).toFixed(2)}%</td>
+        <td><span class="action-badge action-${String(row.latest_action || 'HOLD').toLowerCase()}">${row.latest_action || 'HOLD'}</span></td>
+        <td>${row.latest_action_date || 'n/a'}</td>
+        <td>${Number(row.buy_count || 0)}</td>
+        <td>${Number(row.sell_count || 0)}</td>
+        <td>${Number(row.hold_count || 0)}</td>
+      </tr>
+    `).join('');
+  };
+
+  const renderStrategyActionHistory = (rows) => {
+    const tableBody = document.querySelector('#strategy-action-history-table tbody');
+    if (!tableBody) return;
+
+    if (!rows.length) {
+      tableBody.innerHTML = '<tr><td colspan="6">No hay datos disponibles.</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = rows.map((row) => `
+      <tr>
+        <td>${row.date || 'n/a'}</td>
+        <td>${Number(row.buy_count || 0)}</td>
+        <td>${Number(row.sell_count || 0)}</td>
+        <td>${Number(row.hold_count || 0)}</td>
+        <td>${Number(row.tickers || 0)}</td>
+        <td>${Number(row.avg_strategy_score || 0).toFixed(4)}</td>
+      </tr>
+    `).join('');
+  };
+
   const renderPipelineHealth = (rows) => {
     const row = rows[0] || null;
     const runDate = document.getElementById('health-run-date');
@@ -577,6 +622,14 @@ document.addEventListener('DOMContentLoaded', () => {
           .then((r) => r.ok ? r.json() : null)
           .then((report) => renderLastRunReport(report))
           .catch(() => renderLastRunReport(null)),
+        fetch(`viz/strategy_performance/budget_and_action.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
+          .then((r) => r.ok ? r.text() : '')
+          .then((text) => renderStrategyBudgetAction(parseCsv(text)))
+          .catch(() => renderStrategyBudgetAction([])),
+        fetch(`viz/strategy_performance/action_history.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
+          .then((r) => r.ok ? r.text() : '')
+          .then((text) => renderStrategyActionHistory(parseCsv(text)))
+          .catch(() => renderStrategyActionHistory([])),
       ]);
     })
     .catch(() => {
@@ -584,6 +637,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderStrategyPerformance([]);
       renderActionRecommendations([]);
       renderLastRunReport(null);
+      renderStrategyBudgetAction([]);
+      renderStrategyActionHistory([]);
       // Keep page functional even if manifest isn't available.
     });
 });
