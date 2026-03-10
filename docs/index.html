@@ -141,127 +141,147 @@
       <div class="section-heading">
         <p class="eyebrow">Advanced analytics</p>
         <h2>Diagnóstico integral de modelos</h2>
+      </div>
+
+      <p>Esta vista concentra el detalle operativo para no sobrecargar la portada.</p>
+      <div class="subtab-nav" role="tablist" aria-label="Subsecciones de diagnóstico visual">
+        <button class="subtab-button is-active" type="button" data-subtab-target="charts">Gráficas</button>
+        <button class="subtab-button" type="button" data-subtab-target="recommendations">Recomendaciones</button>
+        <button class="subtab-button" type="button" data-subtab-target="operational-quality">Calidad operativa</button>
+      </div>
+
+      <section class="subtab-panel" data-subtab-panel="charts">
         <p class="window-note">Todas las gráficas usan una ventana temporal fija de <span id="window-days">120</span> días (<span id="window-range">cargando rango...</span>) para mantener comparabilidad ejecutiva y reflejar la última ejecución disponible.</p>
-      </div>
-
-      <p>Esta vista concentra el detalle operativo para no sobrecargar la portada. Usa el selector para revisar una visualización a la vez.</p>
-      <div class="analysis-selector" role="tablist" aria-label="Selector de gráficas avanzadas">
-        <button class="analysis-selector-button is-active" type="button" data-analysis-target="error-heatmap">Error heatmap</button>
-        <button class="analysis-selector-button" type="button" data-analysis-target="direction-accuracy">Acierto direccional</button>
-        <button class="analysis-selector-button" type="button" data-analysis-target="residual-distribution">Residuales</button>
-        <button class="analysis-selector-button" type="button" data-analysis-target="mae-trend">Tendencia MAE</button>
-        <button class="analysis-selector-button" type="button" data-analysis-target="risk-return">Riesgo-retorno</button>
-        <button class="analysis-selector-button" type="button" data-analysis-target="driver-stability">Drivers</button>
-        <button class="analysis-selector-button" type="button" data-analysis-target="coverage">Cobertura</button>
-      </div>
-      <div class="viz-analysis-grid">
-        <article class="viz-analysis-card is-active" data-analysis-panel="error-heatmap">
-          <figure class="viz-card">
-            <img src="viz/error_heatmap.svg" alt="Heatmap de MAE por ticker y modelo" loading="lazy">
-            <figcaption>Error por combinación ticker-modelo.</figcaption>
-          </figure>
-          <aside class="viz-explainer">
-            <h4>Cómo interpretarla</h4>
-            <p>Colores más intensos indican mayor error medio absoluto. Si un ticker permanece en tonos cálidos para varios modelos, suele señalar que el problema está en la calidad/señal del activo más que en un algoritmo puntual.</p>
-          </aside>
-        </article>
-
-        <article class="viz-analysis-card is-hidden" data-analysis-panel="direction-accuracy">
-          <figure class="viz-card">
-            <img src="viz/direction_accuracy.svg" alt="Accuracy direccional por ticker y modelo" loading="lazy">
-            <figcaption>Acierto direccional (sube/baja).</figcaption>
-          </figure>
-          <aside class="viz-explainer">
-            <h4>Cómo interpretarla</h4>
-            <p>Valores cercanos a 100% implican alta consistencia direccional. Si un modelo mantiene buen acierto aun con MAE moderado, puede seguir siendo útil para decisiones tácticas de entrada/salida.</p>
-          </aside>
-        </article>
-
-        <article class="viz-analysis-card is-hidden" data-analysis-panel="residual-distribution">
-          <figure class="viz-card">
-            <img src="viz/residual_distribution.svg" alt="Distribución de residuales por modelo" loading="lazy">
-            <figcaption>Sesgo y dispersión de residuales.</figcaption>
-          </figure>
-          <aside class="viz-explainer">
-            <h4>Cómo interpretarla</h4>
-            <p>Medianas alejadas de 0 evidencian sesgo estructural (sobre/infraestimación). Bigotes y cajas amplias indican inestabilidad del error entre activos y periodos.</p>
-          </aside>
-        </article>
-
-        <article class="viz-analysis-card is-hidden" data-analysis-panel="mae-trend">
-          <figure class="viz-card">
-            <img src="viz/mae_trend.svg" alt="Tendencia temporal de MAE por modelo" loading="lazy">
-            <figcaption>Estabilidad temporal del error.</figcaption>
-          </figure>
-          <aside class="viz-explainer">
-            <h4>Cómo interpretarla</h4>
-            <p>Tendencias descendentes reflejan aprendizaje y estabilidad; cambios de régimen con picos persistentes suelen anticipar drift de mercado o necesidad de reentrenamiento.</p>
-          </aside>
-        </article>
-
-        <article class="viz-analysis-card is-hidden" data-analysis-panel="risk-return">
-          <figure class="viz-card">
-            <img src="viz/risk_return_signals.svg" alt="Dispersión riesgo-retorno de señales" loading="lazy">
-            <figcaption>Retorno esperado vs error de señal.</figcaption>
-          </figure>
-          <aside class="viz-explainer">
-            <h4>Cómo interpretarla</h4>
-            <p>El cuadrante ideal está a la derecha-abajo (más retorno esperado con menor error). Clusters separados por color ayudan a identificar qué familia de modelos ofrece mejor frontera riesgo-retorno.</p>
-          </aside>
-        </article>
-
-        <article class="viz-analysis-card is-hidden" data-analysis-panel="driver-stability">
-          <figure class="viz-card">
-            <img src="viz/driver_stability.svg" alt="Estabilidad de drivers en el tiempo" loading="lazy">
-            <figcaption>Importancia de variables por fecha.</figcaption>
-          </figure>
-          <aside class="viz-explainer">
-            <h4>Cómo interpretarla</h4>
-            <p>Variaciones bruscas por fila indican que el modelo cambió de drivers de forma abrupta (alerta de drift conceptual). Bandas estables sugieren narrativa predictiva robusta en el tiempo.</p>
-          </aside>
-        </article>
-
-        <article class="viz-analysis-card is-hidden" data-analysis-panel="coverage">
-          <figure class="viz-card">
-            <img src="viz/operational_coverage.svg" alt="Curva de cobertura operativa" loading="lazy">
-            <figcaption>Cobertura de tickers por modelo.</figcaption>
-          </figure>
-          <aside class="viz-explainer">
-            <h4>Cómo interpretarla</h4>
-            <p>Coberturas altas y estables implican pipeline sano en datos, features y scoring. Caídas abruptas suelen asociarse a faltantes de mercado, retrasos de jobs o validaciones bloqueantes.</p>
-          </aside>
-        </article>
-      </div>
-
-      <div class="section-heading prediction-heading">
-        <p class="eyebrow">Trading actions</p>
-        <h3>Acciones sugeridas por ticker</h3>
-      </div>
-      <p>En esta vista se habilitan filtros y ordenamiento para revisar recomendaciones sin saturar la portada principal.</p>
-      <article class="table-card table-card-wide">
-        <h4>Acción por ticker</h4>
-        <div id="action-table-controls" class="table-controls" aria-label="Controles de filtros y ordenamiento"></div>
-        <div class="table-wrap">
-          <table id="action-recommendations-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Ticker</th>
-                <th>Score</th>
-                <th>Acción</th>
-                <th>Resultado 1d</th>
-                <th>Resultado 5d</th>
-                <th>Resultado 20d</th>
-                <th>Calidad 5d</th>
-                <th class="model-prediction-col">Predicciones por modelo</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="9">Cargando datos...</td></tr>
-            </tbody>
-          </table>
+        <p>Usa el selector para revisar una visualización a la vez.</p>
+        <div class="analysis-selector" role="tablist" aria-label="Selector de gráficas avanzadas">
+          <button class="analysis-selector-button is-active" type="button" data-analysis-target="error-heatmap">Error heatmap</button>
+          <button class="analysis-selector-button" type="button" data-analysis-target="direction-accuracy">Acierto direccional</button>
+          <button class="analysis-selector-button" type="button" data-analysis-target="residual-distribution">Residuales</button>
+          <button class="analysis-selector-button" type="button" data-analysis-target="mae-trend">Tendencia MAE</button>
+          <button class="analysis-selector-button" type="button" data-analysis-target="risk-return">Riesgo-retorno</button>
+          <button class="analysis-selector-button" type="button" data-analysis-target="driver-stability">Drivers</button>
+          <button class="analysis-selector-button" type="button" data-analysis-target="coverage">Cobertura</button>
         </div>
-      </article>
+        <div class="viz-analysis-grid">
+          <article class="viz-analysis-card is-active" data-analysis-panel="error-heatmap">
+            <figure class="viz-card">
+              <img src="viz/error_heatmap.svg" alt="Heatmap de MAE por ticker y modelo" loading="lazy">
+              <figcaption>Error por combinación ticker-modelo.</figcaption>
+            </figure>
+            <aside class="viz-explainer">
+              <h4>Cómo interpretarla</h4>
+              <p>Colores más intensos indican mayor error medio absoluto. Si un ticker permanece en tonos cálidos para varios modelos, suele señalar que el problema está en la calidad/señal del activo más que en un algoritmo puntual.</p>
+            </aside>
+          </article>
+
+          <article class="viz-analysis-card is-hidden" data-analysis-panel="direction-accuracy">
+            <figure class="viz-card">
+              <img src="viz/direction_accuracy.svg" alt="Accuracy direccional por ticker y modelo" loading="lazy">
+              <figcaption>Acierto direccional (sube/baja).</figcaption>
+            </figure>
+            <aside class="viz-explainer">
+              <h4>Cómo interpretarla</h4>
+              <p>Valores cercanos a 100% implican alta consistencia direccional. Si un modelo mantiene buen acierto aun con MAE moderado, puede seguir siendo útil para decisiones tácticas de entrada/salida.</p>
+            </aside>
+          </article>
+
+          <article class="viz-analysis-card is-hidden" data-analysis-panel="residual-distribution">
+            <figure class="viz-card">
+              <img src="viz/residual_distribution.svg" alt="Distribución de residuales por modelo" loading="lazy">
+              <figcaption>Sesgo y dispersión de residuales.</figcaption>
+            </figure>
+            <aside class="viz-explainer">
+              <h4>Cómo interpretarla</h4>
+              <p>Medianas alejadas de 0 evidencian sesgo estructural (sobre/infraestimación). Bigotes y cajas amplias indican inestabilidad del error entre activos y periodos.</p>
+            </aside>
+          </article>
+
+          <article class="viz-analysis-card is-hidden" data-analysis-panel="mae-trend">
+            <figure class="viz-card">
+              <img src="viz/mae_trend.svg" alt="Tendencia temporal de MAE por modelo" loading="lazy">
+              <figcaption>Estabilidad temporal del error.</figcaption>
+            </figure>
+            <aside class="viz-explainer">
+              <h4>Cómo interpretarla</h4>
+              <p>Tendencias descendentes reflejan aprendizaje y estabilidad; cambios de régimen con picos persistentes suelen anticipar drift de mercado o necesidad de reentrenamiento.</p>
+            </aside>
+          </article>
+
+          <article class="viz-analysis-card is-hidden" data-analysis-panel="risk-return">
+            <figure class="viz-card">
+              <img src="viz/risk_return_signals.svg" alt="Dispersión riesgo-retorno de señales" loading="lazy">
+              <figcaption>Retorno esperado vs error de señal.</figcaption>
+            </figure>
+            <aside class="viz-explainer">
+              <h4>Cómo interpretarla</h4>
+              <p>El cuadrante ideal está a la derecha-abajo (más retorno esperado con menor error). Clusters separados por color ayudan a identificar qué familia de modelos ofrece mejor frontera riesgo-retorno.</p>
+            </aside>
+          </article>
+
+          <article class="viz-analysis-card is-hidden" data-analysis-panel="driver-stability">
+            <figure class="viz-card">
+              <img src="viz/driver_stability.svg" alt="Estabilidad de drivers en el tiempo" loading="lazy">
+              <figcaption>Importancia de variables por fecha.</figcaption>
+            </figure>
+            <aside class="viz-explainer">
+              <h4>Cómo interpretarla</h4>
+              <p>Variaciones bruscas por fila indican que el modelo cambió de drivers de forma abrupta (alerta de drift conceptual). Bandas estables sugieren narrativa predictiva robusta en el tiempo.</p>
+            </aside>
+          </article>
+
+          <article class="viz-analysis-card is-hidden" data-analysis-panel="coverage">
+            <figure class="viz-card">
+              <img src="viz/operational_coverage.svg" alt="Curva de cobertura operativa" loading="lazy">
+              <figcaption>Cobertura de tickers por modelo.</figcaption>
+            </figure>
+            <aside class="viz-explainer">
+              <h4>Cómo interpretarla</h4>
+              <p>Coberturas altas y estables implican pipeline sano en datos, features y scoring. Caídas abruptas suelen asociarse a faltantes de mercado, retrasos de jobs o validaciones bloqueantes.</p>
+            </aside>
+          </article>
+        </div>
+      </section>
+
+      <section class="subtab-panel is-hidden" data-subtab-panel="recommendations">
+        <div class="section-heading prediction-heading">
+          <p class="eyebrow">Trading actions</p>
+          <h3>Acciones sugeridas por ticker</h3>
+        </div>
+        <p>En esta vista se habilitan filtros y ordenamiento para revisar recomendaciones sin saturar la portada principal.</p>
+        <article class="table-card table-card-wide">
+          <h4>Acción por ticker</h4>
+          <div id="action-table-controls" class="table-controls" aria-label="Controles de filtros y ordenamiento"></div>
+          <div class="table-wrap">
+            <table id="action-recommendations-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Ticker</th>
+                  <th>Score</th>
+                  <th>Acción</th>
+                  <th>Resultado 1d</th>
+                  <th>Resultado 5d</th>
+                  <th>Resultado 20d</th>
+                  <th>Calidad 5d</th>
+                  <th class="model-prediction-col">Predicciones por modelo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="9">Cargando datos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="subtab-panel is-hidden" data-subtab-panel="operational-quality">
+        <div class="section-heading prediction-heading">
+          <p class="eyebrow">Operations</p>
+          <h3>Calidad operativa</h3>
+        </div>
+        <p>Concentra señales de robustez para validar que el sistema se mantiene utilizable en producción: estabilidad de cobertura, continuidad de scoreo y capacidad de respuesta ante cambios de régimen.</p>
+        <p>Úsala para priorizar investigación cuando observes quiebres simultáneos entre cobertura, error y consistencia de drivers.</p>
+      </section>
     </section>
 
 

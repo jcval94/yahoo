@@ -15,17 +15,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   revealItems.forEach((item) => observer.observe(item));
 
-  const tabButtons = document.querySelectorAll('.tab-button');
-  const tabPanels = document.querySelectorAll('.tab-panel');
-  tabButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const target = button.getAttribute('data-tab-target');
-      tabButtons.forEach((b) => b.classList.toggle('is-active', b === button));
-      tabPanels.forEach((panel) => {
-        const panelName = panel.getAttribute('data-tab-panel');
-        panel.classList.toggle('is-hidden', panelName !== target);
+  const wireToggleTabs = ({ buttonSelector, panelSelector, targetAttr, panelAttr }) => {
+    const buttons = document.querySelectorAll(buttonSelector);
+    const panels = document.querySelectorAll(panelSelector);
+    if (!buttons.length || !panels.length) return;
+
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const target = button.getAttribute(targetAttr);
+        buttons.forEach((item) => item.classList.toggle('is-active', item === button));
+        panels.forEach((panel) => {
+          const panelName = panel.getAttribute(panelAttr);
+          panel.classList.toggle('is-hidden', panelName !== target);
+        });
       });
     });
+  };
+
+  wireToggleTabs({
+    buttonSelector: '.tab-button',
+    panelSelector: '.tab-panel',
+    targetAttr: 'data-tab-target',
+    panelAttr: 'data-tab-panel',
+  });
+
+  wireToggleTabs({
+    buttonSelector: '.subtab-button',
+    panelSelector: '.subtab-panel',
+    targetAttr: 'data-subtab-target',
+    panelAttr: 'data-subtab-panel',
   });
 
   const analysisButtons = document.querySelectorAll('.analysis-selector-button');
