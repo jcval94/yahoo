@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return score;
     };
 
-    const modelColumns = Array.from(
+    const modelGroups = Array.from(
       rows.reduce((allColumns, row) => {
         Object.keys(row || {}).forEach((key) => {
           if (key.startsWith('pred_')) {
@@ -180,23 +180,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }, new Set())
     )
       .sort((a, b) => a.localeCompare(b))
-      .reduce((dedupedColumns, columnName) => {
+      .reduce((groups, columnName) => {
         const canonicalName = canonicalModelName(columnName);
-        const existing = dedupedColumns.find((entry) => entry.canonicalName === canonicalName);
+        const existing = groups.find((entry) => entry.canonicalName === canonicalName);
         if (!existing) {
-          dedupedColumns.push({ canonicalName, columnName });
-          return dedupedColumns;
+          groups.push({
+            canonicalName,
+            labelColumn: columnName,
+            sourceColumns: [columnName],
+          });
+          return groups;
         }
-        if (scoreModelColumn(columnName) > scoreModelColumn(existing.columnName)) {
-          existing.columnName = columnName;
+
+        existing.sourceColumns.push(columnName);
+        if (scoreModelColumn(columnName) > scoreModelColumn(existing.labelColumn)) {
+          existing.labelColumn = columnName;
         }
-        return dedupedColumns;
-      }, [])
-      .map((entry) => entry.columnName);
+        return groups;
+      }, []);
 
     const allColumns = [
       ...staticColumns,
-      ...modelColumns.map((col) => ({ key: col, label: col.replace('pred_', '').toUpperCase(), type: 'number' })),
+      ...modelGroups.map((group) => ({
+        key: group.canonicalName,
+        label: group.labelColumn.replace('pred_', '').toUpperCase(),
+        type: 'number',
+      })),
     ];
 
     const controls = document.getElementById('action-table-controls');
@@ -218,17 +227,32 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderRows = () => {
+      const getColumnValue = (row, key) => {
+        const modelGroup = modelGroups.find((group) => group.canonicalName === key);
+        if (!modelGroup) return row[key];
+
+        const preferredSourceColumns = [...modelGroup.sourceColumns]
+          .sort((a, b) => scoreModelColumn(b) - scoreModelColumn(a));
+        for (const sourceKey of preferredSourceColumns) {
+          const value = row[sourceKey];
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            return value;
+          }
+        }
+        return '';
+      };
+
       const filtered = rows.filter((row) => allColumns.every((column) => {
         const filterValue = (state.filters[column.key] || '').toString().trim().toLowerCase();
         if (!filterValue) return true;
-        return String(row[column.key] || '').toLowerCase().includes(filterValue);
+        return String(getColumnValue(row, column.key) || '').toLowerCase().includes(filterValue);
       }));
 
       const sorted = [...filtered].sort((left, right) => {
         if (!state.sortKey) return 0;
         const column = allColumns.find((col) => col.key === state.sortKey);
-        const leftValue = parseComparable(left[state.sortKey], column?.type || 'text');
-        const rightValue = parseComparable(right[state.sortKey], column?.type || 'text');
+        const leftValue = parseComparable(getColumnValue(left, state.sortKey), column?.type || 'text');
+        const rightValue = parseComparable(getColumnValue(right, state.sortKey), column?.type || 'text');
         if (leftValue === rightValue) {
           if (state.sortKey === 'date') {
             const leftScore = parseComparable(left.strategy_score, 'number');
@@ -271,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (nextButton) nextButton.disabled = state.page >= totalPages;
 
       if (!sorted.length) {
-        const totalColumns = staticColumns.length + (modelColumns.length || 1);
+        const totalColumns = staticColumns.length + (modelGroups.length || 1);
         tableBody.innerHTML = `<tr><td colspan="${totalColumns}">No hay filas para los filtros seleccionados.</td></tr>`;
         return;
       }
@@ -290,7 +314,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<td>${column.formatter ? column.formatter(value) : value}</td>`;
           });
 
-          const modelCells = modelColumns.map((col) => `<td class="model-predictions">${row[col] || '-'}</td>`);
+          const modelCells = modelGroups.map((group) => {
+            const value = getColumnValue(row, group.canonicalName);
+            return `<td class="model-predictions">${value || '-'}</td>`;
+          });
 
           return `
             <tr>
@@ -399,11 +426,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tableHeadRow.innerHTML = [
       ...staticColumns.map((column) => `<th>${column.label}</th>`),
-      ...modelColumns.map((col) => `<th class="model-prediction-col">${col.replace('pred_', '').toUpperCase()}</th>`),
+      ...modelGroups.map((group) => `<th class="model-prediction-col">${group.labelColumn.replace('pred_', '').toUpperCase()}</th>`),
     ].join('');
 
     if (!rows.length) {
-      const totalColumns = staticColumns.length + (modelColumns.length || 1);
+      const totalColumns = staticColumns.length + (modelGroups.length || 1);
       tableBody.innerHTML = `<tr><td colspan="${totalColumns}">No hay datos disponibles.</td></tr>`;
       return;
     }
