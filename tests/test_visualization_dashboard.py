@@ -324,3 +324,32 @@ def test_prepare_strategy_performance_accepts_backtest_alias_columns(tmp_path, m
     assert float(row["return_pct"]) == 11.0
     assert float(row["win_rate"]) == 60.0
     assert float(row["max_drawdown"]) == 0.05
+
+
+def test_prepare_strategy_performance_details_creates_dedicated_folder(tmp_path, monkeypatch):
+    root = tmp_path
+    strategy_details_dir = root / "viz" / "strategy_performance"
+    strategy_df = pd.DataFrame([
+        {"strategy": "winner_take_all", "initial_budget": 10000, "ending_equity": 11000, "return_pct": 10.0}
+    ])
+    action_df = pd.DataFrame([
+        {"date": "2026-03-06", "ticker": "AAA", "action": "BUY", "strategy_score": 4.1},
+        {"date": "2026-03-06", "ticker": "BBB", "action": "SELL", "strategy_score": 3.7},
+    ])
+
+    monkeypatch.setattr(viz, "STRATEGY_DETAILS_DIR", strategy_details_dir)
+
+    viz.prepare_strategy_performance_details(strategy_df, action_df)
+
+    budget_file = strategy_details_dir / "budget_and_action.csv"
+    history_file = strategy_details_dir / "action_history.csv"
+    assert budget_file.exists()
+    assert history_file.exists()
+
+    budget = pd.read_csv(budget_file)
+    assert "latest_action" in budget.columns
+    assert budget.loc[0, "latest_action_date"] == "2026-03-06"
+
+    history = pd.read_csv(history_file)
+    assert list(history.columns) == ["date", "buy_count", "sell_count", "hold_count", "tickers", "avg_strategy_score"]
+    assert int(history.loc[0, "buy_count"]) == 1
