@@ -105,6 +105,22 @@ def test_edge_evaluation_no_file(tmp_path):
     assert not metrics_main_files
 
 
+def test_edge_evaluation_empty_csv(tmp_path):
+    df = pd.DataFrame({'Close': [1, 2, 3]}, index=pd.date_range('2020-01-01', periods=3))
+    predict.RESULTS_DIR = tmp_path
+    predict.RUN_TIMESTAMP = '2025-07-09T00:00:00+00:00'
+
+    empty_file = tmp_path / 'empty.csv'
+    empty_file.write_text('')
+
+    result = predict.evaluate_edge_predictions({'TEST': df}, empty_file)
+    assert result is None
+    metrics_files = list((tmp_path / 'edge_metrics').glob('edge_metrics_*'))
+    assert not metrics_files
+    metrics_main_files = list((tmp_path / 'metrics').glob('edge_metrics_*'))
+    assert not metrics_main_files
+
+
 def test_load_models_filters_stale_tickers(tmp_path, monkeypatch):
     class _DummyModel:
         def predict(self, X):
