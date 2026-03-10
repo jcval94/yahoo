@@ -761,15 +761,30 @@ def prepare_last_run_report(
         health_row = health_df.iloc[0].to_dict()
 
     action_slice = pd.DataFrame()
+    action_selection = "none"
+    action_dates = pd.Series(dtype="datetime64[ns]")
+    selected_action_date = "n/a"
     if action_df is not None and not getattr(action_df, "empty", True):
-        if run_date != "n/a":
-            action_slice = action_df[action_df["date"] == run_date].copy()
-        if action_slice.empty:
-            max_date = pd.to_datetime(action_df["date"], errors="coerce").max()
-            if not pd.isna(max_date):
-                action_slice = action_df[pd.to_datetime(action_df["date"], errors="coerce") == max_date].copy()
-        if run_date == "n/a":
+        if "date" in action_df.columns:
+            action_dates = pd.to_datetime(action_df["date"], errors="coerce")
+            if run_date != "n/a":
+                action_slice = action_df[action_df["date"] == run_date].copy()
+                if not action_slice.empty:
+                    action_selection = "run_date_exact"
+                    selected_action_date = run_date
+            if action_slice.empty:
+                max_date = action_dates.max()
+                if not pd.isna(max_date):
+                    action_slice = action_df[action_dates == max_date].copy()
+                    if not action_slice.empty:
+                        action_selection = "max_date_fallback"
+                        selected_action_date = pd.Timestamp(max_date).date().isoformat()
+            if run_date == "n/a" and action_slice.empty:
+                action_slice = action_df.copy()
+                action_selection = "run_date_missing_all_actions"
+        else:
             action_slice = action_df.copy()
+            action_selection = "date_column_missing"
 
     strategy_rows: list[dict] = []
     if strategy_df is not None and not getattr(strategy_df, "empty", True):
@@ -847,6 +862,27 @@ def prepare_last_run_report(
         "strategy_leaderboard": strategy_rows,
         "model_metrics": metrics_summary,
     }
+
+    action_dates_clean = action_dates.dropna() if action_dates is not None else pd.Series(dtype="datetime64[ns]")
+    logger.info(
+        "last_run_report_snapshot run_date=%s action_selection=%s action_rows_total=%s "
+        "action_rows_selected=%s action_date_min=%s action_date_max=%s selected_action_date=%s "
+        "top_recommendations=%s strategy_rows=%s metrics_rows=%s edge_rows=%s edge_tickers=%s edge_models=%s edge_by_model=%s",
+        run_date,
+        action_selection,
+        0 if action_df is None else int(len(action_df)),
+        int(len(action_slice)),
+        "n/a" if action_dates_clean.empty else action_dates_clean.min().date().isoformat(),
+        "n/a" if action_dates_clean.empty else action_dates_clean.max().date().isoformat(),
+        selected_action_date,
+        len(top_recommendations),
+        len(strategy_rows),
+        len(metrics_summary),
+        edge_summary["rows"],
+        edge_summary["tickers"],
+        edge_summary["models"],
+        len(edge_summary.get("by_model", [])),
+    )
 
     report_file.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("Saved last run report to %s", report_file)

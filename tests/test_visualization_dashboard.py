@@ -201,6 +201,8 @@ def test_prepare_last_run_report_falls_back_to_latest_actions(tmp_path, monkeypa
     assert report is not None
     assert report["summary"]["recommended_tickers"] == 1
     assert report["summary"]["actions"]["BUY"] == 1
+    assert len(report["top_recommendations"]) == 1
+    assert report["top_recommendations"][0]["ticker"] == "AAA"
     assert "by_model" in report["summary"]["edge_coverage"]
 
 
