@@ -752,7 +752,29 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     model_scores, ranked_models = _load_latest_model_scores()
     stability_scores = _load_stability_scores()
 
+    def _canonical_model_name(raw_model: object) -> str:
+        model = str(raw_model or "").strip()
+        normalized = "".join(ch for ch in model.lower() if ch.isalnum())
+        aliases = {
+            "rf": "RandomForestRegressor",
+            "randomforest": "RandomForestRegressor",
+            "randomforestregressor": "RandomForestRegressor",
+            "linreg": "Ridge",
+            "linearregression": "Ridge",
+            "ridge": "Ridge",
+            "xgb": "XGBRegressor",
+            "xgbregressor": "XGBRegressor",
+            "lgbm": "LGBMRegressor",
+            "lgbmregressor": "LGBMRegressor",
+            "arima": "ARIMAModel",
+            "arimamodel": "ARIMAModel",
+            "lstm": "LSTM",
+            "lstmmodel": "LSTM",
+        }
+        return aliases.get(normalized, model)
+
     preds = preds.copy()
+    preds["model"] = preds["model"].map(_canonical_model_name)
     if "run_date" in preds.columns:
         preds["decision_date"] = pd.to_datetime(preds["run_date"], errors="coerce").dt.normalize()
     else:
@@ -760,7 +782,7 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     pred_dates = pd.to_datetime(preds.get("predicted_date"), errors="coerce").dt.normalize()
     preds["decision_date"] = preds["decision_date"].fillna(pred_dates)
     preds = preds.dropna(subset=["decision_date"]).sort_values(["decision_date", "ticker", "model"])
-    model_names = sorted(preds["model"].dropna().astype(str).unique())
+    model_names: list[str] = []
 
     closes = (
         preds[["ticker", "decision_date", "actual"]]
@@ -820,6 +842,7 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
 
     date_cutoff = preds["decision_date"].max() - pd.Timedelta(days=60)
     relevant_preds = preds[preds["decision_date"] >= date_cutoff]
+    model_names = sorted(relevant_preds["model"].dropna().astype(str).unique())
 
     rows: list[dict] = []
     for (date_value, _ticker), grp in relevant_preds.groupby(["decision_date", "ticker"]):
