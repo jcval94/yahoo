@@ -97,6 +97,19 @@ def _latest_csv(directory: Path, pattern: str) -> Path | None:
     return files[-1] if files else None
 
 
+def _latest_valid_prediction_csv() -> Path | None:
+    """Return the most recent non-empty daily prediction CSV with required fields."""
+    required = {"ticker", "actual", "pred"}
+    for candidate in sorted(PRED_DIR.glob("*_daily_predictions.csv"), reverse=True):
+        df = _safe_read_csv(candidate)
+        if df is None or df.empty:
+            continue
+        if not required.issubset(df.columns):
+            continue
+        return candidate
+    return None
+
+
 def _latest_csv_for_run_date(directory: Path, prefix: str, run_date: str) -> Path | None:
     """Return latest dated CSV for a step, preferring run_date or the nearest earlier date."""
     if pd is None:
@@ -560,7 +573,7 @@ def prepare_pipeline_health() -> "pd.DataFrame | None":
 
     evaluation_dir = EDGE_METRICS_DIR
     required_steps = 5
-    latest_pred_file = _latest_csv(PRED_DIR, "*_daily_predictions.csv")
+    latest_pred_file = _latest_valid_prediction_csv()
     out_file = VIZ_DIR / "pipeline_health.csv"
 
     if latest_pred_file is None:
@@ -739,23 +752,30 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     model_scores, ranked_models = _load_latest_model_scores()
     stability_scores = _load_stability_scores()
 
-    preds = preds.sort_values(["predicted_date", "ticker", "model"]).copy()
+    preds = preds.copy()
+    if "run_date" in preds.columns:
+        preds["decision_date"] = pd.to_datetime(preds["run_date"], errors="coerce").dt.normalize()
+    else:
+        preds["decision_date"] = pd.NaT
+    pred_dates = pd.to_datetime(preds.get("predicted_date"), errors="coerce").dt.normalize()
+    preds["decision_date"] = preds["decision_date"].fillna(pred_dates)
+    preds = preds.dropna(subset=["decision_date"]).sort_values(["decision_date", "ticker", "model"])
     model_names = sorted(preds["model"].dropna().astype(str).unique())
 
     closes = (
-        preds[["ticker", "predicted_date", "actual"]]
-        .dropna(subset=["ticker", "predicted_date", "actual"])
-        .drop_duplicates(subset=["ticker", "predicted_date"], keep="last")
-        .sort_values(["ticker", "predicted_date"])
+        preds[["ticker", "decision_date", "actual"]]
+        .dropna(subset=["ticker", "decision_date", "actual"])
+        .drop_duplicates(subset=["ticker", "decision_date"], keep="last")
+        .sort_values(["ticker", "decision_date"])
     )
 
     close_map: dict[tuple[str, str], float] = {}
     ticker_dates: dict[str, list[pd.Timestamp]] = {}
     for ticker, grp in closes.groupby("ticker"):
-        dates = list(pd.to_datetime(grp["predicted_date"]).dt.normalize())
+        dates = list(pd.to_datetime(grp["decision_date"]).dt.normalize())
         ticker_dates[str(ticker)] = dates
         for _, row in grp.iterrows():
-            close_map[(str(row["ticker"]), pd.Timestamp(row["predicted_date"]).date().isoformat())] = float(row["actual"])
+            close_map[(str(row["ticker"]), pd.Timestamp(row["decision_date"]).date().isoformat())] = float(row["actual"])
 
     def _future_return(ticker: str, date_value: pd.Timestamp, horizon: int) -> float | None:
         dates = ticker_dates.get(ticker, [])
@@ -798,11 +818,11 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
             return "BAJA"
         return "NEUTRO"
 
-    date_cutoff = preds["predicted_date"].max() - pd.Timedelta(days=60)
-    relevant_preds = preds[preds["predicted_date"] >= date_cutoff]
+    date_cutoff = preds["decision_date"].max() - pd.Timedelta(days=60)
+    relevant_preds = preds[preds["decision_date"] >= date_cutoff]
 
     rows: list[dict] = []
-    for (date_value, _ticker), grp in relevant_preds.groupby(["predicted_date", "ticker"]):
+    for (date_value, _ticker), grp in relevant_preds.groupby(["decision_date", "ticker"]):
         decision = _evaluate_strategies(grp, model_scores, ranked_models, stability_scores)
         score = float(decision["score"])
         if score >= cfg.buy_threshold:
@@ -875,7 +895,7 @@ def prepare_last_run_report(
         return None
 
     report_file = VIZ_DIR / "last_run_report.json"
-    latest_pred_file = _latest_csv(PRED_DIR, "*_daily_predictions.csv")
+    latest_pred_file = _latest_valid_prediction_csv()
     latest_metrics_file = _latest_csv(METRICS_DIR, "metrics_daily_*.csv")
     latest_edge_file = _latest_csv(EDGE_METRICS_DIR, "edge_metrics_*.csv")
 
