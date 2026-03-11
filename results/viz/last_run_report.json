@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-10T19:22:01.168344+00:00",
-  "run_date": "2026-03-10",
+  "generated_at": "2026-03-11T04:35:03.857108+00:00",
+  "run_date": "2026-03-11",
   "artifacts": {
-    "predictions_file": "2026-03-10_daily_predictions.csv",
-    "metrics_file": "metrics_daily_2026-03-10.csv",
+    "predictions_file": "2026-03-11_daily_predictions.csv",
+    "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-03-06.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-10",
-    "duration_minutes": 6.66,
+    "run_date": "2026-03-11",
+    "duration_minutes": 6.96,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -164,36 +164,127 @@
       "ending_equity": 0.0,
       "return_pct": 0.0,
       "win_rate": 0.0,
-      "max_drawdown": 0.0
+      "max_drawdown": 0.0,
+      "initial_budget": 10000.0,
+      "max_position_pct": 12.0,
+      "min_trade_usd": 300.0,
+      "holding_days": 2
     },
     {
       "strategy": "top3_ensemble",
       "ending_equity": 0.0,
       "return_pct": 0.0,
       "win_rate": 0.0,
-      "max_drawdown": 0.0
+      "max_drawdown": 0.0,
+      "initial_budget": 10000.0,
+      "max_position_pct": 12.0,
+      "min_trade_usd": 300.0,
+      "holding_days": 2
     },
     {
       "strategy": "consensus_vote",
       "ending_equity": 0.0,
       "return_pct": 0.0,
       "win_rate": 0.0,
-      "max_drawdown": 0.0
+      "max_drawdown": 0.0,
+      "initial_budget": 10000.0,
+      "max_position_pct": 12.0,
+      "min_trade_usd": 300.0,
+      "holding_days": 2
     },
     {
       "strategy": "risk_adjusted_edge",
       "ending_equity": 0.0,
       "return_pct": 0.0,
       "win_rate": 0.0,
-      "max_drawdown": 0.0
+      "max_drawdown": 0.0,
+      "initial_budget": 10000.0,
+      "max_position_pct": 12.0,
+      "min_trade_usd": 300.0,
+      "holding_days": 2
     },
     {
       "strategy": "downtrend_rebound",
       "ending_equity": 0.0,
       "return_pct": 0.0,
       "win_rate": 0.0,
-      "max_drawdown": 0.0
+      "max_drawdown": 0.0,
+      "initial_budget": 10000.0,
+      "max_position_pct": 12.0,
+      "min_trade_usd": 300.0,
+      "holding_days": 2
     }
   ],
-  "model_metrics": []
+  "model_metrics": [
+    {
+      "model": "NEE_arima",
+      "MAE": 0.9259,
+      "RMSE": 1.1678,
+      "MAPE": 0.0104,
+      "R2": 0.9321
+    },
+    {
+      "model": "NEE_lgbm",
+      "MAE": 1.0326,
+      "RMSE": 1.2841,
+      "MAPE": 0.0116,
+      "R2": 0.9178
+    },
+    {
+      "model": "NEE_rf",
+      "MAE": 1.1204,
+      "RMSE": 1.3679,
+      "MAPE": 0.0125,
+      "R2": 0.9068
+    },
+    {
+      "model": "NEE_xgb",
+      "MAE": 1.1238,
+      "RMSE": 1.3327,
+      "MAPE": 0.0127,
+      "R2": 0.9115
+    },
+    {
+      "model": "NEE_lgbm",
+      "MAE": 1.1547,
+      "RMSE": 1.3749,
+      "MAPE": 0.013,
+      "R2": 0.9058
+    },
+    {
+      "model": "NEE_rf",
+      "MAE": 1.1996,
+      "RMSE": 1.4596,
+      "MAPE": 0.0134,
+      "R2": 0.8939
+    },
+    {
+      "model": "NEE_xgb",
+      "MAE": 1.3912,
+      "RMSE": 1.6725,
+      "MAPE": 0.0156,
+      "R2": 0.8606
+    },
+    {
+      "model": "NEE_linreg",
+      "MAE": 1.5217,
+      "RMSE": 1.8032,
+      "MAPE": 0.0171,
+      "R2": 0.838
+    },
+    {
+      "model": "MRK_lgbm",
+      "MAE": 1.5954,
+      "RMSE": 2.0132,
+      "MAPE": 0.0138,
+      "R2": 0.8784
+    },
+    {
+      "model": "MRK_linreg",
+      "MAE": 1.6174,
+      "RMSE": 1.9085,
+      "MAPE": 0.0139,
+      "R2": 0.8907
+    }
+  ]
 }
