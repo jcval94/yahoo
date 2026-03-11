@@ -200,21 +200,43 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'result_5d', label: 'Calidad 5d', type: 'text' },
     ];
 
-    const canonicalModelName = (columnName) => {
+    const normalizeModelToken = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    const canonicalModelLabel = (columnName) => {
       const rawModel = columnName.replace('pred_', '');
-      const normalized = rawModel
-        .toLowerCase()
-        .replace(/model|regressor/g, '')
-        .replace(/[^a-z0-9]/g, '');
-      return normalized || rawModel.toLowerCase();
+      const normalized = normalizeModelToken(rawModel);
+      const aliases = {
+        rf: 'RandomForestRegressor',
+        randomforest: 'RandomForestRegressor',
+        randomforestregressor: 'RandomForestRegressor',
+        ridge: 'Ridge',
+        linreg: 'Ridge',
+        linearregression: 'Ridge',
+        xgb: 'XGBRegressor',
+        xgbregressor: 'XGBRegressor',
+        lgbm: 'LGBMRegressor',
+        lgbmregressor: 'LGBMRegressor',
+        arima: 'ARIMAModel',
+        arimamodel: 'ARIMAModel',
+        lstm: 'LSTM',
+        lstmmodel: 'LSTM',
+      };
+      return aliases[normalized] || rawModel;
     };
 
-    const scoreModelColumn = (columnName) => {
+    const canonicalModelName = (columnName) => normalizeModelToken(canonicalModelLabel(columnName));
+
+    const scoreModelColumn = (columnName, preferredLabel = '') => {
       const rawModel = columnName.replace('pred_', '');
+      const preferredCol = preferredLabel ? `pred_${preferredLabel}` : '';
+      if (preferredCol && columnName === preferredCol) return 100;
+      const normalizedRaw = normalizeModelToken(rawModel);
+      const normalizedPreferred = normalizeModelToken(preferredLabel);
+      if (normalizedPreferred && normalizedRaw === normalizedPreferred) return 90;
       let score = 0;
       if (/^[a-z0-9_]+$/.test(rawModel)) score += 2;
-      if (!/(model|regressor)/i.test(rawModel)) score += 1;
-      score -= rawModel.length / 100;
+      if (/(model|regressor)/i.test(rawModel)) score += 1;
+      score += rawModel.length / 100;
       return score;
     };
 
@@ -236,13 +258,14 @@ document.addEventListener('DOMContentLoaded', () => {
           groups.push({
             canonicalName,
             labelColumn: columnName,
+            displayLabel: canonicalModelLabel(columnName),
             sourceColumns: [columnName],
           });
           return groups;
         }
 
         existing.sourceColumns.push(columnName);
-        if (scoreModelColumn(columnName) > scoreModelColumn(existing.labelColumn)) {
+        if (scoreModelColumn(columnName, existing.displayLabel) > scoreModelColumn(existing.labelColumn, existing.displayLabel)) {
           existing.labelColumn = columnName;
         }
         return groups;
@@ -252,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ...staticColumns,
       ...modelGroups.map((group) => ({
         key: group.canonicalName,
-        label: group.labelColumn.replace('pred_', '').toUpperCase(),
+        label: group.displayLabel.toUpperCase(),
         type: 'number',
       })),
     ];
@@ -281,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modelGroup) return row[key];
 
         const preferredSourceColumns = [...modelGroup.sourceColumns]
-          .sort((a, b) => scoreModelColumn(b) - scoreModelColumn(a));
+          .sort((a, b) => scoreModelColumn(b, modelGroup.displayLabel) - scoreModelColumn(a, modelGroup.displayLabel));
         for (const sourceKey of preferredSourceColumns) {
           const value = row[sourceKey];
           if (value !== undefined && value !== null && String(value).trim() !== '') {
@@ -475,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tableHeadRow.innerHTML = [
       ...staticColumns.map((column) => `<th>${column.label}</th>`),
-      ...modelGroups.map((group) => `<th class="model-prediction-col">${group.labelColumn.replace('pred_', '').toUpperCase()}</th>`),
+      ...modelGroups.map((group) => `<th class="model-prediction-col">${group.displayLabel.toUpperCase()}</th>`),
     ].join('');
 
     if (!rows.length) {

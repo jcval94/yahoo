@@ -15,6 +15,7 @@ from typing import Dict, Iterable, List
 
 import numpy as np
 import pandas as pd
+from pandas.errors import EmptyDataError
 
 from ..utils import load_config
 
@@ -88,6 +89,9 @@ def _load_prediction_files() -> pd.DataFrame:
     for path in files:
         try:
             df = pd.read_csv(path)
+        except EmptyDataError:
+            logger.warning("Skipping empty prediction file %s", path)
+            continue
         except Exception:
             logger.exception("Cannot read prediction file %s", path)
             continue

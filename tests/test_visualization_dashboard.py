@@ -239,6 +239,64 @@ def test_prepare_action_recommendations_uses_run_date_for_output_date(monkeypatc
     assert out is not None
     assert not out.empty
     assert out.iloc[0]["date"] == "2026-03-11"
+
+
+def test_prepare_action_recommendations_normalizes_alias_models(monkeypatch, tmp_path):
+    run_date = pd.Timestamp("2026-03-11")
+    preds = pd.DataFrame([
+        {
+            "ticker": "AAA",
+            "model": "rf",
+            "actual": 100.0,
+            "pred": 103.0,
+            "run_date": run_date,
+            "predicted_date": run_date,
+        },
+        {
+            "ticker": "AAA",
+            "model": "linreg",
+            "actual": 100.0,
+            "pred": 101.0,
+            "run_date": run_date,
+            "predicted_date": run_date,
+        },
+        {
+            "ticker": "AAA",
+            "model": "xgb",
+            "actual": 100.0,
+            "pred": 102.0,
+            "run_date": run_date,
+            "predicted_date": run_date,
+        },
+    ])
+
+    class _Cfg:
+        buy_threshold = 2.8
+        sell_threshold = -1.8
+
+    def _fake_eval(*args, **kwargs):
+        return {"ticker": "AAA", "best_model": "RandomForestRegressor", "score": 4.0, "actual": 100.0}
+
+    import src.actions.paper_trader as trader
+
+    monkeypatch.setattr(trader, "_load_prediction_files", lambda: preds)
+    monkeypatch.setattr(trader, "load_trading_config", lambda: _Cfg())
+    monkeypatch.setattr(trader, "_load_latest_model_scores", lambda: ({}, {}))
+    monkeypatch.setattr(trader, "_load_stability_scores", lambda: {})
+    monkeypatch.setattr(trader, "_evaluate_strategies", _fake_eval)
+    monkeypatch.setattr(viz, "VIZ_DIR", tmp_path)
+
+    out = viz.prepare_action_recommendations()
+
+    assert out is not None
+    assert not out.empty
+    assert "pred_RandomForestRegressor" in out.columns
+    assert "pred_Ridge" in out.columns
+    assert "pred_rf" not in out.columns
+    assert "pred_linreg" not in out.columns
+    assert out.iloc[0]["pred_RandomForestRegressor"] == "SUBE"
+    assert out.iloc[0]["pred_Ridge"] == "SUBE"
+
 def test_prepare_pipeline_health_ignores_latest_empty_prediction_file(tmp_path, monkeypatch):
     root = tmp_path
     pred_dir = root / "predicts"

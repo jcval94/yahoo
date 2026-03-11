@@ -4,6 +4,7 @@ from src.actions.paper_trader import (
     _evaluate_strategies,
     _commission,
     _execution_price,
+    _load_prediction_files,
     _max_drawdown,
     TradingConfig,
 )
@@ -85,3 +86,22 @@ def test_downtrend_rebound_signal_requires_week_and_month_downtrend():
     )
 
     assert out["signals"]["downtrend_rebound"] == 1
+
+
+def test_load_prediction_files_ignores_empty_csv(tmp_path, monkeypatch):
+    pred_dir = tmp_path / "predicts"
+    pred_dir.mkdir(parents=True, exist_ok=True)
+
+    (pred_dir / "2026-03-10_daily_predictions.csv").write_text("\n", encoding="utf-8")
+    pd.DataFrame([
+        {"ticker": "AAA", "model": "rf", "actual": 100.0, "pred": 101.0, "Predicted": "2026-03-11"}
+    ]).to_csv(pred_dir / "2026-03-11_daily_predictions.csv", index=False)
+
+    import src.actions.paper_trader as trader
+
+    monkeypatch.setattr(trader, "RESULTS_DIR", tmp_path)
+    out = _load_prediction_files()
+
+    assert len(out) == 1
+    assert out.iloc[0]["ticker"] == "AAA"
+    assert out.iloc[0]["model"] == "rf"
