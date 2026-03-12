@@ -12,10 +12,11 @@
     <header class="hero card reveal">
       <p class="eyebrow">Plataforma de análisis cuantitativo</p>
       <h1>Yahoo Finance Pipeline</h1>
-      <p class="subtitle">Una experiencia visual limpia y ejecutiva para monitorear datos, modelos y resultados operativos en un solo tablero.</p>
-      <div class="hero-actions">
-        <a class="button button-primary" href="#visualizaciones">Explorar visualizaciones</a>
-        <a class="button button-secondary" href="#arquitectura">Revisar arquitectura</a>
+      <p class="subtitle">Un tablero ejecutivo más claro y visual para seguir el estado del pipeline, el desempeño del modelo y la evolución de estrategias en una sola vista.</p>
+      <div class="hero-highlights" aria-label="Resumen rápido del dashboard">
+        <p><strong>Estado en tiempo real</strong><span>Salud del pipeline y última ejecución.</span></p>
+        <p><strong>Lectura accionable</strong><span>Diagnósticos y métricas priorizadas para decisión.</span></p>
+        <p><strong>Diseño simplificado</strong><span>Menos ruido visual y navegación más directa.</span></p>
       </div>
     </header>
 
@@ -131,14 +132,6 @@
         </article>
       </div>
 
-      <div class="section-heading prediction-heading">
-        <p class="eyebrow">Data quality</p>
-        <h3>Monitoreo de latencia intradía</h3>
-      </div>
-      <figure class="viz-card prediction-card">
-        <img src="viz/latency_monitor.svg" alt="Latencia intradía media y p95" loading="lazy">
-        <figcaption>Serie temporal de latencia media y percentil 95 por fecha de ejecución.</figcaption>
-      </figure>
     </section>
 
     <section class="card reveal tab-panel is-hidden" data-tab-panel="diagnostics" id="diagnostico-visual">
@@ -151,7 +144,6 @@
       <div class="subtab-nav" role="tablist" aria-label="Subsecciones de diagnóstico visual">
         <button class="subtab-button is-active" type="button" data-subtab-target="charts">Gráficas</button>
         <button class="subtab-button" type="button" data-subtab-target="recommendations">Recomendaciones</button>
-        <button class="subtab-button" type="button" data-subtab-target="operational-quality">Calidad operativa</button>
       </div>
 
       <section class="subtab-panel" data-subtab-panel="charts">
@@ -278,14 +270,6 @@
         </article>
       </section>
 
-      <section class="subtab-panel is-hidden" data-subtab-panel="operational-quality">
-        <div class="section-heading prediction-heading">
-          <p class="eyebrow">Operations</p>
-          <h3>Calidad operativa</h3>
-        </div>
-        <p>Concentra señales de robustez para validar que el sistema se mantiene utilizable en producción: estabilidad de cobertura, continuidad de scoreo y capacidad de respuesta ante cambios de régimen.</p>
-        <p>Úsala para priorizar investigación cuando observes quiebres simultáneos entre cobertura, error y consistencia de drivers.</p>
-      </section>
     </section>
 
 
@@ -483,30 +467,6 @@
       </div>
     </section>
 
-    <section class="card reveal tab-panel" data-tab-panel="dashboard" id="arquitectura">
-      <div class="section-heading">
-        <p class="eyebrow">Arquitectura de solución</p>
-        <h2>Flujo de extremo a extremo</h2>
-      </div>
-      <div class="pipeline">
-        <article>
-          <h3>1. Ingesta y limpieza</h3>
-          <p>Adquisición de datos financieros y estandarización para asegurar calidad analítica.</p>
-        </article>
-        <article>
-          <h3>2. Ingeniería de variables</h3>
-          <p>Creación de señales, selección de atributos y control de consistencia estadística.</p>
-        </article>
-        <article>
-          <h3>3. Entrenamiento y evaluación</h3>
-          <p>Modelos de forecasting con métricas comparables y trazabilidad histórica.</p>
-        </article>
-        <article>
-          <h3>4. Reporte y notificación</h3>
-          <p>Generación de resultados y comunicación automática para equipos de negocio.</p>
-        </article>
-      </div>
-    </section>
   </main>
   <script src="js/scripts.js"></script>
 </body>

@@ -1,12 +1,12 @@
 :root {
   --bg: #0b1220;
-  --panel: rgba(15, 23, 42, 0.72);
-  --panel-border: rgba(148, 163, 184, 0.25);
+  --panel: rgba(15, 23, 42, 0.74);
+  --panel-border: rgba(148, 163, 184, 0.24);
   --text: #e2e8f0;
   --muted: #94a3b8;
   --primary: #38bdf8;
   --primary-strong: #0ea5e9;
-  --shadow: 0 24px 60px rgba(2, 6, 23, 0.35);
+  --shadow: 0 24px 60px rgba(2, 6, 23, 0.32);
 }
 
 * {
@@ -17,7 +17,8 @@ body {
   font-family: "Inter", "Segoe UI", Tahoma, sans-serif;
   margin: 0;
   color: var(--text);
-  background: radial-gradient(circle at 10% 20%, #172554, var(--bg) 42%);
+  background:
+    radial-gradient(circle at 12% 16%, #1e3a8a 0%, #0f172a 38%, #070b14 100%);
   min-height: 100vh;
 }
 
@@ -33,30 +34,80 @@ body {
 .layout {
   position: relative;
   z-index: 1;
-  width: min(1240px, 94vw);
-  margin: 2rem auto 3rem;
+  width: min(1260px, 94vw);
+  margin: 1.6rem auto 3.4rem;
   display: grid;
-  gap: 1.25rem;
+  gap: 1.05rem;
 }
 
 .card {
   background: var(--panel);
   border: 1px solid var(--panel-border);
-  border-radius: 20px;
-  padding: 1.5rem;
+  border-radius: 18px;
+  padding: 1.35rem 1.4rem;
   box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 
 .hero h1 {
-  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
-  margin: 0.2rem 0 0.75rem;
+  font-size: clamp(2rem, 3.9vw, 3rem);
+  margin: 0.15rem 0 0.7rem;
 }
 
 .subtitle {
-  max-width: 70ch;
+  max-width: 72ch;
   color: var(--muted);
-  line-height: 1.6;
+  line-height: 1.65;
+}
+
+
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(118deg, rgba(56, 189, 248, 0.08), transparent 45%);
+  pointer-events: none;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-highlights {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.hero-highlights p {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.5);
+  color: #dbeafe;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.88rem;
+}
+
+.hero-highlights p strong {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7dd3fc;
+}
+
+.hero-highlights p span {
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .eyebrow {
@@ -66,36 +117,6 @@ body {
   font-size: 0.74rem;
   font-weight: 600;
   margin: 0;
-}
-
-.hero-actions {
-  margin-top: 1.2rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.button {
-  text-decoration: none;
-  padding: 0.62rem 1rem;
-  border-radius: 999px;
-  font-weight: 600;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.button:hover {
-  transform: translateY(-1px);
-}
-
-.button-primary {
-  color: #04121f;
-  background: linear-gradient(90deg, var(--primary), #7dd3fc);
-  box-shadow: 0 10px 25px rgba(56, 189, 248, 0.3);
-}
-
-.button-secondary {
-  color: var(--text);
-  border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
 
@@ -112,8 +133,8 @@ body {
 
 .health-card {
   border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 14px;
-  padding: 0.85rem;
+  border-radius: 16px;
+  padding: 0.95rem;
   background: rgba(15, 23, 42, 0.45);
 }
 
@@ -125,7 +146,7 @@ body {
 
 .health-value {
   margin: 0.4rem 0 0;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
 }
 
@@ -142,14 +163,16 @@ body {
   background: rgba(15, 23, 42, 0.35);
   color: var(--text);
   border-radius: 999px;
-  padding: 0.5rem 0.9rem;
+  padding: 0.52rem 0.92rem;
+  transition: all 0.2s ease;
   font-weight: 600;
   cursor: pointer;
 }
 
 .tab-button.is-active {
-  border-color: rgba(56, 189, 248, 0.9);
-  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.95);
+  background: rgba(56, 189, 248, 0.2);
+  color: #eaf7ff;
 }
 
 .tab-panel.is-hidden {
@@ -205,7 +228,7 @@ body {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+  gap: 1.05rem;
 }
 
 .kpi {
@@ -244,7 +267,7 @@ code {
 .viz-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
+  gap: 1.05rem;
   margin-top: 1rem;
 }
 
@@ -252,8 +275,8 @@ code {
   margin: 0;
   background: rgba(15, 23, 42, 0.55);
   border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 14px;
-  padding: 0.85rem;
+  border-radius: 16px;
+  padding: 0.95rem;
 }
 
 img {
@@ -285,7 +308,7 @@ figcaption {
 .viz-analysis-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.05rem;
   margin-top: 1rem;
 }
 
@@ -307,8 +330,9 @@ figcaption {
 }
 
 .analysis-selector-button.is-active {
-  border-color: rgba(56, 189, 248, 0.9);
-  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.95);
+  background: rgba(56, 189, 248, 0.2);
+  color: #eaf7ff;
 }
 
 .viz-analysis-card {
@@ -328,7 +352,7 @@ figcaption {
 
 .viz-explainer {
   border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1rem;
   background: rgba(15, 23, 42, 0.45);
 }
@@ -351,7 +375,7 @@ figcaption {
 .pipeline {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 1rem;
+  gap: 1.05rem;
 }
 
 .pipeline article {
@@ -388,6 +412,10 @@ section p {
   .viz-analysis-card {
     grid-template-columns: 1fr;
   }
+
+  .hero-highlights {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 680px) {
@@ -404,7 +432,7 @@ section p {
 .table-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1rem;
+  gap: 1.05rem;
   margin-top: 0.9rem;
 }
 
@@ -414,7 +442,7 @@ section p {
 
 .table-card {
   border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1rem;
   background: rgba(15, 23, 42, 0.45);
 }
@@ -524,4 +552,28 @@ section p {
   min-width: 72px;
   white-space: nowrap;
   font-size: 0.76rem;
+}
+
+
+.section-heading h2,
+.section-heading h3 {
+  letter-spacing: 0.01em;
+}
+
+.viz-card,
+.table-card,
+.health-card,
+.kpi {
+  box-shadow: inset 0 1px 0 rgba(226, 232, 240, 0.04);
+}
+
+.table-wrap th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #cbd5e1;
+}
+
+.table-wrap tr:hover td {
+  background: rgba(56, 189, 248, 0.05);
 }
