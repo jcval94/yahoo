@@ -75,6 +75,70 @@
       </article>
     </section>
 
+
+
+    <section class="card reveal tab-panel" data-tab-panel="dashboard" id="interactive-analytics">
+      <div class="section-heading">
+        <p class="eyebrow">Analytics interactivo</p>
+        <h2>Centro de gráficos accionables</h2>
+      </div>
+      <p>Explora tendencias, conversión, retención, comportamiento horario, geografía y eficiencia por canal con controles interactivos en tiempo real.</p>
+      <div class="interactive-toolbar">
+        <label for="analytics-window">Ventana de tiempo</label>
+        <select id="analytics-window">
+          <option value="7">7 días</option>
+          <option value="30" selected>30 días</option>
+          <option value="90">90 días</option>
+          <option value="365">12 meses</option>
+        </select>
+      </div>
+
+      <div class="interactive-grid interactive-grid-main">
+        <article class="interactive-card interactive-card-wide">
+          <div class="interactive-card-header">
+            <h3>Serie temporal comparativa</h3>
+            <div class="inline-controls" id="timeseries-toggles"></div>
+          </div>
+          <svg id="timeseries-chart" class="chart-surface" viewBox="0 0 860 280" role="img" aria-label="Serie temporal comparativa"></svg>
+          <p id="timeseries-meta" class="chart-meta"></p>
+        </article>
+      </div>
+
+      <div class="interactive-grid interactive-grid-split">
+        <article class="interactive-card">
+          <div class="interactive-card-header"><h3>Funnel de conversión</h3></div>
+          <svg id="funnel-chart" class="chart-surface" viewBox="0 0 420 260" role="img" aria-label="Funnel de conversión"></svg>
+          <p id="funnel-meta" class="chart-meta"></p>
+        </article>
+        <article class="interactive-card">
+          <div class="interactive-card-header"><h3>Cohortes de retención</h3></div>
+          <div id="cohort-chart" class="heatmap-grid" aria-label="Heatmap de cohortes"></div>
+          <p class="chart-meta">Últimas 12 cohortes mensuales con intensidad por retención.</p>
+        </article>
+      </div>
+
+      <div class="interactive-grid interactive-grid-split">
+        <article class="interactive-card">
+          <div class="interactive-card-header"><h3>Heatmap horario</h3></div>
+          <div id="hourly-heatmap" class="heatmap-grid" aria-label="Heatmap por día y hora"></div>
+          <p class="chart-meta">Actividad de los últimos 28 días por día/hora.</p>
+        </article>
+        <article class="interactive-card">
+          <div class="interactive-card-header"><h3>Mapa geográfico dinámico</h3></div>
+          <svg id="geo-chart" class="chart-surface" viewBox="0 0 420 260" role="img" aria-label="Mapa geográfico"></svg>
+          <p id="geo-meta" class="chart-meta"></p>
+        </article>
+      </div>
+
+      <div class="interactive-grid interactive-grid-main">
+        <article class="interactive-card">
+          <div class="interactive-card-header"><h3>Scatter de eficiencia</h3></div>
+          <svg id="scatter-chart" class="chart-surface" viewBox="0 0 860 280" role="img" aria-label="Scatter de eficiencia"></svg>
+          <p class="chart-meta">X: costo, Y: retorno, tamaño: volumen; click para aislar canal.</p>
+        </article>
+      </div>
+    </section>
+
     <section class="card reveal tab-panel" data-tab-panel="dashboard" id="visualizaciones">
       <div class="section-heading">
         <p class="eyebrow">Monitoreo visual</p>
