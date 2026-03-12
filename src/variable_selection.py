@@ -43,7 +43,7 @@ def remove_multicollinearity(df: pd.DataFrame, threshold: float = 0.9) -> pd.Dat
         Absolute correlation above which one of a pair of columns is dropped.
         Defaults to ``0.9``.
     """
-    corr = df.corr().abs()
+    corr = df.corr()
     upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
     to_drop = [col for col in upper.columns if any(upper[col] > threshold)]
     return df.drop(columns=to_drop)

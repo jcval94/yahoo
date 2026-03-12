@@ -83,6 +83,16 @@ def _add_window_stats(df: pd.DataFrame) -> pd.DataFrame:
 
 def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    if "Close" not in df.columns:
+        return df
+
+    if "High" not in df.columns:
+        df["High"] = df["Close"]
+    if "Low" not in df.columns:
+        df["Low"] = df["Close"]
+    if "Volume" not in df.columns:
+        df["Volume"] = 0.0
+
     macd = ta.trend.MACD(df["Close"])
     df["macd"] = macd.macd()
     df["macd_signal"] = macd.macd_signal()
@@ -94,12 +104,17 @@ def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["bb_bbl"] = bb.bollinger_lband()
     df["bb_width"] = (df["bb_bbh"] - df["bb_bbl"]) / df["bb_bbm"]
 
-    stoch = ta.momentum.StochasticOscillator(df["High"], df["Low"], df["Close"])
-    df["stoch"] = stoch.stoch()
-    df["stoch_signal"] = stoch.stoch_signal()
+    if len(df) >= 14:
+        stoch = ta.momentum.StochasticOscillator(df["High"], df["Low"], df["Close"])
+        df["stoch"] = stoch.stoch()
+        df["stoch_signal"] = stoch.stoch_signal()
 
-    atr = ta.volatility.AverageTrueRange(df["High"], df["Low"], df["Close"])
-    df["atr"] = atr.average_true_range()
+        atr = ta.volatility.AverageTrueRange(df["High"], df["Low"], df["Close"])
+        df["atr"] = atr.average_true_range()
+    else:
+        df["stoch"] = np.nan
+        df["stoch_signal"] = np.nan
+        df["atr"] = np.nan
 
     obv = ta.volume.OnBalanceVolumeIndicator(df["Close"], df["Volume"])
     df["obv"] = obv.on_balance_volume()
@@ -110,6 +125,11 @@ def _add_advanced_indicators(df: pd.DataFrame) -> pd.DataFrame:
 def _add_return_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add returns and simple volatility estimates."""
     df = df.copy()
+    if "Open" not in df.columns and "Close" in df.columns:
+        df["Open"] = df["Close"]
+    if "Low" not in df.columns and "Close" in df.columns:
+        df["Low"] = df["Close"]
+
     prev_close = df["Close"].shift(1)
     df["gap_pct"] = (df["Open"] - prev_close) / prev_close
     df["overnight_return"] = df["gap_pct"]

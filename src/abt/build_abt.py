@@ -12,6 +12,7 @@ from ..utils import (
     timed_stage,
     log_df_details,
     generate_sample_data,
+    fallback_periods_from_start,
     log_offline_mode,
     load_config,
 )
@@ -60,14 +61,69 @@ def _download_stooq(ticker, start, end):
     return StooqDailyReader(ticker, start=start, end=end).read()
 
 
+def _extract_batch_ticker_frame(batch_df: pd.DataFrame, ticker: str) -> pd.DataFrame:
+    """Extract a single ticker frame from a multi-ticker yfinance payload."""
+    if batch_df.empty:
+        return pd.DataFrame()
+
+    if not isinstance(batch_df.columns, pd.MultiIndex):
+        return batch_df.copy()
+
+    out = pd.DataFrame(index=batch_df.index)
+
+    if ticker in batch_df.columns.get_level_values(0):
+        subset = batch_df[ticker]
+        out = subset.copy()
+    elif ticker in batch_df.columns.get_level_values(1):
+        for field in batch_df.columns.get_level_values(0).unique():
+            key = (field, ticker)
+            if key in batch_df.columns:
+                out[field] = batch_df[key]
+
+    if out.empty:
+        return out
+    if isinstance(out.columns, pd.MultiIndex):
+        out.columns = out.columns.get_level_values(0)
+    return out
+
+
+def _download_daily_batch(tickers: list[str], start: str, end: str) -> dict[str, pd.DataFrame]:
+    """Download daily data for many tickers in one Yahoo request."""
+    if not tickers:
+        return {}
+    try:
+        batch_df = yf.download(
+            tickers,
+            start=start,
+            end=end,
+            interval="1d",
+            progress=False,
+            threads=False,
+            auto_adjust=False,
+            group_by="column",
+        )
+    except Exception:
+        logger.exception("Batch download failed for %s tickers", len(tickers))
+        return {}
+
+    out: dict[str, pd.DataFrame] = {}
+    for ticker in tickers:
+        part = _extract_batch_ticker_frame(batch_df, ticker)
+        if part.empty:
+            continue
+        out[ticker] = part.sort_index()
+    return out
+
+
 def _is_intraday_interval(interval: str) -> bool:
     return interval in {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
 
 
 def _normalize_ts(ts: pd.Timestamp) -> pd.Timestamp:
+    ts = pd.Timestamp(ts)
     if ts.tzinfo is not None:
-        return ts.tz_convert("America/New_York")
-    return ts.tz_localize("America/New_York")
+        return ts.tz_localize(None)
+    return ts
 
 
 def _session_from_timestamp(ts: pd.Timestamp, labels: dict | None = None) -> str:
@@ -107,15 +163,20 @@ def download_ticker(
     interval: str = "1d",
     include_prepost: bool = False,
     retries: int = 3,
+    internet_available: bool | None = None,
 ) -> pd.DataFrame:
     """Download historical data with fallbacks for CI environments."""
     with timed_stage(f"download {ticker}"):
         today = pd.Timestamp.today().normalize()
         start_dt = pd.to_datetime(start)
 
-        if not _internet_ok():
+        if internet_available is None:
+            internet_available = _internet_ok()
+
+        if not internet_available:
             logger.warning("Runner sin internet. Usando datos simulados.")
-            df = generate_sample_data(start_dt)
+            periods = fallback_periods_from_start(start_dt)
+            df = generate_sample_data(start_dt, periods=periods)
             log_df_details(f"downloaded {ticker}", df)
             return df
 
@@ -156,7 +217,8 @@ def download_ticker(
 
         if df.empty:
             logger.warning("Todo falló. Generando datos de ejemplo.")
-            df = generate_sample_data(start_dt)
+            periods = fallback_periods_from_start(start_dt)
+            df = generate_sample_data(start_dt, periods=periods)
 
         if isinstance(df.columns, pd.MultiIndex):
             df = df.copy()
@@ -319,6 +381,16 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
     start_dt = max(config_start, five_years_ago)
 
     recalc_rows = get_feature_recalc_rows(safety_rows)
+    internet_available = _internet_ok()
+
+    batch_daily_frames: dict[str, pd.DataFrame] = {}
+    if full_rebuild and frequency == "daily" and internet_available:
+        with timed_stage("download batch daily tickers"):
+            batch_daily_frames = _download_daily_batch(
+                list(CONFIG.get("etfs", [])),
+                start_dt.strftime("%Y-%m-%d"),
+                pd.Timestamp.today().normalize().strftime("%Y-%m-%d"),
+            )
 
     ticker_output_files = []
     for ticker in CONFIG.get("etfs", []):
@@ -332,12 +404,15 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
 
         try:
             with timed_stage(f"download {ticker}"):
-                fresh_df = download_ticker(
-                    ticker,
-                    download_start,
-                    interval=interval,
-                    include_prepost=include_prepost,
-                )
+                fresh_df = batch_daily_frames.get(ticker, pd.DataFrame())
+                if fresh_df.empty:
+                    fresh_df = download_ticker(
+                        ticker,
+                        download_start,
+                        interval=interval,
+                        include_prepost=include_prepost,
+                        internet_available=internet_available,
+                    )
                 fresh_df = _apply_frequency(fresh_df, frequency, session_labels)
                 fresh_df["Ticker"] = ticker
         except Exception:

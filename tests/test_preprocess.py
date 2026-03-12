@@ -19,9 +19,27 @@ def test_extract_data_fallback(monkeypatch):
 
     sample_df = pd.DataFrame({'Close': [1], 'Volume': [1]})
     monkeypatch.setattr(preprocess.yf, 'download', raise_download)
-    monkeypatch.setattr(preprocess, 'generate_sample_data', lambda start: sample_df)
+    monkeypatch.setattr(preprocess, 'generate_sample_data', lambda start, periods=30: sample_df)
     data = preprocess.extract_data(['BBB'], '2020-01-01')
     assert data['BBB'].equals(sample_df)
+
+
+def test_extract_data_fallback_requests_longer_sample(monkeypatch):
+    def raise_download(*args, **kwargs):
+        raise RuntimeError('fail')
+
+    captured = {}
+
+    def fake_sample(start, periods=30):
+        captured['periods'] = periods
+        return pd.DataFrame({'Close': [1] * periods, 'Volume': [1] * periods})
+
+    monkeypatch.setattr(preprocess.yf, 'download', raise_download)
+    monkeypatch.setattr(preprocess, 'generate_sample_data', fake_sample)
+
+    preprocess.extract_data(['BBB'], '2015-01-01')
+
+    assert captured['periods'] >= 260
 
 
 def test_enrich_features(monkeypatch):

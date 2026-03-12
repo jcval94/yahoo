@@ -108,3 +108,8 @@ def test_hybrid_cv_split_basic():
         first_test = folds[0][1][0]
         second_test = folds[1][1][0]
         assert second_test - first_test == 7
+
+
+def test_fallback_periods_from_start_has_minimum_history():
+    periods = utils.fallback_periods_from_start('2015-01-01')
+    assert periods >= 260

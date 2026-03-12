@@ -11,6 +11,7 @@ from .utils import (
     timed_stage,
     log_df_details,
     generate_sample_data,
+    fallback_periods_from_start,
     log_offline_mode,
     load_config,
 )
@@ -32,10 +33,10 @@ def extract_data(tickers: List[str], start: str) -> Dict[str, pd.DataFrame]:
                 df = yf.download(t, start=start, progress=False, auto_adjust=False)
             except Exception:
                 logger.exception("Failed to download %s, using sample", t)
-                df = generate_sample_data(start)
+                df = generate_sample_data(start, periods=fallback_periods_from_start(start))
         if df.empty:
             logger.warning("%s download empty, using sample", t)
-            df = generate_sample_data(start)
+            df = generate_sample_data(start, periods=fallback_periods_from_start(start))
         log_df_details(f"raw {t}", df)
         data[t] = df
     log_offline_mode("extract_data")

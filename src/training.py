@@ -686,28 +686,33 @@ def train_models(
             )
 
         with timed_stage(f"train LSTM {ticker}"):
-            try:
-                # narrow search space to speed up LSTM training
-                lstm_grid = {
-                    "units": [16],
-                    "batch": [64],
-                    "epochs": [2],
-                    "l2_reg": [0.001],
-                }
-                lstm = train_lstm(
-                    X_train,
-                    y_train,
-                    param_space=lstm_grid,
-                    n_iter=1,
-                    cv_splits=cv_splitter.n_splits,
+            if train_lstm is None or predict_lstm is None:
+                logger.warning(
+                    "Skipping LSTM training for %s because the LSTM backend is unavailable",
+                    ticker,
                 )
-                keras_path = MODEL_DIR / f"{ticker}_{frequency}_lstm.keras"
-                lstm.save(keras_path)
-                features_path = keras_path.with_name(keras_path.stem + '_features.json')
-                with open(features_path, 'w') as fh:
-                    json.dump(feature_cols, fh)
-                paths[f"{ticker}_lstm"] = keras_path
+            else:
                 try:
+                    # narrow search space to speed up LSTM training
+                    lstm_grid = {
+                        "units": [16],
+                        "batch": [64],
+                        "epochs": [2],
+                        "l2_reg": [0.001],
+                    }
+                    lstm = train_lstm(
+                        X_train,
+                        y_train,
+                        param_space=lstm_grid,
+                        n_iter=1,
+                        cv_splits=cv_splitter.n_splits,
+                    )
+
+                    schema_hash = hash_schema(X_train)
+                    lstm_path = MODEL_DIR / f"{ticker}_{frequency}_lstm_{schema_hash}.joblib"
+                    save_with_schema(lstm, lstm_path, feature_cols, schema_hash)
+                    paths[f"{ticker}_lstm"] = lstm_path
+
                     preds_train = predict_lstm(lstm, X_train)
                     train_pred_df["LSTM"] = preds_train
                     base_train = df_train.loc[X_train.index, target_col]
@@ -748,44 +753,7 @@ def train_models(
                         test_metrics,
                     )
                 except Exception:
-                    logger.exception("Failed LSTM evaluation for %s", ticker)
-            except Exception:
-                logger.exception("Failed LSTM training for %s", ticker)
-        if lstm is not None:
-            def _save_lstm(model, path, feats, _hash):
-                model.save(path)
-                with open(path.with_name(path.stem + '_features.json'), 'w') as fh:
-                    json.dump(feats, fh)
-
-            wrapper = type('Wrapper', (), {'predict': lambda self, X: predict_lstm(lstm, X)})()
-            _retrain_with_perm_importance(
-                wrapper,
-                model_label='lstm',
-                train_fn=lambda X, y: train_lstm(
-                    X,
-                    y,
-                    cv_splits=cv_splitter.n_splits,
-                ),
-                predict_fn=predict_lstm,
-                save_fn=_save_lstm,
-                feature_cols=feature_cols,
-                X_train=X_train,
-                X_test=X_test,
-                y_train=y_train,
-                y_test=y_test,
-                df_train=df_train,
-                df_test=df_test,
-                target_col=target_col,
-                ticker=ticker,
-                frequency=frequency,
-                paths=paths,
-                metrics_rows=metrics_rows,
-                var_rows=var_rows,
-                abt_window=abt_window,
-                train_window=train_window,
-                test_window=test_window,
-                predict_date=predict_date,
-            )
+                    logger.exception("Failed LSTM training for %s", ticker)
 
         with timed_stage(f"train ARIMA {ticker}"):
             try:

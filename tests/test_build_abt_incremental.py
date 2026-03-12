@@ -43,7 +43,7 @@ def test_build_abt_incremental_recomputes_tail_and_appends_new_rows(tmp_path, mo
 
     calls = {"start": None}
 
-    def fake_download(ticker, start, interval="1d", include_prepost=False, retries=3):
+    def fake_download(ticker, start, interval="1d", include_prepost=False, retries=3, **kwargs):
         calls["start"] = start
         idx_new = pd.date_range("2024-01-06", periods=2, freq="D")
         return pd.DataFrame(
@@ -114,7 +114,7 @@ def test_build_abt_combined_from_saved_csvs_without_retaining_all_frames(tmp_pat
         ),
     }
 
-    def fake_download(ticker, start, interval="1d", include_prepost=False, retries=3):
+    def fake_download(ticker, start, interval="1d", include_prepost=False, retries=3, **kwargs):
         return data_by_ticker[ticker].copy()
 
     def fake_enrich(df):
@@ -142,3 +142,91 @@ def test_build_abt_combined_from_saved_csvs_without_retaining_all_frames(tmp_pat
     assert list(combined.index) == sorted(combined.index.tolist())
     assert any(path.endswith("AAA.csv") for path in read_calls)
     assert any(path.endswith("BBB.csv") for path in read_calls)
+
+
+def test_download_ticker_offline_uses_long_history_sample(monkeypatch):
+    module = __import__("src.abt.build_abt", fromlist=["dummy"])
+
+    captured = {}
+
+    monkeypatch.setattr(module, "_internet_ok", lambda: False)
+
+    def fake_generate(start, periods=30):
+        captured["periods"] = periods
+        idx = pd.date_range("2024-01-01", periods=periods, freq="D")
+        return pd.DataFrame(
+            {
+                "Open": [1.0] * periods,
+                "High": [1.0] * periods,
+                "Low": [1.0] * periods,
+                "Close": [1.0] * periods,
+                "Adj Close": [1.0] * periods,
+                "Volume": [1000] * periods,
+            },
+            index=idx,
+        )
+
+    monkeypatch.setattr(module, "generate_sample_data", fake_generate)
+
+    out = module.download_ticker("AAA", "2015-01-01", interval="1d")
+
+    assert len(out) == captured["periods"]
+    assert captured["periods"] >= 260
+
+
+def test_build_abt_full_daily_uses_batch_download(monkeypatch, tmp_path):
+    module = __import__("src.abt.build_abt", fromlist=["dummy"])
+
+    monkeypatch.setattr(
+        module,
+        "CONFIG",
+        {
+            "etfs": ["AAA", "BBB"],
+            "start_date": "2024-01-01",
+            "data_frequency": "1d",
+            "include_prepost": False,
+            "data_dir": str(tmp_path),
+        },
+    )
+    monkeypatch.setattr(module, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(module, "_internet_ok", lambda: True)
+
+    calls = {"batch": 0, "single": 0}
+
+    idx = pd.to_datetime(["2024-01-01", "2024-01-02"])
+    batch = pd.DataFrame(
+        {
+            ("Open", "AAA"): [1.0, 2.0],
+            ("High", "AAA"): [1.0, 2.0],
+            ("Low", "AAA"): [1.0, 2.0],
+            ("Close", "AAA"): [1.0, 2.0],
+            ("Adj Close", "AAA"): [1.0, 2.0],
+            ("Volume", "AAA"): [100, 100],
+            ("Open", "BBB"): [3.0, 4.0],
+            ("High", "BBB"): [3.0, 4.0],
+            ("Low", "BBB"): [3.0, 4.0],
+            ("Close", "BBB"): [3.0, 4.0],
+            ("Adj Close", "BBB"): [3.0, 4.0],
+            ("Volume", "BBB"): [200, 200],
+        },
+        index=idx,
+    )
+    batch.columns = pd.MultiIndex.from_tuples(batch.columns)
+
+    def fake_yf_download(*args, **kwargs):
+        calls["batch"] += 1
+        return batch
+
+    def fake_single(*args, **kwargs):
+        calls["single"] += 1
+        return pd.DataFrame()
+
+    monkeypatch.setattr(module.yf, "download", fake_yf_download)
+    monkeypatch.setattr(module, "download_ticker", fake_single)
+    monkeypatch.setattr(module, "enrich_indicators", lambda df: df)
+
+    out = module.build_abt("daily", full_rebuild=True)
+
+    assert calls["batch"] == 1
+    assert calls["single"] == 0
+    assert "AAA" in out and "BBB" in out and "combined" in out

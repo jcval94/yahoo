@@ -111,6 +111,19 @@ def generate_sample_data(start: str, periods: int = 30) -> pd.DataFrame:
     return df
 
 
+def fallback_periods_from_start(
+    start: Union[str, pd.Timestamp],
+    *,
+    min_periods: int = 260,
+    max_periods: int = 4000,
+) -> int:
+    """Infer a safe number of synthetic rows based on the requested start date."""
+    start_ts = pd.to_datetime(start)
+    today = pd.Timestamp.today().normalize()
+    span_days = max(1, int((today - start_ts).days) + 1)
+    return int(max(min_periods, min(max_periods, span_days)))
+
+
 def rolling_cv(
     n_samples: int,
     train_size: int = 90,

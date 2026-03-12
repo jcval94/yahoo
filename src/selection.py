@@ -49,7 +49,7 @@ def select_tickers(candidates: List[str], end_date: str) -> List[str]:
     stable_sorted = sorted(metrics.items(), key=lambda x: x[1]["volatility"])
     most_stable = [t for t, _ in stable_sorted if t not in top_volume][:3]
 
-    loser_sorted = sorted(metrics.items(), key=lambda x: x[1]["return"])
+    loser_sorted = sorted(metrics.items(), key=lambda x: x[1]["return"], reverse=True)
     biggest_losers = [t for t, _ in loser_sorted if t not in top_volume + most_stable][:2]
 
     selection = top_volume + most_stable + biggest_losers

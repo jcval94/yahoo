@@ -751,6 +751,14 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
     cfg = load_trading_config()
     model_scores, ranked_models = _load_latest_model_scores()
     stability_scores = _load_stability_scores()
+    default_model_names = [
+        "ARIMAModel",
+        "LGBMRegressor",
+        "LSTM",
+        "RandomForestRegressor",
+        "Ridge",
+        "XGBRegressor",
+    ]
 
     def _canonical_model_name(raw_model: object) -> str:
         model = str(raw_model or "").strip()
@@ -770,6 +778,7 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
             "arimamodel": "ARIMAModel",
             "lstm": "LSTM",
             "lstmmodel": "LSTM",
+            "sequential": "LSTM",
         }
         return aliases.get(normalized, model)
 
@@ -842,7 +851,8 @@ def prepare_action_recommendations() -> "pd.DataFrame | None":
 
     date_cutoff = preds["decision_date"].max() - pd.Timedelta(days=60)
     relevant_preds = preds[preds["decision_date"] >= date_cutoff]
-    model_names = sorted(relevant_preds["model"].dropna().astype(str).unique())
+    detected_models = set(relevant_preds["model"].dropna().astype(str).unique())
+    model_names = sorted(detected_models.union(default_model_names))
 
     rows: list[dict] = []
     for (date_value, _ticker), grp in relevant_preds.groupby(["decision_date", "ticker"]):
