@@ -13,11 +13,7 @@
       <p class="eyebrow">Plataforma de análisis cuantitativo</p>
       <h1>Yahoo Finance Pipeline</h1>
       <p class="subtitle">Un tablero ejecutivo más claro y visual para seguir el estado del pipeline, el desempeño del modelo y la evolución de estrategias en una sola vista.</p>
-      <div class="hero-highlights" aria-label="Resumen rápido del dashboard">
-        <p><strong>Estado en tiempo real</strong><span>Salud del pipeline y última ejecución.</span></p>
-        <p><strong>Lectura accionable</strong><span>Diagnósticos y métricas priorizadas para decisión.</span></p>
-        <p><strong>Diseño simplificado</strong><span>Menos ruido visual y navegación más directa.</span></p>
-      </div>
+      <p class="hero-note">Vista enfocada: menos paneles, métricas clave primero y navegación directa.</p>
     </header>
 
     <nav class="tab-nav card reveal" aria-label="Pestañas de dashboard">
@@ -33,46 +29,23 @@
         <h2>Panel de salud del pipeline</h2>
       </div>
       <div class="health-grid" id="pipeline-health-grid">
-        <article class="health-card">
+        <article class="health-item">
           <h3>Último run</h3>
           <p class="health-value" id="health-run-date">Cargando...</p>
         </article>
-        <article class="health-card">
+        <article class="health-item">
           <h3>Duración estimada</h3>
           <p class="health-value" id="health-duration">Cargando...</p>
         </article>
-        <article class="health-card">
+        <article class="health-item">
           <h3>Pasos exitosos</h3>
           <p class="health-value" id="health-success">Cargando...</p>
         </article>
-        <article class="health-card">
+        <article class="health-item">
           <h3>Fallback / offline</h3>
           <p class="health-value" id="health-fallback">Cargando...</p>
         </article>
       </div>
-    </section>
-
-    <section class="kpi-grid reveal tab-panel" data-tab-panel="dashboard" aria-label="Indicadores de plataforma">
-      <article class="kpi card">
-        <h2>Python</h2>
-        <p class="kpi-value">3.11</p>
-        <p class="kpi-caption">Stack estable para producción.</p>
-      </article>
-      <article class="kpi card">
-        <h2>Datos</h2>
-        <p class="kpi-value">Diario</p>
-        <p class="kpi-caption">Descarga y actualización automatizada.</p>
-      </article>
-      <article class="kpi card">
-        <h2>Modelado</h2>
-        <p class="kpi-value">ML + TS</p>
-        <p class="kpi-caption">Combinación de modelos estadísticos y de aprendizaje.</p>
-      </article>
-      <article class="kpi card">
-        <h2>Operación</h2>
-        <p class="kpi-value">24/7</p>
-        <p class="kpi-caption">Ejecución continua por GitHub Actions.</p>
-      </article>
     </section>
 
 
