@@ -12,12 +12,7 @@
     <header class="hero card reveal">
       <p class="eyebrow">Plataforma de análisis cuantitativo</p>
       <h1>Yahoo Finance Pipeline</h1>
-      <p class="subtitle">Un tablero ejecutivo más claro y visual para seguir el estado del pipeline, el desempeño del modelo y la evolución de estrategias en una sola vista.</p>
-      <div class="hero-highlights" aria-label="Resumen rápido del dashboard">
-        <p><strong>Estado en tiempo real</strong><span>Salud del pipeline y última ejecución.</span></p>
-        <p><strong>Lectura accionable</strong><span>Diagnósticos y métricas priorizadas para decisión.</span></p>
-        <p><strong>Diseño simplificado</strong><span>Menos ruido visual y navegación más directa.</span></p>
-      </div>
+      <p class="subtitle">Tablero ejecutivo para monitorear resultados y decisiones de forma directa.</p>
     </header>
 
     <nav class="tab-nav card reveal" aria-label="Pestañas de dashboard">
@@ -77,32 +72,6 @@
 
 
 
-    <section class="card reveal tab-panel" data-tab-panel="dashboard" id="interactive-analytics">
-      <div class="section-heading">
-        <p class="eyebrow">Decisiones operativas</p>
-        <h2>Centro de decisiones accionables</h2>
-      </div>
-      <p>Quitamos los gráficos genéricos y dejamos un resumen ejecutivo enfocado en qué hacer hoy con base en la última corrida.</p>
-
-      <div class="actionable-grid" aria-label="Resumen accionable de la última ejecución">
-        <article class="actionable-card">
-          <h3>Prioridad de ejecución</h3>
-          <p class="actionable-value" id="actionable-priority">Esperando datos...</p>
-          <p class="actionable-caption" id="actionable-priority-caption">Se actualizará al cargar el reporte.</p>
-        </article>
-        <article class="actionable-card">
-          <h3>Calidad reciente (5d)</h3>
-          <p class="actionable-value" id="actionable-quality">Esperando datos...</p>
-          <p class="actionable-caption" id="actionable-quality-caption">Se actualizará al cargar el reporte.</p>
-        </article>
-        <article class="actionable-card">
-          <h3>Siguiente acción recomendada</h3>
-          <p class="actionable-value" id="actionable-next-step">Esperando datos...</p>
-          <p class="actionable-caption" id="actionable-next-step-caption">Se actualizará al cargar el reporte.</p>
-        </article>
-      </div>
-    </section>
-
     <section class="card reveal tab-panel" data-tab-panel="dashboard" id="visualizaciones">
       <div class="section-heading">
         <p class="eyebrow">Monitoreo visual</p>
@@ -133,7 +102,7 @@
         <p class="eyebrow">Trading actions</p>
         <h3>Resumen de estrategias</h3>
       </div>
-      <p>Para reducir saturación en portada, aquí se muestra solo el resumen de estrategias. Las recomendaciones por ticker y el diagnóstico completo se movieron a la pestaña <strong>Diagnóstico visual</strong>.</p>
+
       <div class="table-grid table-grid-single">
         <article class="table-card table-card-wide">
           <h4>Desempeño por estrategia</h4>
@@ -168,13 +137,13 @@
         <h2>Diagnóstico integral de modelos</h2>
       </div>
 
-      <p>Esta vista concentra el detalle operativo para no sobrecargar la portada.</p>
+
       <div class="subtab-nav" role="tablist" aria-label="Subsecciones de diagnóstico visual">
-        <button class="subtab-button is-active" type="button" data-subtab-target="charts">Gráficas</button>
-        <button class="subtab-button" type="button" data-subtab-target="recommendations">Recomendaciones</button>
+        <button class="subtab-button is-active" type="button" data-subtab-target="recommendations">Recomendaciones</button>
+        <button class="subtab-button" type="button" data-subtab-target="charts">Gráficas</button>
       </div>
 
-      <section class="subtab-panel" data-subtab-panel="charts">
+      <section class="subtab-panel is-hidden" data-subtab-panel="charts">
         <p class="window-note">Todas las gráficas usan una ventana temporal fija de <span id="window-days">120</span> días (<span id="window-range">cargando rango...</span>) para mantener comparabilidad ejecutiva y reflejar la última ejecución disponible.</p>
         <p>Usa el selector para revisar una visualización a la vez.</p>
         <div class="analysis-selector" role="tablist" aria-label="Selector de gráficas avanzadas">
@@ -266,12 +235,12 @@
         </div>
       </section>
 
-      <section class="subtab-panel is-hidden" data-subtab-panel="recommendations">
+      <section class="subtab-panel" data-subtab-panel="recommendations">
         <div class="section-heading prediction-heading">
           <p class="eyebrow">Trading actions</p>
           <h3>Acciones sugeridas por ticker</h3>
         </div>
-        <p>En esta vista se habilitan filtros y ordenamiento para revisar recomendaciones sin saturar la portada principal.</p>
+
         <article class="table-card table-card-wide">
           <h4>Acción por ticker</h4>
           <div id="action-table-controls" class="table-controls" aria-label="Controles de filtros y ordenamiento"></div>

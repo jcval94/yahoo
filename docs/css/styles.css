@@ -554,6 +554,11 @@ section p {
   font-size: 0.76rem;
 }
 
+#action-recommendations-table th.sortable-col {
+  cursor: pointer;
+  user-select: none;
+}
+
 
 .section-heading h2,
 .section-heading h3 {
