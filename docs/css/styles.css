@@ -578,109 +578,40 @@ section p {
   background: rgba(56, 189, 248, 0.05);
 }
 
-.interactive-toolbar {
-  margin: 0.6rem 0 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.interactive-toolbar label {
-  color: var(--muted);
-  font-size: 0.88rem;
-}
-
-.interactive-toolbar select {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 0.35rem 0.5rem;
-}
-
-.interactive-grid {
+.actionable-grid {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
-  margin-top: 0.9rem;
+  margin-top: 1rem;
 }
 
-.interactive-grid-main {
-  grid-template-columns: 1fr;
-}
-
-.interactive-grid-split {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.interactive-card {
+.actionable-card {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 16px;
-  padding: 0.9rem;
+  padding: 1rem;
   background: rgba(15, 23, 42, 0.45);
 }
 
-.interactive-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 0.5rem;
-}
-
-.interactive-card h3 {
+.actionable-card h3 {
   margin: 0;
   font-size: 0.96rem;
 }
 
-.chart-surface {
-  width: 100%;
-  min-height: 260px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.7));
-  border: 1px solid rgba(148, 163, 184, 0.25);
+.actionable-value {
+  margin: 0.7rem 0 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #e2e8f0;
 }
 
-.chart-meta {
-  margin: 0.5rem 0 0;
+.actionable-caption {
+  margin: 0.35rem 0 0;
   color: #cbd5e1;
-  font-size: 0.82rem;
-}
-
-.inline-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.inline-controls button {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.35);
-  color: var(--text);
-  border-radius: 999px;
-  font-size: 0.72rem;
-  padding: 0.28rem 0.62rem;
-  cursor: pointer;
-}
-
-.inline-controls button.is-active {
-  border-color: rgba(56, 189, 248, 0.95);
-  background: rgba(56, 189, 248, 0.2);
-}
-
-.heatmap-grid {
-  display: grid;
-  grid-template-columns: repeat(13, minmax(0, 1fr));
-  gap: 0.18rem;
-  min-height: 260px;
-}
-
-.heatmap-cell {
-  border-radius: 4px;
-  min-height: 18px;
+  font-size: 0.84rem;
 }
 
 @media (max-width: 980px) {
-  .interactive-grid-split {
+  .actionable-grid {
     grid-template-columns: 1fr;
   }
 }

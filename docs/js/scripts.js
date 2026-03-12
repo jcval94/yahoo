@@ -510,6 +510,64 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRows();
   };
 
+  const renderActionableCenter = (report) => {
+    const priority = document.getElementById('actionable-priority');
+    const priorityCaption = document.getElementById('actionable-priority-caption');
+    const quality = document.getElementById('actionable-quality');
+    const qualityCaption = document.getElementById('actionable-quality-caption');
+    const nextStep = document.getElementById('actionable-next-step');
+    const nextStepCaption = document.getElementById('actionable-next-step-caption');
+
+    if (!priority || !priorityCaption || !quality || !qualityCaption || !nextStep || !nextStepCaption) {
+      return;
+    }
+
+    if (!report || !report.pipeline_health) {
+      priority.textContent = 'Sin datos';
+      priorityCaption.textContent = 'No hay reporte de ejecución disponible.';
+      quality.textContent = 'Sin datos';
+      qualityCaption.textContent = 'No se puede estimar calidad reciente.';
+      nextStep.textContent = 'Revisar fuente de datos';
+      nextStepCaption.textContent = 'Genera una nueva corrida para habilitar recomendaciones.';
+      return;
+    }
+
+    const actions = report.summary?.actions || {};
+    const buy = Number(actions.BUY || 0);
+    const sell = Number(actions.SELL || 0);
+    const hold = Number(actions.HOLD || 0);
+
+    if (buy > sell && buy >= hold) {
+      priority.textContent = 'Sesgo comprador';
+      priorityCaption.textContent = `${buy} BUY vs ${sell} SELL en el corte actual.`;
+    } else if (sell > buy && sell >= hold) {
+      priority.textContent = 'Sesgo vendedor';
+      priorityCaption.textContent = `${sell} SELL vs ${buy} BUY en el corte actual.`;
+    } else {
+      priority.textContent = 'Modo defensivo';
+      priorityCaption.textContent = `${hold} HOLD; conviene priorizar control de riesgo.`;
+    }
+
+    const quality5d = report.summary?.quality_5d || {};
+    const hit = Number(quality5d.Acierto || 0);
+    const fail = Number(quality5d.Fallo || 0);
+    const resolved = hit + fail;
+    const hitRate = resolved > 0 ? (hit / resolved) * 100 : 0;
+    quality.textContent = `${hitRate.toFixed(1)}% de acierto`;
+    qualityCaption.textContent = resolved > 0
+      ? `${hit} aciertos y ${fail} fallos (sin contar pendientes).`
+      : 'Aún no hay resultados cerrados en ventana de 5 días.';
+
+    const topRecommendation = (report.top_recommendations || [])[0] || null;
+    if (topRecommendation) {
+      nextStep.textContent = `${topRecommendation.action || 'HOLD'} ${topRecommendation.ticker || ''}`.trim();
+      nextStepCaption.textContent = `Score ${Number(topRecommendation.strategy_score || 0).toFixed(4)} · resultado 5d: ${topRecommendation.result_5d || 'Pendiente'}.`;
+    } else {
+      nextStep.textContent = 'Sin recomendación prioritaria';
+      nextStepCaption.textContent = 'No hay tickers destacados en la corrida más reciente.';
+    }
+  };
+
   const renderLastRunReport = (report) => {
     const runDate = document.getElementById('report-run-date');
     const status = document.getElementById('report-status');
@@ -535,8 +593,11 @@ document.addEventListener('DOMContentLoaded', () => {
       topRecBody.innerHTML = '<tr><td colspan="7">Sin datos disponibles.</td></tr>';
       modelMetricsBody.innerHTML = '<tr><td colspan="5">Sin datos disponibles.</td></tr>';
       modelCoverageBody.innerHTML = '<tr><td colspan="3">Sin datos disponibles.</td></tr>';
+      renderActionableCenter(null);
       return;
     }
+
+    renderActionableCenter(report);
 
     const health = report.pipeline_health || {};
     runDate.textContent = report.run_date || health.run_date || 'N/D';
@@ -604,179 +665,6 @@ document.addEventListener('DOMContentLoaded', () => {
       : '<tr><td colspan="5">Sin datos disponibles.</td></tr>';
   };
 
-
-  const buildInteractiveAnalytics = () => {
-    const windowSelect = document.getElementById('analytics-window');
-    const timeseriesSvg = document.getElementById('timeseries-chart');
-    const timeseriesMeta = document.getElementById('timeseries-meta');
-    const toggleContainer = document.getElementById('timeseries-toggles');
-    const funnelSvg = document.getElementById('funnel-chart');
-    const funnelMeta = document.getElementById('funnel-meta');
-    const cohortGrid = document.getElementById('cohort-chart');
-    const hourlyGrid = document.getElementById('hourly-heatmap');
-    const geoSvg = document.getElementById('geo-chart');
-    const geoMeta = document.getElementById('geo-meta');
-    const scatterSvg = document.getElementById('scatter-chart');
-    if (!windowSelect || !timeseriesSvg || !funnelSvg || !cohortGrid || !hourlyGrid || !geoSvg || !scatterSvg) return;
-
-    const colors = { volume: '#2563eb', conversion: '#10b981', revenue: '#f59e0b' };
-    const activeSeries = new Set(['volume', 'conversion']);
-    const seriesLabels = { volume: 'Volumen', conversion: 'Conversión', revenue: 'Revenue' };
-
-    const randomSeries = (days, base, wave, noise, trend = 0) => Array.from({ length: days }, (_, i) => (
-      base + Math.sin(i / wave) * base * 0.15 + (Math.random() - 0.5) * noise + i * trend
-    ));
-
-    const renderTimeseries = (days) => {
-      const data = {
-        volume: randomSeries(days, 220, 4.2, 35, 0.12),
-        conversion: randomSeries(days, 130, 5.5, 26, 0.05),
-        revenue: randomSeries(days, 170, 6.2, 30, 0.09),
-      };
-      const maxVal = Math.max(...Object.values(data).flat());
-      const w = 860;
-      const h = 280;
-      const pad = 28;
-      const toPoint = (value, i) => {
-        const x = pad + (i * (w - pad * 2)) / Math.max(1, days - 1);
-        const y = h - pad - (value / maxVal) * (h - pad * 2);
-        return `${x.toFixed(2)},${y.toFixed(2)}`;
-      };
-      const lines = [...activeSeries].map((key) => `
-        <polyline fill="none" stroke="${colors[key]}" stroke-width="3" points="${data[key].map(toPoint).join(' ')}" />
-      `).join('');
-      timeseriesSvg.innerHTML = `<rect x="0" y="0" width="${w}" height="${h}" fill="transparent"/>${lines}`;
-      const latest = [...activeSeries].map((k) => `${seriesLabels[k]}: ${data[k][days - 1].toFixed(1)}`).join(' · ');
-      timeseriesMeta.textContent = `Ventana ${days}d · ${latest} · Colores: azul #2563EB, verde #10B981, ámbar #F59E0B`;
-    };
-
-    toggleContainer.innerHTML = Object.keys(seriesLabels).map((key) => `
-      <button type="button" data-series-toggle="${key}" class="${activeSeries.has(key) ? 'is-active' : ''}">${seriesLabels[key]}</button>
-    `).join('');
-    toggleContainer.querySelectorAll('button').forEach((button) => {
-      button.addEventListener('click', () => {
-        const key = button.dataset.seriesToggle;
-        if (activeSeries.has(key)) activeSeries.delete(key); else activeSeries.add(key);
-        if (!activeSeries.size) activeSeries.add('volume');
-        toggleContainer.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', activeSeries.has(b.dataset.seriesToggle)));
-        renderTimeseries(Number(windowSelect.value));
-      });
-    });
-
-    const funnelStages = [
-      { label: 'Visitas', value: 10000 },
-      { label: 'Registro', value: 6200 },
-      { label: 'Activación', value: 4100 },
-      { label: 'Compra', value: 2300 },
-    ];
-
-    const renderFunnel = () => {
-      const max = funnelStages[0].value;
-      funnelSvg.innerHTML = funnelStages.map((stage, idx) => {
-        const y = 20 + idx * 56;
-        const width = (stage.value / max) * 320;
-        return `<g data-stage-index="${idx}" style="cursor:pointer"><rect x="20" y="${y}" width="${width}" height="36" rx="8" fill="${idx === 3 ? '#ef4444' : '#3b82f6'}" opacity="${0.9 - idx * 0.14}"/><text x="30" y="${y + 23}" fill="#e2e8f0" font-size="13">${stage.label}: ${stage.value}</text></g>`;
-      }).join('');
-      funnelMeta.textContent = 'Click en una etapa para ver pérdida relativa frente a la etapa anterior.';
-      funnelSvg.querySelectorAll('g').forEach((g) => g.addEventListener('click', () => {
-        const idx = Number(g.getAttribute('data-stage-index'));
-        if (idx === 0) {
-          funnelMeta.textContent = `Etapa ${funnelStages[idx].label}: base de referencia.`;
-          return;
-        }
-        const drop = (1 - funnelStages[idx].value / funnelStages[idx - 1].value) * 100;
-        funnelMeta.textContent = `${funnelStages[idx].label}: caída de ${drop.toFixed(1)}% vs ${funnelStages[idx - 1].label}.`;
-      }));
-    };
-
-    const colorScale = (ratio) => {
-      const v = Math.max(0, Math.min(1, ratio));
-      const b = Math.round(245 - v * 120);
-      return `rgb(${30 + Math.round(v * 20)}, ${80 + Math.round(v * 70)}, ${b})`;
-    };
-
-    const renderCohort = () => {
-      cohortGrid.innerHTML = '';
-      for (let row = 0; row < 12; row += 1) {
-        for (let col = 0; col < 12; col += 1) {
-          const decay = Math.max(0, 0.88 - col * 0.06 - row * 0.015 + Math.random() * 0.03);
-          const cell = document.createElement('div');
-          cell.className = 'heatmap-cell';
-          cell.style.background = colorScale(decay);
-          cell.title = `Cohorte ${row + 1}, mes ${col + 1}: ${(decay * 100).toFixed(1)}%`;
-          cohortGrid.appendChild(cell);
-        }
-      }
-    };
-
-    const renderHourly = () => {
-      hourlyGrid.innerHTML = '';
-      for (let day = 0; day < 7; day += 1) {
-        for (let hour = 0; hour < 24; hour += 1) {
-          const peak = Math.exp(-((hour - 15) ** 2) / 40) * 0.65 + Math.exp(-((hour - 10) ** 2) / 20) * 0.35;
-          const score = Math.max(0, Math.min(1, peak + Math.random() * 0.2 - 0.05 + day * 0.02));
-          const cell = document.createElement('div');
-          cell.className = 'heatmap-cell';
-          cell.style.background = colorScale(score);
-          cell.title = `Día ${day + 1}, ${hour}:00 = ${(score * 100).toFixed(1)}`;
-          hourlyGrid.appendChild(cell);
-        }
-      }
-    };
-
-    const geoPoints = [
-      { name: 'Norteamérica', x: 80, y: 90, value: 82 },
-      { name: 'LatAm', x: 130, y: 170, value: 61 },
-      { name: 'Europa', x: 220, y: 82, value: 75 },
-      { name: 'África', x: 230, y: 145, value: 58 },
-      { name: 'Asia', x: 305, y: 110, value: 92 },
-      { name: 'Oceanía', x: 355, y: 188, value: 46 },
-    ];
-
-    const renderGeo = () => {
-      geoSvg.innerHTML = `<rect x="12" y="16" width="396" height="228" rx="14" fill="rgba(15,23,42,0.55)" stroke="rgba(148,163,184,0.35)"/>` + geoPoints.map((point) => (
-        `<g data-region="${point.name}" style="cursor:pointer"><circle cx="${point.x}" cy="${point.y}" r="${8 + point.value / 12}" fill="#10b981" opacity="0.8"/><text x="${point.x + 10}" y="${point.y + 4}" fill="#e2e8f0" font-size="11">${point.name}</text></g>`
-      )).join('');
-      geoMeta.textContent = 'Click en una región para ver su contribución.';
-      geoSvg.querySelectorAll('g').forEach((node) => node.addEventListener('click', () => {
-        const region = geoPoints.find((p) => p.name === node.getAttribute('data-region'));
-        geoMeta.textContent = `${region.name}: índice de contribución ${region.value}/100 en la ventana seleccionada.`;
-      }));
-    };
-
-    const channels = [
-      { label: 'Orgánico', color: '#2563eb' },
-      { label: 'Paid', color: '#10b981' },
-      { label: 'Referral', color: '#f59e0b' },
-      { label: 'Email', color: '#8b5cf6' },
-      { label: 'Social', color: '#ef4444' },
-    ];
-
-    const renderScatter = () => {
-      const dots = Array.from({ length: 45 }, (_, idx) => {
-        const channel = channels[idx % channels.length];
-        const x = 50 + Math.random() * 760;
-        const y = 30 + Math.random() * 220;
-        const r = 4 + Math.random() * 10;
-        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${channel.color}" fill-opacity="0.68"><title>${channel.label}</title></circle>`;
-      }).join('');
-      scatterSvg.innerHTML = `<line x1="44" y1="250" x2="820" y2="250" stroke="#94a3b8"/><line x1="44" y1="26" x2="44" y2="250" stroke="#94a3b8"/>${dots}`;
-    };
-
-    const rerenderAll = () => {
-      renderTimeseries(Number(windowSelect.value));
-      renderFunnel();
-      renderCohort();
-      renderHourly();
-      renderGeo();
-      renderScatter();
-    };
-
-    windowSelect.addEventListener('change', rerenderAll);
-    rerenderAll();
-  };
-
-  buildInteractiveAnalytics();
 
   fetch('viz/manifest.json', { cache: 'no-store' })
     .then((response) => response.ok ? response.json() : null)
