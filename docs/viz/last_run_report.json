@@ -1,25 +1,25 @@
 {
-  "generated_at": "2026-03-11T04:35:03.857108+00:00",
-  "run_date": "2026-03-11",
+  "generated_at": "2026-03-12T04:49:50.392053+00:00",
+  "run_date": "2026-03-06",
   "artifacts": {
-    "predictions_file": "2026-03-11_daily_predictions.csv",
+    "predictions_file": "2026-03-06_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-03-06.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-11",
-    "duration_minutes": 6.96,
+    "run_date": "2026-03-06",
+    "duration_minutes": 0.0,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
-    "fallback_offline": "Posible fallback (predicción vacía)",
+    "fallback_offline": "No detectado",
     "status": "SALUDABLE"
   },
   "summary": {
     "actions": {
-      "BUY": 7,
-      "SELL": 12,
-      "HOLD": 11
+      "BUY": 6,
+      "SELL": 6,
+      "HOLD": 18
     },
     "quality_5d": {
       "Acierto": 0,
@@ -122,9 +122,18 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "V",
-      "action": "BUY",
-      "strategy_score": 4.1,
+      "ticker": "AMD",
+      "action": "HOLD",
+      "strategy_score": 2.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "BRK-B",
+      "action": "HOLD",
+      "strategy_score": 2.1,
       "ret_1d": "N/D",
       "ret_5d": "N/D",
       "ret_20d": "N/D",
@@ -140,16 +149,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "ORCL",
-      "action": "HOLD",
-      "strategy_score": 2.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "UNH",
+      "ticker": "LLY",
       "action": "HOLD",
       "strategy_score": 2.1,
       "ret_1d": "N/D",
