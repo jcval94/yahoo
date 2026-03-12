@@ -282,12 +282,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const controls = document.getElementById('action-table-controls');
     const state = {
-      sortKey: 'date',
+      sortKey: 'strategy_score',
       sortDirection: 'desc',
       filters: {},
       page: 1,
       pageSize: 20,
     };
+
+    const getColumnValue = (row, key) => {
+      const modelGroup = modelGroups.find((group) => group.canonicalName === key);
+      if (!modelGroup) return row[key];
+
+      const preferredSourceColumns = [...modelGroup.sourceColumns]
+        .sort((a, b) => scoreModelColumn(b, modelGroup.displayLabel) - scoreModelColumn(a, modelGroup.displayLabel));
+      for (const sourceKey of preferredSourceColumns) {
+        const value = row[sourceKey];
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          return value;
+        }
+      }
+      return '';
+    };
+
+    const picklistFilters = [
+      { key: 'date', label: 'Fecha' },
+      { key: 'ticker', label: 'Ticker' },
+      { key: 'best_model', label: 'Modelo líder' },
+      { key: 'action', label: 'Acción' },
+    ];
+
+    const getFilterOptions = (key) => Array.from(new Set(
+      rows
+        .map((row) => String(getColumnValue(row, key) || '').trim())
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b));
 
     const parseComparable = (value, type) => {
       if (value === null || value === undefined || value === '') return null;
@@ -299,25 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderRows = () => {
-      const getColumnValue = (row, key) => {
-        const modelGroup = modelGroups.find((group) => group.canonicalName === key);
-        if (!modelGroup) return row[key];
-
-        const preferredSourceColumns = [...modelGroup.sourceColumns]
-          .sort((a, b) => scoreModelColumn(b, modelGroup.displayLabel) - scoreModelColumn(a, modelGroup.displayLabel));
-        for (const sourceKey of preferredSourceColumns) {
-          const value = row[sourceKey];
-          if (value !== undefined && value !== null && String(value).trim() !== '') {
-            return value;
-          }
-        }
-        return '';
-      };
-
       const filtered = rows.filter((row) => allColumns.every((column) => {
         const filterValue = (state.filters[column.key] || '').toString().trim().toLowerCase();
         if (!filterValue) return true;
-        return String(getColumnValue(row, column.key) || '').toLowerCase().includes(filterValue);
+        return String(getColumnValue(row, column.key) || '').trim().toLowerCase() === filterValue;
       }));
 
       const sorted = [...filtered].sort((left, right) => {
@@ -401,26 +414,52 @@ document.addEventListener('DOMContentLoaded', () => {
         .join('');
     };
 
+    const renderTableHead = () => {
+      tableHeadRow.innerHTML = [
+        ...staticColumns.map((column) => {
+          const isActive = state.sortKey === column.key;
+          const arrow = isActive ? (state.sortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+          const sortAttr = isActive
+            ? (state.sortDirection === 'asc' ? 'ascending' : 'descending')
+            : 'none';
+          return `<th class="sortable-col" data-sort-key="${column.key}" aria-sort="${sortAttr}">${column.label}${arrow}</th>`;
+        }),
+        ...modelGroups.map((group) => {
+          const isActive = state.sortKey === group.canonicalName;
+          const arrow = isActive ? (state.sortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+          const sortAttr = isActive
+            ? (state.sortDirection === 'asc' ? 'ascending' : 'descending')
+            : 'none';
+          return `<th class="model-prediction-col sortable-col" data-sort-key="${group.canonicalName}" aria-sort="${sortAttr}">${group.displayLabel.toUpperCase()}${arrow}</th>`;
+        }),
+      ].join('');
+
+      tableHeadRow.querySelectorAll('[data-sort-key]').forEach((headerCell) => {
+        headerCell.addEventListener('click', () => {
+          const sortKey = headerCell.getAttribute('data-sort-key');
+          if (!sortKey) return;
+          if (state.sortKey === sortKey) {
+            state.sortDirection = state.sortDirection === 'desc' ? 'asc' : 'desc';
+          } else {
+            state.sortKey = sortKey;
+            state.sortDirection = 'desc';
+          }
+          state.page = 1;
+          renderTableHead();
+          renderRows();
+        });
+      });
+    };
+
     if (controls) {
       controls.innerHTML = `
-        <label>
-          Ordenar por
-          <select id="action-sort-key">
-            <option value="">Sin orden</option>
-            ${allColumns.map((column) => `<option value="${column.key}">${column.label}</option>`).join('')}
-          </select>
-        </label>
-        <label>
-          Dirección
-          <select id="action-sort-direction">
-            <option value="asc">Ascendente</option>
-            <option value="desc">Descendente</option>
-          </select>
-        </label>
-        ${allColumns.map((column) => `
+        ${picklistFilters.map((column) => `
           <label>
             Filtrar ${column.label}
-            <input type="text" id="filter-${column.key}" placeholder="Contiene..." />
+            <select id="filter-${column.key}">
+              <option value="">Todos</option>
+              ${getFilterOptions(column.key).map((option) => `<option value="${option}">${option}</option>`).join('')}
+            </select>
           </label>
         `).join('')}
         <label>
@@ -437,8 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <span id="action-page-summary">Mostrando 0–0 de 0</span>
       `;
 
-      const sortKeySelect = controls.querySelector('#action-sort-key');
-      const sortDirectionSelect = controls.querySelector('#action-sort-direction');
       const pageSizeSelect = controls.querySelector('#action-page-size');
       const showAllButton = controls.querySelector('#action-show-all');
       const prevButton = controls.querySelector('#action-page-prev');
@@ -447,21 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pageSizeSelect) {
         pageSizeSelect.value = String(state.pageSize);
       }
-      if (sortKeySelect) sortKeySelect.value = state.sortKey;
-      if (sortDirectionSelect) sortDirectionSelect.value = state.sortDirection;
-
-      sortKeySelect?.addEventListener('change', (event) => {
-        state.sortKey = event.target.value;
-        state.page = 1;
-        renderRows();
-      });
-
-      sortDirectionSelect?.addEventListener('change', (event) => {
-        state.sortDirection = event.target.value;
-        state.page = 1;
-        renderRows();
-      });
-
       pageSizeSelect?.addEventListener('change', (event) => {
         state.pageSize = Number(event.target.value) || 20;
         state.page = 1;
@@ -486,9 +508,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderRows();
       });
 
-      allColumns.forEach((column) => {
+      picklistFilters.forEach((column) => {
         const input = controls.querySelector(`#filter-${column.key}`);
-        input?.addEventListener('input', (event) => {
+        input?.addEventListener('change', (event) => {
           state.filters[column.key] = event.target.value;
           state.page = 1;
           renderRows();
@@ -496,10 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    tableHeadRow.innerHTML = [
-      ...staticColumns.map((column) => `<th>${column.label}</th>`),
-      ...modelGroups.map((group) => `<th class="model-prediction-col">${group.displayLabel.toUpperCase()}</th>`),
-    ].join('');
+    renderTableHead();
 
     if (!rows.length) {
       const totalColumns = staticColumns.length + (modelGroups.length || 1);
