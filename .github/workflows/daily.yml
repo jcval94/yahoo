@@ -50,6 +50,32 @@ jobs:
         run: |
           set -e
           python -m src.predict 2>&1 | tee predict.log || { echo "::error::Prediction failed"; exit 1; }
+      - name: Validate prediction artifacts non-empty
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('results/predicts')
+          daily_files = sorted(root.glob('*_daily_predictions.csv'))
+          edge_files = sorted(root.glob('*_edge_prediction.csv'))
+          if not daily_files:
+              raise SystemExit('No daily prediction file was generated')
+          if not edge_files:
+              raise SystemExit('No edge prediction file was generated')
+
+          def validate(path: Path, required: set[str]) -> None:
+              df = pd.read_csv(path)
+              if df.empty:
+                  raise SystemExit(f'{path} is empty')
+              missing = required - set(df.columns)
+              if missing:
+                  raise SystemExit(f'{path} is missing required columns: {sorted(missing)}')
+
+          validate(daily_files[-1], {'ticker', 'model', 'actual', 'pred'})
+          validate(edge_files[-1], {'ticker', 'model', 'pred'})
+          print(f'Validated prediction outputs: {daily_files[-1].name}, {edge_files[-1].name}')
+          PY
       - name: Evaluate drift
         run: |
           python -m src.edge_drift
