@@ -685,11 +685,38 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
+  const loadDashboardData = (versionToken) => Promise.all([
+    fetch(`viz/pipeline_health.csv?v=${versionToken}`, { cache: 'no-store' })
+      .then((r) => r.ok ? r.text() : '')
+      .then((text) => renderPipelineHealth(parseCsv(text)))
+      .catch(() => renderPipelineHealth([])),
+    fetch(`viz/strategy_performance.csv?v=${versionToken}`, { cache: 'no-store' })
+      .then((r) => r.ok ? r.text() : '')
+      .then((text) => renderStrategyPerformance(parseCsv(text)))
+      .catch(() => renderStrategyPerformance([])),
+    fetch(`viz/action_recommendations.csv?v=${versionToken}`, { cache: 'no-store' })
+      .then((r) => r.ok ? r.text() : '')
+      .then((text) => renderActionRecommendations(parseCsv(text)))
+      .catch(() => renderActionRecommendations([])),
+    fetch(`viz/last_run_report.json?v=${versionToken}`, { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((report) => renderLastRunReport(report))
+      .catch(() => renderLastRunReport(null)),
+    fetch(`viz/strategy_performance/budget_and_action.csv?v=${versionToken}`, { cache: 'no-store' })
+      .then((r) => r.ok ? r.text() : '')
+      .then((text) => renderStrategyBudgetAction(parseCsv(text)))
+      .catch(() => renderStrategyBudgetAction([])),
+    fetch(`viz/strategy_performance/action_history.csv?v=${versionToken}`, { cache: 'no-store' })
+      .then((r) => r.ok ? r.text() : '')
+      .then((text) => renderStrategyActionHistory(parseCsv(text)))
+      .catch(() => renderStrategyActionHistory([])),
+  ]);
+
   fetch('viz/manifest.json', { cache: 'no-store' })
     .then((response) => response.ok ? response.json() : null)
     .then((manifest) => {
       if (!manifest || !manifest.generated_at) {
-        return;
+        return loadDashboardData(Date.now());
       }
 
       const windowDays = document.getElementById('window-days');
@@ -709,32 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
         image.setAttribute('src', `${src}?v=${manifest.generated_at}`);
       });
 
-      return Promise.all([
-        fetch(`viz/pipeline_health.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
-          .then((r) => r.ok ? r.text() : '')
-          .then((text) => renderPipelineHealth(parseCsv(text)))
-          .catch(() => renderPipelineHealth([])),
-        fetch(`viz/strategy_performance.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
-          .then((r) => r.ok ? r.text() : '')
-          .then((text) => renderStrategyPerformance(parseCsv(text)))
-          .catch(() => renderStrategyPerformance([])),
-        fetch(`viz/action_recommendations.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
-          .then((r) => r.ok ? r.text() : '')
-          .then((text) => renderActionRecommendations(parseCsv(text)))
-          .catch(() => renderActionRecommendations([])),
-        fetch(`viz/last_run_report.json?v=${manifest.generated_at}`, { cache: 'no-store' })
-          .then((r) => r.ok ? r.json() : null)
-          .then((report) => renderLastRunReport(report))
-          .catch(() => renderLastRunReport(null)),
-        fetch(`viz/strategy_performance/budget_and_action.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
-          .then((r) => r.ok ? r.text() : '')
-          .then((text) => renderStrategyBudgetAction(parseCsv(text)))
-          .catch(() => renderStrategyBudgetAction([])),
-        fetch(`viz/strategy_performance/action_history.csv?v=${manifest.generated_at}`, { cache: 'no-store' })
-          .then((r) => r.ok ? r.text() : '')
-          .then((text) => renderStrategyActionHistory(parseCsv(text)))
-          .catch(() => renderStrategyActionHistory([])),
-      ]);
+      return loadDashboardData(manifest.generated_at);
     })
     .catch(() => {
       renderPipelineHealth([]);
