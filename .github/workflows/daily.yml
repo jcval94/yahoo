@@ -86,6 +86,9 @@ jobs:
         run: |
           python -m src.visualization
           python -m src.monitoring.latency_viz
+      - name: Validate dashboard freshness
+        run: |
+          python -m src.monitoring.dashboard_freshness --max-age-hours 36
       - name: Commit visualizations
         env:
           PUSH_TOKEN: ${{ secrets.GH_PAT }}
