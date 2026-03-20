@@ -44,3 +44,27 @@ def test_load_prediction_data_builds_when_missing(tmp_path, monkeypatch):
 
     assert "AAA" in data
     assert data["AAA"]["Close"].iloc[-1] == 4
+
+
+def test_load_prediction_data_rebuilds_empty_csv(tmp_path, monkeypatch):
+    monkeypatch.setattr(predict, "CONFIG", {"etfs": ["AAA"], "data_dir": str(tmp_path)})
+
+    empty_path = tmp_path / "AAA.csv"
+    empty_path.write_text("\n", encoding="utf-8")
+
+    rebuilt = {"value": False}
+
+    def _build_abt(_frequency):
+        rebuilt["value"] = True
+        df = pd.DataFrame({"Close": [5, 6]}, index=pd.date_range("2024-03-01", periods=2))
+        df.to_csv(empty_path, index_label="Date")
+        return {"AAA": empty_path}
+
+    build_abt_module = importlib.import_module("src.abt.build_abt")
+    monkeypatch.setattr(build_abt_module, "build_abt", _build_abt)
+
+    data = predict.load_prediction_data("daily")
+
+    assert rebuilt["value"]
+    assert "AAA" in data
+    assert data["AAA"]["Close"].iloc[-1] == 6

@@ -204,11 +204,33 @@ def load_prediction_data(frequency: str, force_rebuild: bool = False) -> Dict[st
             if candidate:
                 existing_paths[ticker] = Path(candidate)
 
-    return {
-        ticker: pd.read_csv(path, index_col=0, parse_dates=True)
-        for ticker, path in existing_paths.items()
-        if path.exists()
-    }
+    loaded: Dict[str, pd.DataFrame] = {}
+    empty_tickers: list[str] = []
+    for ticker, path in existing_paths.items():
+        if not path.exists():
+            continue
+        try:
+            loaded[ticker] = pd.read_csv(path, index_col=0, parse_dates=True)
+        except pd.errors.EmptyDataError:
+            logger.warning("Skipping empty ABT file for %s: %s", ticker, path)
+            empty_tickers.append(ticker)
+
+    if empty_tickers and not force_rebuild:
+        logger.info(
+            "Detected empty ABT files for %s. Rebuilding ABT and retrying load once.",
+            ", ".join(empty_tickers),
+        )
+        rebuilt_data = load_prediction_data(frequency, force_rebuild=True)
+        for ticker in empty_tickers:
+            frame = rebuilt_data.get(ticker)
+            if frame is not None and not frame.empty:
+                loaded[ticker] = frame
+            else:
+                logger.error(
+                    "ABT for %s remains empty after rebuild. Check upstream data download/build.",
+                    ticker,
+                )
+    return loaded
 def _next_prediction_timestamp(index: pd.Index, frequency: str):
     last_ts = index.max()
     if frequency == "intraday":

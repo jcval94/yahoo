@@ -230,3 +230,28 @@ def test_build_abt_full_daily_uses_batch_download(monkeypatch, tmp_path):
     assert calls["batch"] == 1
     assert calls["single"] == 0
     assert "AAA" in out and "BBB" in out and "combined" in out
+
+
+def test_build_abt_skips_writing_empty_ticker_csv(tmp_path, monkeypatch):
+    module = __import__("src.abt.build_abt", fromlist=["dummy"])
+
+    monkeypatch.setattr(
+        module,
+        "CONFIG",
+        {
+            "etfs": ["AAA"],
+            "start_date": "2024-01-01",
+            "data_frequency": "1d",
+            "include_prepost": False,
+            "data_dir": str(tmp_path),
+        },
+    )
+    monkeypatch.setattr(module, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(module, "_internet_ok", lambda: True)
+    monkeypatch.setattr(module, "download_ticker", lambda *args, **kwargs: pd.DataFrame())
+    monkeypatch.setattr(module, "enrich_indicators", lambda df: df)
+
+    out = module.build_abt("daily", full_rebuild=True)
+
+    assert "AAA" not in out
+    assert not (tmp_path / "AAA.csv").exists()

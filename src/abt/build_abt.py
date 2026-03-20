@@ -440,6 +440,18 @@ def build_abt(frequency: str = "daily", full_rebuild: bool = False, safety_rows:
                 final_df = pd.concat([historical_keep, recalculated]).sort_index()
                 final_df = final_df[~final_df.index.duplicated(keep="last")]
 
+        if final_df.empty or len(final_df.columns) == 0:
+            logger.error(
+                "ABT vacío para %s (%s). Se omite escritura para evitar CSV inválido.",
+                ticker,
+                frequency,
+            )
+            if not existing_df.empty:
+                logger.info("Se conserva ABT previo no vacío para %s", ticker)
+                results[ticker] = out_file
+                ticker_output_files.append(out_file)
+            continue
+
         final_df.index.name = "Date"
         final_df.to_csv(out_file, index_label="Date")
         log_df_details(f"saved {out_file.stem}", final_df)
