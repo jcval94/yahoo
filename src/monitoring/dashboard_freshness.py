@@ -27,10 +27,24 @@ def _manifest_generated_at_is_fresh(path: Path, max_age_hours: int, now: datetim
     generated_at = payload.get("generated_at")
     if not isinstance(generated_at, str) or not generated_at.strip():
         return False
-    parsed = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+    parsed = _parse_generated_at(generated_at.strip())
+    if parsed is None:
+        return False
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return now - parsed.astimezone(timezone.utc) <= timedelta(hours=max_age_hours)
+
+
+def _parse_generated_at(value: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        pass
+
+    try:
+        return datetime.strptime(value, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
 
 
 def validate_dashboard_freshness(
