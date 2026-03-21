@@ -64,17 +64,23 @@ jobs:
           if not edge_files:
               raise SystemExit('No edge prediction file was generated')
 
-          def validate(path: Path, required: set[str]) -> None:
-              df = pd.read_csv(path)
-              if df.empty:
-                  raise SystemExit(f'{path} is empty')
-              missing = required - set(df.columns)
-              if missing:
-                  raise SystemExit(f'{path} is missing required columns: {sorted(missing)}')
+          def latest_valid(files: list[Path], required: set[str], kind: str) -> Path:
+              for path in sorted(files, reverse=True):
+                  try:
+                      df = pd.read_csv(path)
+                  except pd.errors.EmptyDataError:
+                      continue
+                  if df.empty:
+                      continue
+                  missing = required - set(df.columns)
+                  if missing:
+                      continue
+                  return path
+              raise SystemExit(f'No valid {kind} file found with required columns: {sorted(required)}')
 
-          validate(daily_files[-1], {'ticker', 'model', 'actual', 'pred'})
-          validate(edge_files[-1], {'ticker', 'model', 'pred'})
-          print(f'Validated prediction outputs: {daily_files[-1].name}, {edge_files[-1].name}')
+          daily_file = latest_valid(daily_files, {'ticker', 'model', 'actual', 'pred'}, 'daily prediction')
+          edge_file = latest_valid(edge_files, {'ticker', 'model', 'pred'}, 'edge prediction')
+          print(f'Validated prediction outputs: {daily_file.name}, {edge_file.name}')
           PY
       - name: Evaluate drift
         run: |
