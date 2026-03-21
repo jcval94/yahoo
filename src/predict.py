@@ -393,7 +393,17 @@ def run_predictions(
             "No valid predictions were generated. Check diagnostics counters above for root causes."
         )
 
-    result_df = pd.DataFrame(rows)
+    prediction_columns = [
+        "ticker",
+        "model",
+        "actual",
+        "pred",
+        "Training Window",
+        "Predict moment",
+        "Predicted",
+        "parameters",
+    ]
+    result_df = pd.DataFrame(rows, columns=prediction_columns)
     if not result_df.empty and "parameters" in result_df.columns:
         ordered_cols = [c for c in result_df.columns if c != "parameters"] + ["parameters"]
         result_df = result_df[ordered_cols]
@@ -422,7 +432,7 @@ def save_edge_predictions(result_df: pd.DataFrame) -> Path:
 
     if result_df.empty:
         edge_file = edge_dir / f"{RUN_TIMESTAMP[:10]}_edge_prediction.csv"
-        pd.DataFrame().to_csv(edge_file, index=False)
+        pd.DataFrame(columns=["ticker", "model", "pred", "Predicted"]).to_csv(edge_file, index=False)
         return edge_file
 
     metrics_dir = RESULTS_DIR / "metrics"

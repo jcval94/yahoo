@@ -155,3 +155,37 @@ def test_load_models_filters_by_frequency(tmp_path, monkeypatch):
     models = predict.load_models(tmp_path, frequency="daily")
 
     assert set(models) == {"NVDA_daily_rf_aaaaaaaaaa"}
+
+
+def test_run_predictions_empty_output_keeps_expected_columns(tmp_path):
+    predict.RESULTS_DIR = tmp_path
+    predict.RUN_TIMESTAMP = "2025-07-11T00:00:00+00:00"
+
+    result = predict.run_predictions({}, {}, frequency="daily")
+    pred_file = tmp_path / "predicts" / "2025-07-11_daily_predictions.csv"
+    written = pd.read_csv(pred_file)
+
+    expected_columns = [
+        "ticker",
+        "model",
+        "actual",
+        "pred",
+        "Training Window",
+        "Predict moment",
+        "Predicted",
+        "parameters",
+    ]
+    assert list(result.columns) == expected_columns
+    assert list(written.columns) == expected_columns
+    assert written.empty
+
+
+def test_save_edge_predictions_empty_output_keeps_expected_columns(tmp_path):
+    predict.RESULTS_DIR = tmp_path
+    predict.RUN_TIMESTAMP = "2025-07-11T00:00:00+00:00"
+
+    edge_file = predict.save_edge_predictions(pd.DataFrame())
+    written = pd.read_csv(edge_file)
+
+    assert list(written.columns) == ["ticker", "model", "pred", "Predicted"]
+    assert written.empty
