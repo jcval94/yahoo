@@ -174,6 +174,75 @@ def test_download_ticker_offline_uses_long_history_sample(monkeypatch):
     assert captured["periods"] >= 260
 
 
+def test_download_ticker_intraday_uses_compatible_periods(monkeypatch):
+    module = __import__("src.abt.build_abt", fromlist=["dummy"])
+    monkeypatch.setattr(module, "_internet_ok", lambda: True)
+
+    calls = []
+
+    def fake_yf_download(*args, **kwargs):
+        calls.append(kwargs)
+        idx = pd.date_range("2026-01-01 09:30", periods=3, freq="1min")
+        return pd.DataFrame(
+            {
+                "Open": [1.0, 1.0, 1.0],
+                "High": [1.0, 1.0, 1.0],
+                "Low": [1.0, 1.0, 1.0],
+                "Close": [1.0, 1.0, 1.0],
+                "Adj Close": [1.0, 1.0, 1.0],
+                "Volume": [100, 100, 100],
+            },
+            index=idx,
+        )
+
+    monkeypatch.setattr(module.yf, "download", fake_yf_download)
+
+    module.download_ticker("AAA", "2024-01-01", interval="1m")
+    module.download_ticker("AAA", "2024-01-01", interval="5m")
+
+    assert calls[0]["interval"] == "1m"
+    assert calls[0]["period"] == "8d"
+    assert calls[1]["interval"] == "5m"
+    assert calls[1]["period"] == "60d"
+
+
+def test_download_ticker_intraday_does_not_use_stooq_fallback(monkeypatch):
+    module = __import__("src.abt.build_abt", fromlist=["dummy"])
+    monkeypatch.setattr(module, "_internet_ok", lambda: True)
+    monkeypatch.setattr(module.yf, "download", lambda *args, **kwargs: pd.DataFrame())
+
+    stooq_calls = {"count": 0}
+    sample_calls = {"count": 0}
+
+    def fake_stooq(*args, **kwargs):
+        stooq_calls["count"] += 1
+        return pd.DataFrame()
+
+    def fake_sample(start, periods=30):
+        sample_calls["count"] += 1
+        idx = pd.date_range("2024-01-01", periods=5, freq="D")
+        return pd.DataFrame(
+            {
+                "Open": [1.0] * 5,
+                "High": [1.0] * 5,
+                "Low": [1.0] * 5,
+                "Close": [1.0] * 5,
+                "Adj Close": [1.0] * 5,
+                "Volume": [100] * 5,
+            },
+            index=idx,
+        )
+
+    monkeypatch.setattr(module, "_download_stooq", fake_stooq)
+    monkeypatch.setattr(module, "generate_sample_data", fake_sample)
+
+    out = module.download_ticker("AAA", "2024-01-01", interval="1m", retries=1)
+
+    assert not out.empty
+    assert stooq_calls["count"] == 0
+    assert sample_calls["count"] == 1
+
+
 def test_build_abt_full_daily_uses_batch_download(monkeypatch, tmp_path):
     module = __import__("src.abt.build_abt", fromlist=["dummy"])
 

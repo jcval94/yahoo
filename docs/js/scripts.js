@@ -619,14 +619,24 @@ document.addEventListener('DOMContentLoaded', () => {
     renderActionableCenter(report);
 
     const health = report.pipeline_health || {};
+    const dataQuality = report.data_quality || {};
+    const predictionsValid = dataQuality.predictions_valid !== false;
+    const qualityCause = dataQuality.cause || 'ok';
     runDate.textContent = report.run_date || health.run_date || 'N/D';
-    status.textContent = health.status || 'N/D';
+    status.textContent = predictionsValid
+      ? (health.status || 'N/D')
+      : `${health.status || 'DEGRADADO'} · ⚠ Predicciones inválidas`;
     success.textContent = `${Number(health.success_pct || 0).toFixed(2)}% (${health.successful_steps || 0}/${health.total_steps || 0})`;
     fallback.textContent = health.fallback_offline || 'No detectado';
 
     const edgeCoverage = report.summary?.edge_coverage || {};
+    const qualityWarning = predictionsValid
+      ? ''
+      : `<li style="color:#ffb020;font-weight:700;"><strong>⚠ Calidad de predicciones:</strong> inválida (${qualityCause}). Revisar artefacto del último run.</li>`;
     artifactsList.innerHTML = `
+      ${qualityWarning}
       <li><strong>Predicciones:</strong> ${report.artifacts?.predictions_file || 'n/a'}</li>
+      <li><strong>Predicciones válidas:</strong> ${predictionsValid ? 'Sí' : 'No'}</li>
       <li><strong>Métricas:</strong> ${report.artifacts?.metrics_file || 'n/a'}</li>
       <li><strong>Edge metrics:</strong> ${report.artifacts?.edge_metrics_file || 'n/a'}</li>
       <li><strong>Cobertura edge:</strong> ${edgeCoverage.rows || 0} filas, ${edgeCoverage.tickers || 0} tickers, ${edgeCoverage.models || 0} modelos.</li>

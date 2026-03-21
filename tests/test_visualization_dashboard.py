@@ -33,6 +33,8 @@ def test_prepare_pipeline_health_writes_summary(tmp_path, monkeypatch):
         "total_steps",
         "fallback_offline",
         "status",
+        "predictions_valid",
+        "prediction_quality_cause",
     ]
     assert out.loc[0, "run_date"] == run_date
     assert out.loc[0, "successful_steps"] >= 4
@@ -405,7 +407,10 @@ def test_prepare_pipeline_health_ignores_latest_empty_prediction_file(tmp_path, 
     monkeypatch.setattr(viz, "VIZ_DIR", viz_dir)
     out = viz.prepare_pipeline_health()
     assert out is not None
-    assert out.loc[0, "run_date"] == valid_run
+    assert out.loc[0, "run_date"] == empty_run
+    assert out.loc[0, "predictions_valid"] == False
+    assert out.loc[0, "prediction_quality_cause"] == "empty_file"
+    assert out.loc[0, "status"] in {"DEGRADADO", "CRÍTICO"}
 def test_prepare_last_run_report_ignores_latest_empty_prediction_file(tmp_path, monkeypatch):
     root = tmp_path
     pred_dir = root / "predicts"
@@ -432,8 +437,36 @@ def test_prepare_last_run_report_ignores_latest_empty_prediction_file(tmp_path, 
     monkeypatch.setattr(viz, "VIZ_DIR", viz_dir)
     report = viz.prepare_last_run_report(pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
     assert report is not None
-    assert report["run_date"] == valid_run
-    assert report["artifacts"]["predictions_file"] == f"{valid_run}_daily_predictions.csv"
+    assert report["run_date"] == empty_run
+    assert report["artifacts"]["predictions_file"] == f"{empty_run}_daily_predictions.csv"
+    assert report["data_quality"]["predictions_valid"] is False
+    assert report["data_quality"]["cause"] == "empty_file"
+
+
+def test_prepare_last_run_report_marks_missing_columns_as_invalid(tmp_path, monkeypatch):
+    root = tmp_path
+    pred_dir = root / "predicts"
+    metrics_dir = root / "metrics"
+    edge_dir = root / "edge_metrics"
+    viz_dir = root / "viz"
+    for directory in [pred_dir, metrics_dir, edge_dir, viz_dir]:
+        directory.mkdir(parents=True, exist_ok=True)
+
+    run_date = "2026-03-12"
+    pd.DataFrame([{"ticker": "AAA", "pred": 101.0}]).to_csv(
+        pred_dir / f"{run_date}_daily_predictions.csv", index=False
+    )
+    monkeypatch.setattr(viz, "PRED_DIR", pred_dir)
+    monkeypatch.setattr(viz, "METRICS_DIR", metrics_dir)
+    monkeypatch.setattr(viz, "EDGE_METRICS_DIR", edge_dir)
+    monkeypatch.setattr(viz, "VIZ_DIR", viz_dir)
+
+    report = viz.prepare_last_run_report(pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
+
+    assert report is not None
+    assert report["run_date"] == run_date
+    assert report["data_quality"]["predictions_valid"] is False
+    assert report["data_quality"]["cause"] == "missing_columns"
 def test_prepare_edge_metrics_reads_from_edge_metrics_dir(tmp_path, monkeypatch):
     root = tmp_path
     metrics_dir = root / "metrics"

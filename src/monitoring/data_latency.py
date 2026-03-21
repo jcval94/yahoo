@@ -19,6 +19,39 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 LATENCY_DIR = ROOT_DIR / "results" / "latency"
 
 
+def _interval_to_minutes(interval: str) -> int | None:
+    if interval.endswith("m"):
+        return int(interval[:-1])
+    if interval.endswith("h"):
+        return int(interval[:-1]) * 60
+    return None
+
+
+def _is_intraday_granularity(index: pd.Index) -> bool:
+    if len(index) < 1:
+        return False
+    parsed = pd.to_datetime(index, errors="coerce")
+    parsed = parsed.dropna()
+    if len(parsed) < 1:
+        return False
+    if len(parsed) == 1:
+        ts = parsed[0]
+        return bool(ts.hour or ts.minute or ts.second)
+
+    series = pd.Series(parsed).sort_values()
+    diffs = series.diff().dropna()
+    if diffs.empty:
+        return False
+    min_step = diffs.min()
+    return pd.Timedelta(0) < min_step <= pd.Timedelta(hours=12)
+
+
+def _is_recent_intraday_bar(latency_minutes: float, interval: str) -> bool:
+    interval_minutes = _interval_to_minutes(interval) or 60
+    freshness_limit = max(interval_minutes * 3, 180)
+    return latency_minutes <= freshness_limit
+
+
 def _to_utc_timestamp(ts: pd.Timestamp) -> pd.Timestamp:
     parsed = pd.Timestamp(ts)
     if parsed.tzinfo is None:
@@ -42,14 +75,24 @@ def measure_ticker_latency(ticker: str, intervals: list[str]) -> dict[str, objec
 
         last_bar_ts = _to_utc_timestamp(frame.index.max())
         latency_minutes = round((download_time_utc - last_bar_ts.to_pydatetime()).total_seconds() / 60.0, 2)
+        granularity_ok = _is_intraday_granularity(frame.index)
+        recent_ok = _is_recent_intraday_bar(latency_minutes, interval)
+        if not granularity_ok:
+            status = "invalid_granularity"
+        elif not recent_ok:
+            status = "stale_intraday"
+        else:
+            status = "ok"
         return {
             "ticker": ticker,
             "download_time_utc": download_time_utc.isoformat(),
             "last_bar_timestamp": last_bar_ts.isoformat(),
             "latency_minutes": latency_minutes,
+            "interval_requested": interval,
             "interval_used": interval,
             "source": "yfinance",
-            "status": "ok",
+            "granularity_ok": bool(granularity_ok),
+            "status": status,
         }
 
     return {
@@ -57,8 +100,10 @@ def measure_ticker_latency(ticker: str, intervals: list[str]) -> dict[str, objec
         "download_time_utc": download_time_utc.isoformat(),
         "last_bar_timestamp": "",
         "latency_minutes": "",
+        "interval_requested": ",".join(intervals),
         "interval_used": "",
         "source": "yfinance",
+        "granularity_ok": False,
         "status": "no_data",
     }
 
