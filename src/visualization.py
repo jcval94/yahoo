@@ -97,17 +97,51 @@ def _latest_csv(directory: Path, pattern: str) -> Path | None:
     return files[-1] if files else None
 
 
-def _latest_valid_prediction_csv() -> Path | None:
-    """Return the most recent non-empty daily prediction CSV with required fields."""
+def _latest_prediction_run_csv() -> Path | None:
+    """Return prediction CSV for the most recent run date, without validating content."""
+    candidates: list[tuple[object, Path]] = []
+    for candidate in PRED_DIR.glob("*_daily_predictions.csv"):
+        run_date = candidate.stem.split("_")[0]
+        parsed = pd.to_datetime(run_date, errors="coerce") if pd is not None else run_date
+        if pd is not None and pd.isna(parsed):
+            continue
+        candidates.append((parsed, candidate))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda row: row[0])
+    return candidates[-1][1]
+
+
+def _prediction_artifact_quality(pred_file: Path | None) -> dict:
+    """Validate prediction artifact quality for a specific run date file."""
     required = {"ticker", "actual", "pred"}
-    for candidate in sorted(PRED_DIR.glob("*_daily_predictions.csv"), reverse=True):
-        df = _safe_read_csv(candidate)
-        if df is None or df.empty:
-            continue
-        if not required.issubset(df.columns):
-            continue
-        return candidate
-    return None
+    out = {"predictions_valid": False, "cause": "missing_file"}
+    if pred_file is None or not pred_file.exists():
+        return out
+
+    if pred_file.stat().st_size == 0:
+        out["cause"] = "empty_file"
+        return out
+
+    pred_df = _safe_read_csv(pred_file)
+    if pred_df is None:
+        out["cause"] = "read_error"
+        return out
+    if pred_df.empty and len(pred_df.columns) == 0:
+        out["cause"] = "empty_file"
+        return out
+    if not required.issubset(pred_df.columns):
+        out["cause"] = "missing_columns"
+        return out
+    if len(pred_df) == 0:
+        out["cause"] = "zero_rows"
+        return out
+
+    out["predictions_valid"] = True
+    out["cause"] = "ok"
+    return out
 
 
 def _latest_csv_for_run_date(directory: Path, prefix: str, run_date: str) -> Path | None:
@@ -573,7 +607,7 @@ def prepare_pipeline_health() -> "pd.DataFrame | None":
 
     evaluation_dir = EDGE_METRICS_DIR
     required_steps = 5
-    latest_pred_file = _latest_valid_prediction_csv()
+    latest_pred_file = _latest_prediction_run_csv()
     out_file = VIZ_DIR / "pipeline_health.csv"
 
     if latest_pred_file is None:
@@ -594,6 +628,7 @@ def prepare_pipeline_health() -> "pd.DataFrame | None":
         return empty
 
     run_date = latest_pred_file.stem.split("_")[0]
+    prediction_quality = _prediction_artifact_quality(latest_pred_file)
     step_paths: dict[str, Path | None] = {
         "features": _latest_csv_for_run_date(FEATURE_DIR, "features_daily_", run_date),
         "training": _latest_csv_for_run_date(METRICS_DIR, "metrics_daily_", run_date),
@@ -613,7 +648,7 @@ def prepare_pipeline_health() -> "pd.DataFrame | None":
 
     pred_df = _safe_read_csv(latest_pred_file)
     fallback_offline = "No detectado"
-    if pred_df is None or pred_df.empty:
+    if not prediction_quality["predictions_valid"] or pred_df is None or pred_df.empty:
         fallback_offline = "Posible fallback (predicción vacía)"
     elif "actual" in pred_df.columns:
         actual = pd.to_numeric(pred_df["actual"], errors="coerce").dropna()
@@ -626,6 +661,8 @@ def prepare_pipeline_health() -> "pd.DataFrame | None":
         status = "DEGRADADO"
     else:
         status = "CRÍTICO"
+    if not prediction_quality["predictions_valid"]:
+        status = "DEGRADADO" if success_pct >= 60 else "CRÍTICO"
 
     out = pd.DataFrame(
         [
@@ -637,6 +674,8 @@ def prepare_pipeline_health() -> "pd.DataFrame | None":
                 "total_steps": required_steps,
                 "fallback_offline": fallback_offline,
                 "status": status,
+                "predictions_valid": bool(prediction_quality["predictions_valid"]),
+                "prediction_quality_cause": prediction_quality["cause"],
             }
         ]
     )
@@ -928,7 +967,8 @@ def prepare_last_run_report(
         return None
 
     report_file = VIZ_DIR / "last_run_report.json"
-    latest_pred_file = _latest_valid_prediction_csv()
+    latest_pred_file = _latest_prediction_run_csv()
+    prediction_quality = _prediction_artifact_quality(latest_pred_file)
     latest_metrics_file = _latest_csv(METRICS_DIR, "metrics_daily_*.csv")
     latest_edge_file = _latest_csv(EDGE_METRICS_DIR, "edge_metrics_*.csv")
 
@@ -1040,6 +1080,10 @@ def prepare_last_run_report(
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "run_date": run_date,
+        "data_quality": {
+            "predictions_valid": bool(prediction_quality["predictions_valid"]),
+            "cause": prediction_quality["cause"],
+        },
         "artifacts": {
             "predictions_file": latest_pred_file.name if latest_pred_file else "n/a",
             "metrics_file": latest_metrics_file.name if latest_metrics_file else "n/a",

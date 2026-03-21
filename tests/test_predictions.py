@@ -1,4 +1,5 @@
 import pytest
+import json
 
 pd = pytest.importorskip("pandas")
 
@@ -189,3 +190,32 @@ def test_save_edge_predictions_empty_output_keeps_expected_columns(tmp_path):
 
     assert list(written.columns) == ["ticker", "model", "pred", "Predicted"]
     assert written.empty
+
+
+def test_run_predictions_daily_bucket_columns_all_nan_still_predicts(tmp_path):
+    class _DummyModel:
+        def predict(self, X):
+            return [float(X.sum(axis=1).iloc[0])]
+
+    predict.RESULTS_DIR = tmp_path
+    predict.MODEL_DIR = tmp_path
+    predict.RUN_TIMESTAMP = "2025-07-12T00:00:00+00:00"
+
+    model_name = "TEST_daily_dummy"
+    (tmp_path / f"{model_name}_features.json").write_text(
+        json.dumps(["delta", "bucket_return_mean_hist", "bucket_return_vol_hist"])
+    )
+
+    df = pd.DataFrame(
+        {
+            "Close": [10.0, 11.0, 12.0],
+            "bucket_return_mean_hist": [float("nan"), float("nan"), float("nan")],
+            "bucket_return_vol_hist": [float("nan"), float("nan"), float("nan")],
+        },
+        index=pd.date_range("2025-01-01", periods=3),
+    )
+
+    result = predict.run_predictions({model_name: _DummyModel()}, {"TEST": df}, frequency="daily")
+
+    assert not result.empty
+    assert result.loc[0, "ticker"] == "TEST"

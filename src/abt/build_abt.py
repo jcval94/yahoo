@@ -119,6 +119,15 @@ def _is_intraday_interval(interval: str) -> bool:
     return interval in {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
 
 
+def _intraday_period_for_interval(interval: str) -> str:
+    """Return a Yahoo-compatible period for each intraday interval."""
+    if interval == "1m":
+        return "8d"
+    if interval in {"2m", "5m"}:
+        return "60d"
+    return "730d"
+
+
 def _normalize_ts(ts: pd.Timestamp) -> pd.Timestamp:
     ts = pd.Timestamp(ts)
     if ts.tzinfo is not None:
@@ -184,7 +193,7 @@ def download_ticker(
         for attempt in range(1, retries + 1):
             try:
                 if _is_intraday_interval(interval):
-                    period = "60d" if interval in {"1m", "2m", "5m"} else "730d"
+                    period = _intraday_period_for_interval(interval)
                     df = yf.download(
                         ticker,
                         period=period,
@@ -208,7 +217,7 @@ def download_ticker(
                 df = pd.DataFrame()
             time.sleep(1)
 
-        if df.empty:
+        if df.empty and not _is_intraday_interval(interval):
             try:
                 df = _download_stooq(ticker, start_dt, today)
                 logger.info("Stooq suministró %d filas para %s", len(df), ticker)

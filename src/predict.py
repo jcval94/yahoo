@@ -244,7 +244,41 @@ def _next_prediction_timestamp(index: pd.Index, frequency: str):
     return last_ts + pd.offsets.BDay()
 
 
-def _prepare_prediction_inputs(df: pd.DataFrame, target_col: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _feature_fill_values_for_model(model: Any, feature_list: list[str]) -> dict[str, float]:
+    """Return per-feature fill values, preferring trained medians when available."""
+    fill_values: dict[str, float] = {col: 0.0 for col in feature_list}
+    if not feature_list:
+        return fill_values
+
+    if hasattr(model, "feature_medians_"):
+        raw = getattr(model, "feature_medians_")
+        if isinstance(raw, dict):
+            for col in feature_list:
+                if col in raw and pd.notna(raw[col]):
+                    fill_values[col] = float(raw[col])
+    elif hasattr(model, "medians_"):
+        raw = getattr(model, "medians_")
+        if isinstance(raw, dict):
+            for col in feature_list:
+                if col in raw and pd.notna(raw[col]):
+                    fill_values[col] = float(raw[col])
+    elif hasattr(model, "imputer_statistics_") and hasattr(model, "feature_names_in_"):
+        stats = np.asarray(getattr(model, "imputer_statistics_", []))
+        names = list(getattr(model, "feature_names_in_", []))
+        if len(stats) == len(names):
+            stats_by_col = {name: float(val) for name, val in zip(names, stats) if pd.notna(val)}
+            for col in feature_list:
+                if col in stats_by_col:
+                    fill_values[col] = stats_by_col[col]
+    return fill_values
+
+
+def _prepare_prediction_inputs(
+    df: pd.DataFrame,
+    target_col: str,
+    feature_list: list[str] | None = None,
+    feature_fill_values: dict[str, float] | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
     """Return a cleaned ABT copy and numeric feature matrix ready for prediction."""
     prepared = df.copy()
     if "delta" not in prepared.columns:
@@ -254,8 +288,31 @@ def _prepare_prediction_inputs(df: pd.DataFrame, target_col: str) -> tuple[pd.Da
     if "Ticker" in X:
         X = X.drop(columns=["Ticker"])
     X = X.select_dtypes(exclude="object")
-    X = X.replace([np.inf, -np.inf], np.nan).dropna()
-    return prepared, X
+    X = X.replace([np.inf, -np.inf], np.nan)
+
+    diagnostics = {"columns_all_nan": 0, "rows_discarded": 0, "columns_imputed": 0}
+    diagnostics["columns_all_nan"] = int(X.isna().all(axis=0).sum())
+    X = X.dropna(axis=1, how="all")
+
+    expected_features = list(feature_list or [])
+    if expected_features:
+        missing_expected = [c for c in expected_features if c not in X.columns]
+        for col in missing_expected:
+            X[col] = 0.0
+        X = X.reindex(columns=expected_features)
+        fill_values = {
+            col: float((feature_fill_values or {}).get(col, 0.0))
+            for col in expected_features
+        }
+        has_missing = X[expected_features].isna().any(axis=0)
+        diagnostics["columns_imputed"] = int(has_missing.sum())
+        if diagnostics["columns_imputed"]:
+            X.loc[:, expected_features] = X[expected_features].fillna(fill_values)
+
+    rows_before = len(X)
+    X = X.dropna(axis=0, how="any")
+    diagnostics["rows_discarded"] = rows_before - len(X)
+    return prepared, X, diagnostics
 
 
 def run_predictions(
@@ -267,7 +324,7 @@ def run_predictions(
     rows = []
     diagnostics = Counter()
     diagnostics["models_received"] = len(models)
-    prepared_by_ticker: Dict[str, tuple[pd.DataFrame, pd.DataFrame, str]] = {}
+    prepared_by_ticker: Dict[tuple[str, tuple[str, ...]], tuple[pd.DataFrame, pd.DataFrame, str]] = {}
     for name, model_info in models.items():
         if isinstance(model_info, tuple):
             model, feature_list, schema_hash = model_info
@@ -286,7 +343,21 @@ def run_predictions(
         ticker = _model_ticker(name)
         algo = parts[2] if len(parts) > 2 else getattr(model, "__class__", type(model)).__name__
         target_col = TARGET_COLS.get(ticker, "Close")
-        prepared_pack = prepared_by_ticker.get(ticker)
+        selected_features: list[str] | None = None
+        if feature_list is not None:
+            selected_features = list(feature_list)
+        else:
+            feature_file = MODEL_DIR / f"{name}_features.json"
+            if feature_file.exists():
+                try:
+                    with feature_file.open() as fh:
+                        selected_features = list(json.load(fh))
+                except Exception:
+                    diagnostics["feature_alignment_errors"] += 1
+                    logger.exception("Failed to load feature list for %s", name)
+
+        cache_key = (ticker, tuple(selected_features or []))
+        prepared_pack = prepared_by_ticker.get(cache_key)
 
         if prepared_pack is None:
             df = data.get(ticker)
@@ -306,13 +377,26 @@ def run_predictions(
                 )
                 target_col = "Close"
 
-            prepared_df, prepared_X = _prepare_prediction_inputs(df, target_col)
+            fill_values = _feature_fill_values_for_model(model, selected_features or [])
+            prepared_df, prepared_X, prep_diag = _prepare_prediction_inputs(
+                df,
+                target_col,
+                feature_list=selected_features,
+                feature_fill_values=fill_values,
+            )
+            logger.info(
+                "Ticker %s diagnostics: columnas_all_nan=%s filas_descartadas=%s columnas_imputadas=%s",
+                ticker,
+                prep_diag["columns_all_nan"],
+                prep_diag["rows_discarded"],
+                prep_diag["columns_imputed"],
+            )
             if prepared_X.empty:
                 diagnostics["skipped_empty_features"] += 1
                 logger.warning("All rows have NaN/inf features for %s", ticker)
                 continue
-            prepared_by_ticker[ticker] = (prepared_df, prepared_X, target_col)
-            prepared_pack = prepared_by_ticker[ticker]
+            prepared_by_ticker[cache_key] = (prepared_df, prepared_X, target_col)
+            prepared_pack = prepared_by_ticker[cache_key]
 
         df, base_X, target_col = prepared_pack
         X = base_X
@@ -326,17 +410,6 @@ def run_predictions(
                 diagnostics["skipped_schema_mismatch"] += 1
                 logger.exception("Schema mismatch for %s", name)
                 continue
-            X = X.reindex(columns=feature_list, fill_value=0)
-        else:
-            feature_file = MODEL_DIR / f"{name}_features.json"
-            if feature_file.exists():
-                try:
-                    with feature_file.open() as fh:
-                        selected = json.load(fh)
-                    X = X.reindex(columns=selected, fill_value=0)
-                except Exception:
-                    diagnostics["feature_alignment_errors"] += 1
-                    logger.exception("Failed to align features for %s", name)
 
         train_start = df.index.min().date()
         train_end = df.index.max().date()
