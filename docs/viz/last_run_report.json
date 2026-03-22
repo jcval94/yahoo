@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-21T16:45:20.876918+00:00",
-  "run_date": "2026-03-21",
+  "generated_at": "2026-03-22T04:54:36.775648+00:00",
+  "run_date": "2026-03-22",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-21_daily_predictions.csv",
+    "predictions_file": "2026-03-22_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-03-06.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-21",
-    "duration_minutes": 6.35,
+    "run_date": "2026-03-22",
+    "duration_minutes": 6.62,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -23,8 +23,8 @@
   },
   "summary": {
     "actions": {
-      "BUY": 12,
-      "SELL": 5,
+      "BUY": 13,
+      "SELL": 4,
       "HOLD": 13
     },
     "quality_5d": {
@@ -73,6 +73,15 @@
     }
   },
   "top_recommendations": [
+    {
+      "ticker": "AMD",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
     {
       "ticker": "ASML",
       "action": "BUY",
@@ -128,6 +137,15 @@
       "result_5d": "Pendiente"
     },
     {
+      "ticker": "LLY",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
       "ticker": "META",
       "action": "BUY",
       "strategy_score": 4.1,
@@ -137,25 +155,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "MSFT",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
       "ticker": "NVDA",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "PLTR",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
