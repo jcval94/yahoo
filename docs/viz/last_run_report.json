@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-23T05:05:03.985300+00:00",
-  "run_date": "2026-03-23",
+  "generated_at": "2026-03-24T04:55:37.816767+00:00",
+  "run_date": "2026-03-24",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-23_daily_predictions.csv",
+    "predictions_file": "2026-03-24_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
-    "edge_metrics_file": "edge_metrics_2026-03-06.csv"
+    "edge_metrics_file": "edge_metrics_2026-03-23.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-23",
-    "duration_minutes": 6.37,
+    "run_date": "2026-03-24",
+    "duration_minutes": 6.38,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -23,9 +23,9 @@
   },
   "summary": {
     "actions": {
-      "BUY": 12,
+      "BUY": 11,
       "SELL": 4,
-      "HOLD": 14
+      "HOLD": 15
     },
     "quality_5d": {
       "Acierto": 0,
@@ -35,7 +35,7 @@
     "recommended_tickers": 30,
     "strategies_ranked": 5,
     "edge_coverage": {
-      "rows": 106,
+      "rows": 180,
       "tickers": 30,
       "models": 6,
       "by_model": [
@@ -45,29 +45,29 @@
           "tickers": 30
         },
         {
-          "model": "lgbm",
-          "rows": 23,
-          "tickers": 23
-        },
-        {
           "model": "arima",
-          "rows": 21,
-          "tickers": 21
+          "rows": 30,
+          "tickers": 30
         },
         {
-          "model": "rf",
-          "rows": 17,
-          "tickers": 17
-        },
-        {
-          "model": "xgb",
-          "rows": 13,
-          "tickers": 13
+          "model": "lgbm",
+          "rows": 30,
+          "tickers": 30
         },
         {
           "model": "linreg",
-          "rows": 2,
-          "tickers": 2
+          "rows": 30,
+          "tickers": 30
+        },
+        {
+          "model": "rf",
+          "rows": 30,
+          "tickers": 30
+        },
+        {
+          "model": "xgb",
+          "rows": 30,
+          "tickers": 30
         }
       ]
     }
@@ -83,34 +83,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "ASML",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "AVGO",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
       "ticker": "BRK-B",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "GOOGL",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -137,7 +110,25 @@
       "result_5d": "Pendiente"
     },
     {
+      "ticker": "LLY",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
       "ticker": "META",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "MSFT",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -156,6 +147,15 @@
     },
     {
       "ticker": "PLTR",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "UNH",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
