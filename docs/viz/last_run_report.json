@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-24T04:55:37.816767+00:00",
-  "run_date": "2026-03-24",
+  "generated_at": "2026-03-25T04:56:05.103677+00:00",
+  "run_date": "2026-03-25",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-24_daily_predictions.csv",
+    "predictions_file": "2026-03-25_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
-    "edge_metrics_file": "edge_metrics_2026-03-23.csv"
+    "edge_metrics_file": "edge_metrics_2026-03-24.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-24",
-    "duration_minutes": 6.38,
+    "run_date": "2026-03-25",
+    "duration_minutes": 6.22,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -23,9 +23,9 @@
   },
   "summary": {
     "actions": {
-      "BUY": 11,
+      "BUY": 9,
       "SELL": 4,
-      "HOLD": 15
+      "HOLD": 17
     },
     "quality_5d": {
       "Acierto": 0,
@@ -74,7 +74,7 @@
   },
   "top_recommendations": [
     {
-      "ticker": "AMD",
+      "ticker": "AVGO",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -92,6 +92,15 @@
       "result_5d": "Pendiente"
     },
     {
+      "ticker": "GOOGL",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
       "ticker": "JNJ",
       "action": "BUY",
       "strategy_score": 4.1,
@@ -101,25 +110,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "JPM",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
       "ticker": "LLY",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "META",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -158,6 +149,15 @@
       "ticker": "UNH",
       "action": "BUY",
       "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "AMD",
+      "action": "HOLD",
+      "strategy_score": 2.1,
       "ret_1d": "N/D",
       "ret_5d": "N/D",
       "ret_20d": "N/D",
