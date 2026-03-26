@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-25T04:56:05.103677+00:00",
-  "run_date": "2026-03-25",
+  "generated_at": "2026-03-26T05:07:22.590287+00:00",
+  "run_date": "2026-03-26",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-25_daily_predictions.csv",
+    "predictions_file": "2026-03-26_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
-    "edge_metrics_file": "edge_metrics_2026-03-24.csv"
+    "edge_metrics_file": "edge_metrics_2026-03-25.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-25",
-    "duration_minutes": 6.22,
+    "run_date": "2026-03-26",
+    "duration_minutes": 6.49,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -23,9 +23,9 @@
   },
   "summary": {
     "actions": {
-      "BUY": 9,
-      "SELL": 4,
-      "HOLD": 17
+      "BUY": 11,
+      "SELL": 5,
+      "HOLD": 14
     },
     "quality_5d": {
       "Acierto": 0,
@@ -74,7 +74,7 @@
   },
   "top_recommendations": [
     {
-      "ticker": "AVGO",
+      "ticker": "AMD",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -101,7 +101,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "JNJ",
+      "ticker": "JPM",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -119,7 +119,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "MSFT",
+      "ticker": "META",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -128,7 +128,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "NVDA",
+      "ticker": "MSFT",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -155,9 +155,9 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "AMD",
-      "action": "HOLD",
-      "strategy_score": 2.1,
+      "ticker": "ASML",
+      "action": "BUY",
+      "strategy_score": 4.1,
       "ret_1d": "N/D",
       "ret_5d": "N/D",
       "ret_20d": "N/D",
