@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-26T05:07:22.590287+00:00",
-  "run_date": "2026-03-26",
+  "generated_at": "2026-03-27T05:09:08.195124+00:00",
+  "run_date": "2026-03-27",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-26_daily_predictions.csv",
+    "predictions_file": "2026-03-27_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
-    "edge_metrics_file": "edge_metrics_2026-03-25.csv"
+    "edge_metrics_file": "edge_metrics_2026-03-26.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-26",
-    "duration_minutes": 6.49,
+    "run_date": "2026-03-27",
+    "duration_minutes": 6.71,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -83,6 +83,15 @@
       "result_5d": "Pendiente"
     },
     {
+      "ticker": "AVGO",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
       "ticker": "BRK-B",
       "action": "BUY",
       "strategy_score": 4.1,
@@ -101,7 +110,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "JPM",
+      "ticker": "JNJ",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -119,7 +128,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "META",
+      "ticker": "MSFT",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -128,7 +137,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "MSFT",
+      "ticker": "NVDA",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -147,15 +156,6 @@
     },
     {
       "ticker": "UNH",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "ASML",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
