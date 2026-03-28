@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-27T05:09:08.195124+00:00",
-  "run_date": "2026-03-27",
+  "generated_at": "2026-03-28T04:55:21.789269+00:00",
+  "run_date": "2026-03-28",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-27_daily_predictions.csv",
+    "predictions_file": "2026-03-28_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
-    "edge_metrics_file": "edge_metrics_2026-03-26.csv"
+    "edge_metrics_file": "edge_metrics_2026-03-27.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-27",
-    "duration_minutes": 6.71,
+    "run_date": "2026-03-28",
+    "duration_minutes": 6.45,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -83,6 +83,15 @@
       "result_5d": "Pendiente"
     },
     {
+      "ticker": "ASML",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
       "ticker": "AVGO",
       "action": "BUY",
       "strategy_score": 4.1,
@@ -110,7 +119,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "JNJ",
+      "ticker": "JPM",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -119,7 +128,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "LLY",
+      "ticker": "META",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
@@ -147,15 +156,6 @@
     },
     {
       "ticker": "PLTR",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "UNH",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
