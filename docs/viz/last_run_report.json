@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-28T04:55:21.789269+00:00",
-  "run_date": "2026-03-28",
+  "generated_at": "2026-03-29T05:12:19.648796+00:00",
+  "run_date": "2026-03-29",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-28_daily_predictions.csv",
+    "predictions_file": "2026-03-29_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-03-27.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-28",
-    "duration_minutes": 6.45,
+    "run_date": "2026-03-29",
+    "duration_minutes": 6.32,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
