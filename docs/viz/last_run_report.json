@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-30T05:24:52.129699+00:00",
-  "run_date": "2026-03-30",
+  "generated_at": "2026-03-31T05:11:21.670660+00:00",
+  "run_date": "2026-03-31",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-30_daily_predictions.csv",
+    "predictions_file": "2026-03-31_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
-    "edge_metrics_file": "edge_metrics_2026-03-27.csv"
+    "edge_metrics_file": "edge_metrics_2026-03-30.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-30",
-    "duration_minutes": 6.45,
+    "run_date": "2026-03-31",
+    "duration_minutes": 6.44,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -23,9 +23,9 @@
   },
   "summary": {
     "actions": {
-      "BUY": 12,
-      "SELL": 5,
-      "HOLD": 13
+      "BUY": 10,
+      "SELL": 4,
+      "HOLD": 16
     },
     "quality_5d": {
       "Acierto": 0,
@@ -110,24 +110,6 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "JPM",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "LLY",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
       "ticker": "META",
       "action": "BUY",
       "strategy_score": 4.1,
@@ -156,6 +138,24 @@
     },
     {
       "ticker": "PLTR",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "UNH",
+      "action": "BUY",
+      "strategy_score": 4.1,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "ASML",
       "action": "BUY",
       "strategy_score": 4.1,
       "ret_1d": "N/D",
