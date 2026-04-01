@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-03-31T05:11:21.670660+00:00",
-  "run_date": "2026-03-31",
+  "generated_at": "2026-04-01T05:24:23.699587+00:00",
+  "run_date": "2026-04-01",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-03-31_daily_predictions.csv",
+    "predictions_file": "2026-04-01_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
-    "edge_metrics_file": "edge_metrics_2026-03-30.csv"
+    "edge_metrics_file": "edge_metrics_2026-03-31.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-03-31",
-    "duration_minutes": 6.44,
+    "run_date": "2026-04-01",
+    "duration_minutes": 6.39,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -23,9 +23,9 @@
   },
   "summary": {
     "actions": {
-      "BUY": 10,
-      "SELL": 4,
-      "HOLD": 16
+      "BUY": 0,
+      "SELL": 0,
+      "HOLD": 30
     },
     "quality_5d": {
       "Acierto": 0,
@@ -74,72 +74,36 @@
   },
   "top_recommendations": [
     {
+      "ticker": "AAPL",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
       "ticker": "AMD",
-      "action": "BUY",
-      "strategy_score": 4.1,
+      "action": "HOLD",
+      "strategy_score": 0.0,
       "ret_1d": "N/D",
       "ret_5d": "N/D",
       "ret_20d": "N/D",
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "AVGO",
-      "action": "BUY",
-      "strategy_score": 4.1,
+      "ticker": "WMT",
+      "action": "HOLD",
+      "strategy_score": 0.0,
       "ret_1d": "N/D",
       "ret_5d": "N/D",
       "ret_20d": "N/D",
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "BRK-B",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "GOOGL",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "META",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "MSFT",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "NVDA",
-      "action": "BUY",
-      "strategy_score": 4.1,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "PLTR",
-      "action": "BUY",
-      "strategy_score": 4.1,
+      "ticker": "V",
+      "action": "HOLD",
+      "strategy_score": 0.0,
       "ret_1d": "N/D",
       "ret_5d": "N/D",
       "ret_20d": "N/D",
@@ -147,17 +111,53 @@
     },
     {
       "ticker": "UNH",
-      "action": "BUY",
-      "strategy_score": 4.1,
+      "action": "HOLD",
+      "strategy_score": 0.0,
       "ret_1d": "N/D",
       "ret_5d": "N/D",
       "ret_20d": "N/D",
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "ASML",
-      "action": "BUY",
-      "strategy_score": 4.1,
+      "ticker": "TSM",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "TSLA",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "PLTR",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "PG",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "ORCL",
+      "action": "HOLD",
+      "strategy_score": 0.0,
       "ret_1d": "N/D",
       "ret_5d": "N/D",
       "ret_20d": "N/D",
