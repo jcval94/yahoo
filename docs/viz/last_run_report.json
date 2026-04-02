@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-04-01T05:24:23.699587+00:00",
-  "run_date": "2026-04-01",
+  "generated_at": "2026-04-02T05:04:25.254048+00:00",
+  "run_date": "2026-04-02",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-04-01_daily_predictions.csv",
+    "predictions_file": "2026-04-02_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
-    "edge_metrics_file": "edge_metrics_2026-03-31.csv"
+    "edge_metrics_file": "edge_metrics_2026-04-01.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-04-01",
-    "duration_minutes": 6.39,
+    "run_date": "2026-04-02",
+    "duration_minutes": 6.36,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -35,37 +35,12 @@
     "recommended_tickers": 30,
     "strategies_ranked": 5,
     "edge_coverage": {
-      "rows": 180,
+      "rows": 30,
       "tickers": 30,
-      "models": 6,
+      "models": 1,
       "by_model": [
         {
-          "model": "Top3Ensamble",
-          "rows": 30,
-          "tickers": 30
-        },
-        {
-          "model": "arima",
-          "rows": 30,
-          "tickers": 30
-        },
-        {
-          "model": "lgbm",
-          "rows": 30,
-          "tickers": 30
-        },
-        {
-          "model": "linreg",
-          "rows": 30,
-          "tickers": 30
-        },
-        {
-          "model": "rf",
-          "rows": 30,
-          "tickers": 30
-        },
-        {
-          "model": "xgb",
+          "model": "_NaiveModel",
           "rows": 30,
           "tickers": 30
         }
