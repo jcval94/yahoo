@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-04-08T05:12:59.313264+00:00",
-  "run_date": "2026-04-08",
+  "generated_at": "2026-04-09T05:11:26.497051+00:00",
+  "run_date": "2026-04-09",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-04-08_daily_predictions.csv",
+    "predictions_file": "2026-04-09_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-04-02.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-04-08",
-    "duration_minutes": 6.76,
+    "run_date": "2026-04-09",
+    "duration_minutes": 6.62,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -67,7 +67,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "WMT",
+      "ticker": "AMZN",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -76,7 +76,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "V",
+      "ticker": "ASML",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -85,7 +85,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "UNH",
+      "ticker": "AVGO",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -94,7 +94,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "TSM",
+      "ticker": "BRK-B",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -103,7 +103,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "TSLA",
+      "ticker": "CAT",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -112,7 +112,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "PLTR",
+      "ticker": "COST",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -121,7 +121,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "PG",
+      "ticker": "CRM",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -130,7 +130,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "ORCL",
+      "ticker": "GOOGL",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
