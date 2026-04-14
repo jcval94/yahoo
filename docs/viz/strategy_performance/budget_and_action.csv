@@ -1,6 +1,6 @@
 strategy,initial_budget,ending_equity,return_pct,latest_action,latest_action_date,buy_count,sell_count,hold_count
-winner_take_all,10000.0,0.0,0.0,HOLD,2026-04-13,0,0,30
-top3_ensemble,10000.0,0.0,0.0,HOLD,2026-04-13,0,0,30
-consensus_vote,10000.0,0.0,0.0,HOLD,2026-04-13,0,0,30
-risk_adjusted_edge,10000.0,0.0,0.0,HOLD,2026-04-13,0,0,30
-downtrend_rebound,10000.0,0.0,0.0,HOLD,2026-04-13,0,0,30
+winner_take_all,10000.0,0.0,0.0,HOLD,2026-04-14,0,0,30
+top3_ensemble,10000.0,0.0,0.0,HOLD,2026-04-14,0,0,30
+consensus_vote,10000.0,0.0,0.0,HOLD,2026-04-14,0,0,30
+risk_adjusted_edge,10000.0,0.0,0.0,HOLD,2026-04-14,0,0,30
+downtrend_rebound,10000.0,0.0,0.0,HOLD,2026-04-14,0,0,30
