@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-06-05T07:09:02.552229+00:00",
-  "run_date": "2026-06-05",
+  "generated_at": "2026-06-06T06:30:10.317325+00:00",
+  "run_date": "2026-06-06",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-06-05_daily_predictions.csv",
+    "predictions_file": "2026-06-06_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-06-03.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-06-05",
-    "duration_minutes": 6.56,
+    "run_date": "2026-06-06",
+    "duration_minutes": 6.24,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -25,14 +25,14 @@
     "actions": {
       "BUY": 0,
       "SELL": 0,
-      "HOLD": 28
+      "HOLD": 30
     },
     "quality_5d": {
       "Acierto": 0,
       "Fallo": 0,
-      "Pendiente": 28
+      "Pendiente": 30
     },
-    "recommended_tickers": 28,
+    "recommended_tickers": 30,
     "strategies_ranked": 5,
     "edge_coverage": {
       "rows": 30,
@@ -112,6 +112,15 @@
       "result_5d": "Pendiente"
     },
     {
+      "ticker": "PLTR",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
       "ticker": "PG",
       "action": "HOLD",
       "strategy_score": 0.0,
@@ -122,15 +131,6 @@
     },
     {
       "ticker": "ORCL",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "NVDA",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
