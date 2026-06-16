@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-06-15T09:00:03.339794+00:00",
-  "run_date": "2026-06-15",
+  "generated_at": "2026-06-16T08:47:28.219450+00:00",
+  "run_date": "2026-06-16",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-06-15_daily_predictions.csv",
+    "predictions_file": "2026-06-16_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-06-12.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-06-15",
-    "duration_minutes": 6.21,
+    "run_date": "2026-06-16",
+    "duration_minutes": 6.61,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -25,14 +25,14 @@
     "actions": {
       "BUY": 0,
       "SELL": 0,
-      "HOLD": 30
+      "HOLD": 5
     },
     "quality_5d": {
       "Acierto": 0,
       "Fallo": 0,
-      "Pendiente": 30
+      "Pendiente": 5
     },
-    "recommended_tickers": 30,
+    "recommended_tickers": 5,
     "strategies_ranked": 5,
     "edge_coverage": {
       "rows": 30,
@@ -49,7 +49,7 @@
   },
   "top_recommendations": [
     {
-      "ticker": "AAPL",
+      "ticker": "ASML",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -58,7 +58,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "AMD",
+      "ticker": "BRK-B",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -67,43 +67,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "WMT",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "V",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "UNH",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "TSM",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "TSLA",
+      "ticker": "META",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -121,16 +85,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "PG",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "ORCL",
+      "ticker": "TSM",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
