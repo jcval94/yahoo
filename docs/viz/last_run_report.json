@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-06-16T08:47:28.219450+00:00",
-  "run_date": "2026-06-16",
+  "generated_at": "2026-06-17T08:30:28.394931+00:00",
+  "run_date": "2026-06-17",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-06-16_daily_predictions.csv",
+    "predictions_file": "2026-06-17_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-06-12.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-06-16",
-    "duration_minutes": 6.61,
+    "run_date": "2026-06-17",
+    "duration_minutes": 6.83,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -25,14 +25,14 @@
     "actions": {
       "BUY": 0,
       "SELL": 0,
-      "HOLD": 5
+      "HOLD": 28
     },
     "quality_5d": {
       "Acierto": 0,
       "Fallo": 0,
-      "Pendiente": 5
+      "Pendiente": 28
     },
-    "recommended_tickers": 5,
+    "recommended_tickers": 28,
     "strategies_ranked": 5,
     "edge_coverage": {
       "rows": 30,
@@ -49,7 +49,7 @@
   },
   "top_recommendations": [
     {
-      "ticker": "ASML",
+      "ticker": "AAPL",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -58,7 +58,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "BRK-B",
+      "ticker": "AMD",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -67,7 +67,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "META",
+      "ticker": "WMT",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -76,7 +76,16 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "PLTR",
+      "ticker": "V",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "UNH",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -86,6 +95,42 @@
     },
     {
       "ticker": "TSM",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "TSLA",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "PG",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "ORCL",
+      "action": "HOLD",
+      "strategy_score": 0.0,
+      "ret_1d": "N/D",
+      "ret_5d": "N/D",
+      "ret_20d": "N/D",
+      "result_5d": "Pendiente"
+    },
+    {
+      "ticker": "NVDA",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
