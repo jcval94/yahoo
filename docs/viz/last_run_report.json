@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-14T05:28:22.742193+00:00",
-  "run_date": "2026-07-14",
+  "generated_at": "2026-07-15T05:30:33.316352+00:00",
+  "run_date": "2026-07-15",
   "data_quality": {
     "predictions_valid": true,
     "cause": "ok"
   },
   "artifacts": {
-    "predictions_file": "2026-07-14_daily_predictions.csv",
+    "predictions_file": "2026-07-15_daily_predictions.csv",
     "metrics_file": "metrics_daily_2026-03-06.csv",
     "edge_metrics_file": "edge_metrics_2026-07-13.csv"
   },
   "pipeline_health": {
-    "run_date": "2026-07-14",
-    "duration_minutes": 5.59,
+    "run_date": "2026-07-15",
+    "duration_minutes": 6.47,
     "success_pct": 100.0,
     "successful_steps": 5,
     "total_steps": 5,
@@ -25,14 +25,14 @@
     "actions": {
       "BUY": 0,
       "SELL": 0,
-      "HOLD": 30
+      "HOLD": 2
     },
     "quality_5d": {
       "Acierto": 0,
       "Fallo": 0,
-      "Pendiente": 30
+      "Pendiente": 2
     },
-    "recommended_tickers": 30,
+    "recommended_tickers": 2,
     "strategies_ranked": 5,
     "edge_coverage": {
       "rows": 30,
@@ -49,7 +49,7 @@
   },
   "top_recommendations": [
     {
-      "ticker": "AAPL",
+      "ticker": "META",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
@@ -58,79 +58,7 @@
       "result_5d": "Pendiente"
     },
     {
-      "ticker": "AMD",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "AMZN",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "ASML",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "AVGO",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "BRK-B",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "CAT",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "COST",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "CRM",
-      "action": "HOLD",
-      "strategy_score": 0.0,
-      "ret_1d": "N/D",
-      "ret_5d": "N/D",
-      "ret_20d": "N/D",
-      "result_5d": "Pendiente"
-    },
-    {
-      "ticker": "GOOGL",
+      "ticker": "PLTR",
       "action": "HOLD",
       "strategy_score": 0.0,
       "ret_1d": "N/D",
