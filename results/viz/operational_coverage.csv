@@ -1,9 +1,4 @@
 Predicted,model,covered_tickers,coverage_pct
-2026-03-23,arima,30,100.0
-2026-03-23,lgbm,30,100.0
-2026-03-23,linreg,30,100.0
-2026-03-23,rf,30,100.0
-2026-03-23,xgb,30,100.0
 2026-03-24,arima,30,100.0
 2026-03-24,lgbm,30,100.0
 2026-03-24,linreg,30,100.0
@@ -107,3 +102,4 @@ Predicted,model,covered_tickers,coverage_pct
 2026-07-16,_NaiveModel,30,100.0
 2026-07-17,_NaiveModel,30,100.0
 2026-07-20,_NaiveModel,30,100.0
+2026-07-21,_NaiveModel,30,100.0
